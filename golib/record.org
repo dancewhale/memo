@@ -1,0 +1,28 @@
+#+title: Record
+
+* Card
+** fsrs 算法
+Retrievability (R): The probability that the person can successfully recall a particular information at a given moment. It depends on the time elapsed since the last review and the memory stability (S).
+
+Stability (S): The time, in days, required for R to decrease from 100% to 90%. For example, S = 365 means that an entire year will pass before the probability of recalling a particular card drops to 90%.
+
+Difficulty (D): The inherent complexity of a particular information. It represents how difficult it is to increase memory stability after a review.
+
+In FSRS, these three values are collectively called the "memory state". The value of R changes daily, while D and S change only after a card has been reviewed. FSRS takes into account only the first review of the day. Each card has its own DSR values, in other words, each card has its own memory state.
+
+
+** 研究
+#+begin_src go
+type Card struct {
+	Due           time.Time `json:"Due"`
+	Stability     float64   `json:"Stability"`
+	Difficulty    float64   `json:"Difficulty"`
+	ElapsedDays   uint64    `json:"ElapsedDays"`
+	ScheduledDays uint64    `json:"ScheduledDays"`
+	Reps          uint64    `json:"Reps"`
+	Lapses        uint64    `json:"Lapses"`
+	State         State     `json:"State"`
+	LastReview    time.Time `json:"LastReview"`
+}
+
+#+end_src
