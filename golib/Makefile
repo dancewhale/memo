@@ -7,4 +7,8 @@ memo.so: cmd/main.go
 clean:
 	rm -f  memo.so
 
-all: memo.so
+run:
+	$(GO) build -o memo cmd/main.go
+	./memo -c ./config.yaml
+
+so: memo.so
