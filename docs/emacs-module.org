@@ -1,0 +1,115 @@
+* emacs module learn
+** emacs module作用
+定义了emacs 的接口，这个接口是emacs 的类库和相关函数，以下是简单描述
+简单就是emacs 定义了一系列的接口，外部模块定义一个统一的入口函数。
+然后emacs 调用该统一函数来初始化模块，其实本质就是init调用emacs-module 中
+的函数，因为对接必然是用的这些函数。
+#+begin_src c
+#include <emacs-module.h>
+
+/* Declare mandatory GPL symbol.  */
+int plugin_is_GPL_compatible;
+
+/* New emacs lisp function. All function exposed to Emacs must have this prototype. */
+static emacs_value
+Fmymod_test (emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data)
+{
+  return env->make_integer (env, 42);
+}
+
+/* Bind NAME to FUN.  */
+static void
+bind_function (emacs_env *env, const char *name, emacs_value Sfun)
+{
+  /* Set the function cell of the symbol named NAME to SFUN using
+     the 'fset' function.  */
+
+  /* Convert the strings to symbols by interning them */
+  emacs_value Qfset = env->intern (env, "fset");
+  emacs_value Qsym = env->intern (env, name);
+
+  /* Prepare the arguments array */
+  emacs_value args[] = { Qsym, Sfun };
+
+  /* Make the call (2 == nb of arguments) */
+  env->funcall (env, Qfset, 2, args);
+}
+
+/* Provide FEATURE to Emacs.  */
+static void
+provide (emacs_env *env, const char *feature)
+{
+  /* call 'provide' with FEATURE converted to a symbol */
+
+  emacs_value Qfeat = env->intern (env, feature);
+  emacs_value Qprovide = env->intern (env, "provide");
+  emacs_value args[] = { Qfeat };
+
+  env->funcall (env, Qprovide, 1, args);
+}
+
+//基础入口, 所有初始化的入口
+int
+emacs_module_init (struct emacs_runtime *ert)
+{
+  emacs_env *env = ert->get_environment (ert);
+
+  /* create a lambda (returns an emacs_value) */
+  emacs_value fun = env->make_function (env,
+              0,            /* min. number of arguments */
+              0,            /* max. number of arguments */
+              Fmymod_test,  /* actual function pointer */
+              "doc",        /* docstring */
+              NULL          /* user pointer of your choice (data param in Fmymod_test) */
+  );
+
+  bind_function (env, "mymod-test", fun);
+  provide (env, "mymod");
+
+  /* loaded successfully */
+  return 0;
+}
+
+#+end_src
+编译
+#+begin_src shell
+gcc -ggdb3 -Wall -I/opt/homebrew/include -fPIC -c mymod.c
+gcc -shared  -o mymod.so mymod.o
+rm mymod.o
+#+end_src
+
+
+** 函数作用
+`emacs-module.h`文件中定义的常见函数的一般介绍。请注意，这只是一些常见函数的概述，具体的函数作用和用法可能会有所不同。
+
+1. `emacs_module_init`：初始化模块的入口函数，用于设置模块的环境和资源。
+
+2. `emacs_module_cleanup`：清理模块的函数，用于释放模块使用的资源。
+
+3. `emacs_module_set_up`：设置模块的函数，用于注册模块的功能和回调函数。
+
+4. `emacs_make_string`：创建一个Lisp字符串对象。
+
+5. `emacs_make_integer`：创建一个Lisp整数对象。
+
+6. `emacs_make_float`：创建一个Lisp浮点数对象。
+
+7. `emacs_make_bool`：创建一个Lisp布尔对象。
+
+8. `emacs_make_vector`：创建一个Lisp向量对象。
+
+9. `emacs_make_function`：创建一个Lisp函数对象。
+
+10. `emacs_funcall`：调用一个Lisp函数。
+
+11. `emacs_call_function`：调用一个Lisp函数，并返回其结果。
+
+12. `emacs_get_string_contents`：获取一个Lisp字符串对象的内容。
+
+13. `emacs_get_integer_contents`：获取一个Lisp整数对象的值。
+
+14. `emacs_get_float_contents`：获取一个Lisp浮点数对象的值。
+
+15. `emacs_get_bool_contents`：获取一个Lisp布尔对象的值。
+
+这些只是一些常见的函数，`emacs-module.h`文件中还定义了其他函数和数据结构，用于与Emacs Lisp交互和扩展Emacs的功能。如果您需要更详细的信息，请查阅Emacs官方文档或具体的函数定义。
