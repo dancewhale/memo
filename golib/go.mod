@@ -6,6 +6,7 @@ toolchain go1.22.2
 
 require (
 	github.com/open-spaced-repetition/go-fsrs v1.2.1
+	github.com/sigma/go-emacs v0.0.1
 	github.com/spewerspew/spew v0.0.0-20230513223542-89b69fbbe2bd
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
