@@ -1,8 +1,8 @@
 package main
 
 import (
-	"memo/cmd/options"
 	"memo/pkg/emodule"
+	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 
@@ -18,6 +18,7 @@ func init() {
 
 func initModule(env emacs.Environment) {
 	em := emodule.EModule{}
+	em.Init()
 
 	env.RegisterFunction("memo-create-card", em.Create_Card, 2, "Create card, first args is card front string, second args is card back string", nil)
 

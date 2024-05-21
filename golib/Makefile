@@ -11,4 +11,4 @@ run:
 	$(GO) build -o memo cmd/main.go
 	./memo -c ./config.yaml
 
-so: memo.so
+so: clean memo.so
