@@ -1,0 +1,28 @@
+#+title: Read
+
+* fsrs useage
+** Create a new card
+card := NewCard()
+** Do a repeat
+p := DefaultParam()
+now := time.Now()
+schedulingCards := p.Repeat(card, now)
+** Show intervals for each rating
+againInterval := schedulingCards[Again].Card.ScheduledDays
+hardInterval := schedulingCards[Hard].Card.ScheduledDays
+goodInterval := schedulingCards[Good].Card.ScheduledDays
+easyInterval := schedulingCards[Easy].Card.ScheduledDays
+** Update card after rating Good
+card = schedulingCards[Good].Card
+
+* 数据结构设计
+
+Card 用来保存卡片难度,计算下一次复习时间,保存的是记忆的元数据.
+ReviewLog 用来保存历史复习记录, Card 和ReviewLog 进行一对多的映射.
+
+那么还有另外的设计,就是需要复习的内容该怎么规划?
+内容和Card 应该是一对一映射的,但是内容可能有多种类型,这个怎么设计数据结构.
+内容之间也是有上下结构的.
+
+我想到的是使用emacs 的treemacs 包构建和supermemo 近似的使用界面.
+然后跳转来进行编辑.
