@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
-	"memo/pkg/storage"
 	"memo/cmd/options"
 	"memo/pkg/logger"
+	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 
 	"github.com/spf13/pflag"
+	"gorm.io/gorm"
 
 	emacs "github.com/sigma/go-emacs"
 	_ "github.com/sigma/go-emacs/gpl-compatible"
@@ -17,7 +18,7 @@ import (
 
 
 type EModule struct {
-	DB  *storage.DBEngine
+	DB  *gorm.DB
 }
 
 func (e *EModule) Init() {
@@ -29,7 +30,7 @@ func (e *EModule) Init() {
 	logger.Init()
 
 	// use for test function
-	e.DB = storage.NewDBEngine()
+	e.DB = storage.InitDBEngine()
 }
 
 func (e *EModule)Create_Card(ctx emacs.FunctionCallContext) (emacs.Value, error) {
@@ -48,7 +49,7 @@ func (e *EModule)Create_Card(ctx emacs.FunctionCallContext) (emacs.Value, error)
 		Back: back,
 	}
 
-	DBEngine := storage.NewDBEngine().DB
+	DBEngine := storage.InitDBEngine()
 	n := dal.Use(DBEngine).Note
         gctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 

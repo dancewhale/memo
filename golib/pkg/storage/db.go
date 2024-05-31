@@ -14,10 +14,10 @@ type DBEngine struct {
 }
 
 func NewDBEngine() *DBEngine {
-	return &DBEngine{initDBEngine()}
+	return &DBEngine{InitDBEngine()}
 }
 
-func initDBEngine() *gorm.DB {
+func InitDBEngine() *gorm.DB {
 	var err error
 	DBConfig := options.Config.DB
 	spew.Dump(DBConfig)

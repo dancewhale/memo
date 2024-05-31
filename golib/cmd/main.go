@@ -37,7 +37,7 @@ func main() {
 	logger.Init()
 
 	// use for test function
-	DBEngine := storage.NewDBEngine().DB
+	DBEngine := storage.InitDBEngine()
 	note := storage.Note{Front: "test", Back: "test"}
 	n := dal.Use(DBEngine).Note
         ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
