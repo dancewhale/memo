@@ -1,10 +1,13 @@
 package main
 
 import (
+	"time"
+	"context"
 	"memo/pkg/emodule"
 	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
+	"memo/pkg/storage/dal"
 
 	"github.com/spf13/pflag"
 
@@ -34,7 +37,10 @@ func main() {
 	logger.Init()
 
 	// use for test function
-	DBEngine := storage.NewDBEngine()
-	card := storage.Card{}
-	card.Create(DBEngine.DB)
+	DBEngine := storage.NewDBEngine().DB
+	note := storage.Note{Front: "test", Back: "test"}
+	n := dal.Use(DBEngine).Note
+        ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+
+	n.WithContext(ctx).Create(&note)
 }

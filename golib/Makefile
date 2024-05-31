@@ -9,6 +9,7 @@ clean:
 
 run:
 	$(GO) build -o memo cmd/main.go
+	chmod +x memo
 	./memo -c ./config.yaml
 
 so: clean memo.so

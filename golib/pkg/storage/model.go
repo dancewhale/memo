@@ -16,7 +16,6 @@ type Note struct {
 
 type Card struct {
 	gorm.Model
-	fsrs.Card
 	Due           time.Time     `json:"Due"`
 	Stability     float64       `json:"Stability"`
 	Difficulty    float64       `json:"Difficulty"`
@@ -40,14 +39,3 @@ type ReviewLog struct {
 	CardID        uint      `json:"CardID"`
 }
 
-func (c *Card) Create(db *gorm.DB) error {
-	return db.Debug().Create(c).Error
-}
-
-func (c *Card) UpdateName(db *gorm.DB) error {
-	return db.Save(&c).Error
-}
-
-func (n *Note) Create(db *gorm.DB) error {
-	return db.Debug().Create(n).Error
-}

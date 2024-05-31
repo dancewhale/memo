@@ -1,9 +1,13 @@
 package emodule
 
 import (
+	"context"
+	"time"
+
 	"memo/pkg/storage"
 	"memo/cmd/options"
 	"memo/pkg/logger"
+	"memo/pkg/storage/dal"
 
 	"github.com/spf13/pflag"
 
@@ -39,11 +43,16 @@ func (e *EModule)Create_Card(ctx emacs.FunctionCallContext) (emacs.Value, error)
 		return nil, err
 	}
 
-	Note := storage.Note{
+	note := storage.Note{
 		Front: font,
 		Back: back,
 	}
-	err = Note.Create(e.DB.DB)
+
+	DBEngine := storage.NewDBEngine().DB
+	n := dal.Use(DBEngine).Note
+        gctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+
+	err = n.WithContext(gctx).Create(&note)
 
 	if err != nil {
 		return env.Bool(false), err
@@ -51,4 +60,3 @@ func (e *EModule)Create_Card(ctx emacs.FunctionCallContext) (emacs.Value, error)
 		return env.Bool(true), nil
 	}
 }
-
