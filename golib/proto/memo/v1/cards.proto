@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package memo.v1;
 
-option go_package = "pb/memo/v1/card;card";
+option go_package = "memo/proto/grpc/memo/v1;card";
 
 service NoteService {
   rpc GetNote(GetNoteRequest) returns (GetNoteResponse);

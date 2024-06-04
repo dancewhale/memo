@@ -45,8 +45,8 @@ func (e *EModule)Create_Card(ctx emacs.FunctionCallContext) (emacs.Value, error)
 	}
 
 	note := storage.Note{
-		Front: font,
-		Back: back,
+		Content: font,
+		Type: back,
 	}
 
 	DBEngine := storage.InitDBEngine()
