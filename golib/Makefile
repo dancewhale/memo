@@ -13,3 +13,9 @@ run:
 	./memo -c ./config.yaml
 
 so: clean memo.so
+
+build:
+	make -C gen run
+	make -C proto check
+	make -C proto gen
+
