@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package memo.v1;
+
+option go_package = "pb/memo/v1/card;card";
+
+service NoteService {
+  rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
+}
+
+message CreateNoteRequest {
+  int64 id = 1;
+}
+
+message CreateNoteResponse {
+  int64 id = 1;
+}
+
+message GetNoteRequest {
+  int64  id = 1;
+  string content = 2;
+  string type = 3;
+}
+
+message GetNoteResponse {
+  int64  id = 1;
+  string content = 2;
+  string type = 3;
+}
+
+message FsrsMemoryState {
+  float stability = 1;
+  float difficulty = 2;
+}

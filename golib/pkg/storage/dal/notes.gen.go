@@ -31,9 +31,8 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 	_note.CreatedAt = field.NewTime(tableName, "created_at")
 	_note.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_note.DeletedAt = field.NewField(tableName, "deleted_at")
-	_note.Front = field.NewString(tableName, "front")
-	_note.Back = field.NewString(tableName, "back")
-	_note.ORGID = field.NewString(tableName, "org_id")
+	_note.Content = field.NewString(tableName, "content")
+	_note.Type = field.NewString(tableName, "type")
 	_note.Card = noteHasOneCard{
 		db: db.Session(&gorm.Session{}),
 
@@ -58,9 +57,8 @@ type note struct {
 	CreatedAt field.Time
 	UpdatedAt field.Time
 	DeletedAt field.Field
-	Front     field.String
-	Back      field.String
-	ORGID     field.String
+	Content   field.String
+	Type      field.String
 	Card      noteHasOneCard
 
 	fieldMap map[string]field.Expr
@@ -82,9 +80,8 @@ func (n *note) updateTableName(table string) *note {
 	n.CreatedAt = field.NewTime(table, "created_at")
 	n.UpdatedAt = field.NewTime(table, "updated_at")
 	n.DeletedAt = field.NewField(table, "deleted_at")
-	n.Front = field.NewString(table, "front")
-	n.Back = field.NewString(table, "back")
-	n.ORGID = field.NewString(table, "org_id")
+	n.Content = field.NewString(table, "content")
+	n.Type = field.NewString(table, "type")
 
 	n.fillFieldMap()
 
@@ -101,14 +98,13 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (n *note) fillFieldMap() {
-	n.fieldMap = make(map[string]field.Expr, 8)
+	n.fieldMap = make(map[string]field.Expr, 7)
 	n.fieldMap["id"] = n.ID
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
 	n.fieldMap["deleted_at"] = n.DeletedAt
-	n.fieldMap["front"] = n.Front
-	n.fieldMap["back"] = n.Back
-	n.fieldMap["org_id"] = n.ORGID
+	n.fieldMap["content"] = n.Content
+	n.fieldMap["type"] = n.Type
 
 }
 

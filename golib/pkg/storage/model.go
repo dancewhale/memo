@@ -8,10 +8,9 @@ import (
 
 type Note struct {
 	gorm.Model
-	Front string      `json:"Front"`
-	Back  string      `json:"Back"`
-	Card  Card        `json:"Card"`
-	ORGID string      `json:"ORGID"`
+	Content string      `json:"Content"`
+	Type    string      `json:"Type"`
+	Card    Card        `json:"Card"`
 }
 
 type Card struct {
