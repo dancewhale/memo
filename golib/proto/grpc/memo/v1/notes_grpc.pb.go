@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.4.0
 // - protoc             (unknown)
-// source: memo/v1/cards.proto
+// source: memo/v1/notes.proto
 
-package card
+package note
 
 import (
 	context "context"
@@ -144,5 +144,5 @@ var NoteService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "memo/v1/cards.proto",
+	Metadata: "memo/v1/notes.proto",
 }

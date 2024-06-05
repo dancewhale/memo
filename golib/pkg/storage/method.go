@@ -2,6 +2,11 @@ package storage
 
 import "gorm.io/gen"
 
+type NoteMethod interface {
+	//where("orgid=@orgid")
+	FindByOrgID(orgid string) (gen.T, error)
+}
+
 type Method interface {
 	// Where("name=@name and age=@age")
 	FindByNameAndAge(name string, age int) (gen.T, error)

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package memo.v1;
 
-option go_package = "memo/proto/grpc/memo/v1;card";
+option go_package = "memo/proto/grpc/memo/v1;note";
 
 service NoteService {
   rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
@@ -10,23 +10,23 @@ service NoteService {
 }
 
 message CreateNoteRequest {
-  int64 id = 1;
+  string content = 1;
+  string type = 2;
+  string orgid = 3;
 }
 
 message CreateNoteResponse {
-  int64 id = 1;
+  string orgid = 1;
 }
 
 message GetNoteRequest {
-  int64  id = 1;
-  string content = 2;
-  string type = 3;
+  string  orgid = 1;
 }
 
 message GetNoteResponse {
-  int64  id = 1;
-  string content = 2;
-  string type = 3;
+  string content = 1;
+  string type = 2;
+  string orgid = 3;
 }
 
 message FsrsMemoryState {

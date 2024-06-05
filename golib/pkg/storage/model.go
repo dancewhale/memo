@@ -10,6 +10,7 @@ type Note struct {
 	gorm.Model
 	Content string      `json:"Content"`
 	Type    string      `json:"Type"`
+	Orgid   string      `gorm:"unique"`
 	Card    Card        `json:"Card"`
 }
 

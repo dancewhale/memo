@@ -14,8 +14,10 @@ run:
 
 so: clean memo.so
 
+check:
+	make -C proto check
+
 build:
 	make -C gen run
-	make -C proto check
 	make -C proto gen
 

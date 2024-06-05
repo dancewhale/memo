@@ -6,6 +6,7 @@ package dal
 
 import (
 	"context"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -33,6 +34,7 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 	_note.DeletedAt = field.NewField(tableName, "deleted_at")
 	_note.Content = field.NewString(tableName, "content")
 	_note.Type = field.NewString(tableName, "type")
+	_note.Orgid = field.NewString(tableName, "orgid")
 	_note.Card = noteHasOneCard{
 		db: db.Session(&gorm.Session{}),
 
@@ -59,6 +61,7 @@ type note struct {
 	DeletedAt field.Field
 	Content   field.String
 	Type      field.String
+	Orgid     field.String
 	Card      noteHasOneCard
 
 	fieldMap map[string]field.Expr
@@ -82,6 +85,7 @@ func (n *note) updateTableName(table string) *note {
 	n.DeletedAt = field.NewField(table, "deleted_at")
 	n.Content = field.NewString(table, "content")
 	n.Type = field.NewString(table, "type")
+	n.Orgid = field.NewString(table, "orgid")
 
 	n.fillFieldMap()
 
@@ -98,13 +102,14 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (n *note) fillFieldMap() {
-	n.fieldMap = make(map[string]field.Expr, 7)
+	n.fieldMap = make(map[string]field.Expr, 8)
 	n.fieldMap["id"] = n.ID
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
 	n.fieldMap["deleted_at"] = n.DeletedAt
 	n.fieldMap["content"] = n.Content
 	n.fieldMap["type"] = n.Type
+	n.fieldMap["orgid"] = n.Orgid
 
 }
 
@@ -194,6 +199,21 @@ func (a noteHasOneCardTx) Count() int64 {
 }
 
 type noteDo struct{ gen.DO }
+
+// where("orgid=@orgid")
+func (n noteDo) FindByOrgID(orgid string) (result storage.Note, err error) {
+	var params []interface{}
+
+	var generateSQL strings.Builder
+	params = append(params, orgid)
+	generateSQL.WriteString("orgid=? ")
+
+	var executeSQL *gorm.DB
+	executeSQL = n.UnderlyingDB().Where(generateSQL.String(), params...).Take(&result) // ignore_security_alert
+	err = executeSQL.Error
+
+	return
+}
 
 func (n noteDo) Debug() *noteDo {
 	return n.withDO(n.DO.Debug())
