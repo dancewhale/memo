@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	"slices"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

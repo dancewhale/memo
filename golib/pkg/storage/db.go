@@ -23,9 +23,9 @@ func InitDBEngine() *gorm.DB {
 	var err error
 	DBConfig := options.Config.DB
 	if DBConfig.DBPath == "" {
-		DBConfig.DBPath = "./memo.db"
+		DBConfig.DBPath = "./memo.sqlite"
 	} else {
-		DBConfig.DBPath = DBConfig.DBPath + "/memo.db"
+		DBConfig.DBPath = DBConfig.DBPath + "/memo.sqlite"
 	}
 	spew.Dump(DBConfig)
 	Engine, err := gorm.Open(sqlite.Open(DBConfig.DBPath), &gorm.Config{
