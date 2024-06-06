@@ -1,2 +1,4 @@
 golib/*.so
 golib/memo
+
+*.db

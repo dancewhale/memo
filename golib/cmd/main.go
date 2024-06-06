@@ -1,14 +1,16 @@
 package main
 
 import (
+	"os"
 	"net"
 	"log"
 	"memo/pkg/emodule"
-	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/api"
+	"memo/cmd/options"
+	//"memo/pkg/storage"
 
-	"github.com/spf13/pflag"
+	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 
 	emacs "github.com/sigma/go-emacs"
@@ -30,15 +32,60 @@ func initModule(env emacs.Environment) {
 
 
 func main() {
-	option := options.NewOptions()
-	pflag.StringVarP(&option.ConfigPath, "config", "c", "config/config.yaml", "config path")
-	pflag.Parse()
+	app := &cli.App{
+		Commands: []*cli.Command{
+			{
+				Name:    "daemon",
+				Aliases: []string{"d"},
+				Usage:   "start the daemon",
+				Action:  appstart,
+			},
+		},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "port",
+				Value:   "50051",
+				Usage:   "Port for the grpc server",
+				EnvVars: []string{"MEMO_PORT"},
+				Destination: &options.Config.Server.Port,
+			},
+			&cli.StringFlag{
+				Name:    "host",
+				Value:   "0.0.0.0",
+				Usage:   "Host for the grpc server",
+				EnvVars: []string{"MEMO_HOST"},
+				Destination: &options.Config.Server.Host,
+			},
+			&cli.StringFlag{
+				Name:    "dbpath",
+				Value:   "",
+				Usage:   "Port for the grpc server",
+				EnvVars: []string{"MEMO_DB_PATH"},
+				Destination: &options.Config.DB.DBPath,
+			},
+			&cli.Int64Flag{
+				Name:    "loglevel",
+				Value:   0,
+				Usage:   "Log level for server",
+				EnvVars: []string{"MEMO_LOG_LEVEL"},
+				Destination: &options.Config.Log.Level,
+			},
+		},
+		Action: nil,
+	}
 
-	options.Init(option.ConfigPath)
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+
+func appstart(cCtx *cli.Context) error{
 	logger.Init()
 
+	options.DBinit()
 	// grpc server code.
-	lis, err := net.Listen("tcp", ":50051")
+	lis, err := net.Listen("tcp", options.Config.Server.Host + ":" + options.Config.Server.Port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -51,4 +98,5 @@ func main() {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+	return nil
 }

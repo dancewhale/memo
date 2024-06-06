@@ -2,6 +2,7 @@ package storage
 
 import (
 	"memo/cmd/options"
+
 	"github.com/spewerspew/spew"
 
 	"gorm.io/driver/sqlite"
@@ -17,9 +18,15 @@ func NewDBEngine() *DBEngine {
 	return &DBEngine{InitDBEngine()}
 }
 
+
 func InitDBEngine() *gorm.DB {
 	var err error
 	DBConfig := options.Config.DB
+	if DBConfig.DBPath == "" {
+		DBConfig.DBPath = "./memo.db"
+	} else {
+		DBConfig.DBPath = DBConfig.DBPath + "/memo.db"
+	}
 	spew.Dump(DBConfig)
 	Engine, err := gorm.Open(sqlite.Open(DBConfig.DBPath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),

@@ -10,7 +10,7 @@ clean:
 run:
 	$(GO) build -o memo cmd/main.go
 	chmod +x memo
-	./memo -c ./config.yaml
+	./memo daemon
 
 so: clean memo.so
 

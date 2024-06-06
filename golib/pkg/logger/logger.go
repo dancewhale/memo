@@ -36,7 +36,8 @@ func NewLogger() {
 func getStdCore() zapcore.Core {
 	stdEncoder := getEncoder()
 	consoleWriter := zapcore.Lock(os.Stdout)
-	return zapcore.NewCore(stdEncoder, consoleWriter, options.Config.Log.Level)
+	LogLevel := zapcore.Level(options.Config.Log.Level)
+	return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
 }
 
 func getEncoder() zapcore.Encoder {

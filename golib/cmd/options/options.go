@@ -1,32 +1,19 @@
 package options
 
 import (
-	"github.com/spf13/viper"
-	"go.uber.org/zap/zapcore"
-	"path"
 	"time"
 )
 
 
-type Options struct {
-	ConfigPath string
-}
-
-func NewOptions() *Options {
-	return &Options{}
-}
-
-
-var sections = make(map[string]any)
 var Config config
 
 type config struct {
 	DB         DB
 	Log        Log
+	Server     Server
 }
 
 type DB struct {
-	DBName          string
 	DBPath          string
 	ParseTime       bool
 	MaxIdleConn     int
@@ -35,30 +22,19 @@ type DB struct {
 }
 
 type Log struct {
-	Level zapcore.Level
+	Level int64
 }
 
-func Init(configPath string) {
-	vp := viper.New()
-
-	dir, file := path.Split(configPath)
-	vp.SetConfigName(file)
-	vp.AddConfigPath(dir)
-	vp.SetConfigType("yaml")
-
-	err := vp.ReadInConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	err = vp.Unmarshal(&Config)
-	if err != nil {
-		panic(err)
-	}
-	InitSections()
+type Server struct {
+	Host string
+	Port string
 }
 
-func InitSections() {
-	sections["DB"] = &Config.DB
-	sections["Log"] = &Config.Log
+func DBinit() {
+	Config.DB = DB{
+		ParseTime:       true,
+		MaxIdleConn:     10,
+		MaxOpenConn:     100,
+		ConnMaxLifetime: 1 * time.Hour,
+	}
 }
