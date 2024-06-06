@@ -66,7 +66,7 @@ func main() {
 			&cli.Int64Flag{
 				Name:    "loglevel",
 				Value:   0,
-				Usage:   "Log level for server",
+				Usage:   "Log level for server, -1 is debug, 0 is info, 1 is warn, 2 is error, 3 is dpanic, 4 is panic, 5 is fatal",
 				EnvVars: []string{"MEMO_LOG_LEVEL"},
 				Destination: &options.Config.Log.Level,
 			},

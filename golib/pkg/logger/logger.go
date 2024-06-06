@@ -2,11 +2,13 @@ package logger
 
 import (
 	"fmt"
+	"os"
+	"sync"
+	"slices"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"memo/cmd/options"
-	"os"
-	"sync"
 )
 
 var once sync.Once
@@ -36,7 +38,14 @@ func NewLogger() {
 func getStdCore() zapcore.Core {
 	stdEncoder := getEncoder()
 	consoleWriter := zapcore.Lock(os.Stdout)
-	LogLevel := zapcore.Level(options.Config.Log.Level)
+	logList := [7]int64{-1, 0, 1, 2, 3, 4, 5}
+	for _, logLevel := range logList {
+		if logLevel == options.Config.Log.Level {
+			LogLevel := zapcore.Level(options.Config.Log.Level)
+			return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
+		}
+	}
+	LogLevel := zapcore.InfoLevel
 	return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
 }
 
