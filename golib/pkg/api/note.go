@@ -4,14 +4,15 @@ import (
 	"context"
 
 	pb "memo/proto/grpc/memo/v1"
-	"memo/pkg/storage"
-	"memo/pkg/storage/dal"
+	"memo/pkg/fsrs"
+	//gfsrs "memo/pkg/fsrs"
 
 	//import dump
-	"github.com/spewerspew/spew"
+	//"github.com/spewerspew/spew"
+	//import fsrs
+	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 )
 
-var DB = storage.InitDBEngine()
 
 type noteServer struct {
 	pb.UnimplementedNoteServiceServer
@@ -19,34 +20,16 @@ type noteServer struct {
 
 func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.GetNoteResponse, error) {
 	// use for test function
-	n := dal.Use(DB).Note
-
-	noteData, err := n.WithContext(ctx).FindByOrgID(in.GetOrgid())
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.GetNoteResponse{Orgid: noteData.Orgid }, nil
+	return &pb.GetNoteResponse{Orgid: "jjj" }, nil
 }
 	
 func (s *noteServer) CreateNote(ctx context.Context, in *pb.CreateNoteRequest) (*pb.CreateNoteResponse, error) {
 	// use for test function
-	n := dal.Use(DB).Note
 
-	noteData := storage.Note{
-		Orgid: in.GetOrgid(),
-		Type: in.GetType(),
-		Content: in.GetContent(),
-	}
+	fnote := fsrs.FSRSNote{C: &gfsrs.Card{}, N: &fsrs.Note{Content: in.GetContent(), Type: in.GetType(), OrgID: in.GetOrgid()}}
 
-	spew.Dump(&noteData)
+	fnote.AddCard()
 
-	err := n.WithContext(ctx).Create(&noteData)
-	if err != nil {
-		return nil, err
-	}
-
-
-	return &pb.CreateNoteResponse{Orgid: noteData.Orgid}, nil
+	return &pb.CreateNoteResponse{Orgid: "test for create card"}, nil
 }
 	

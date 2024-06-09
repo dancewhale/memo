@@ -8,10 +8,11 @@ import (
 
 type Note struct {
 	gorm.Model
-	Content string      `json:"Content"`
-	Type    string      `json:"Type"`
-	Orgid   string      `gorm:"unique"`
-	Card    Card        `json:"Card"`
+	Content       string      `json:"Content",copier:"Content`
+	Type          string      `json:"Type",copier:"Type`
+	Orgid         string      `gorm:"unique",copier:"Orgid`
+	Hash          string      `json:"Hash",copier:"Hash"`
+	Card          Card        `gorm:"foreignKey:NoteID",copier:"-"`
 }
 
 type Card struct {

@@ -2,3 +2,4 @@ golib/*.so
 golib/memo
 
 *.db
+*.sqlite
