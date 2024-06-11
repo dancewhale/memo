@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion8
 const (
 	NoteService_GetNote_FullMethodName    = "/memo.v1.NoteService/GetNote"
 	NoteService_CreateNote_FullMethodName = "/memo.v1.NoteService/CreateNote"
+	NoteService_RemoveNote_FullMethodName = "/memo.v1.NoteService/RemoveNote"
 )
 
 // NoteServiceClient is the client API for NoteService service.
@@ -29,6 +30,7 @@ const (
 type NoteServiceClient interface {
 	GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*GetNoteResponse, error)
 	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*CreateNoteResponse, error)
+	RemoveNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error)
 }
 
 type noteServiceClient struct {
@@ -59,12 +61,23 @@ func (c *noteServiceClient) CreateNote(ctx context.Context, in *CreateNoteReques
 	return out, nil
 }
 
+func (c *noteServiceClient) RemoveNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteNoteResponse)
+	err := c.cc.Invoke(ctx, NoteService_RemoveNote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NoteServiceServer is the server API for NoteService service.
 // All implementations must embed UnimplementedNoteServiceServer
 // for forward compatibility
 type NoteServiceServer interface {
 	GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error)
 	CreateNote(context.Context, *CreateNoteRequest) (*CreateNoteResponse, error)
+	RemoveNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error)
 	mustEmbedUnimplementedNoteServiceServer()
 }
 
@@ -77,6 +90,9 @@ func (UnimplementedNoteServiceServer) GetNote(context.Context, *GetNoteRequest) 
 }
 func (UnimplementedNoteServiceServer) CreateNote(context.Context, *CreateNoteRequest) (*CreateNoteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
+}
+func (UnimplementedNoteServiceServer) RemoveNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveNote not implemented")
 }
 func (UnimplementedNoteServiceServer) mustEmbedUnimplementedNoteServiceServer() {}
 
@@ -127,6 +143,24 @@ func _NoteService_CreateNote_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NoteService_RemoveNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteNoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NoteServiceServer).RemoveNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NoteService_RemoveNote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NoteServiceServer).RemoveNote(ctx, req.(*DeleteNoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NoteService_ServiceDesc is the grpc.ServiceDesc for NoteService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -141,6 +175,10 @@ var NoteService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateNote",
 			Handler:    _NoteService_CreateNote_Handler,
+		},
+		{
+			MethodName: "RemoveNote",
+			Handler:    _NoteService_RemoveNote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

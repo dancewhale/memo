@@ -7,6 +7,7 @@ option go_package = "memo/proto/grpc/memo/v1;note";
 service NoteService {
   rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
   rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
+  rpc RemoveNote(DeleteNoteRequest) returns (DeleteNoteResponse);
 }
 
 message CreateNoteRequest {
@@ -29,7 +30,10 @@ message GetNoteResponse {
   string orgid = 3;
 }
 
-message FsrsMemoryState {
-  float stability = 1;
-  float difficulty = 2;
+message DeleteNoteRequest {
+  string orgid = 1;
+}
+
+message DeleteNoteResponse {
+  string errMsg = 1;
 }

@@ -17,9 +17,9 @@ type noteServer struct {
 
 func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.GetNoteResponse, error) {
 	// use for test function
-	fnote := &fsrs.FSRSNote{}
+	fapi := &fsrs.FSRSApi{}
 
-	fnote = fnote.GetNoteByOrgID(in.GetOrgid())
+	fnote := fapi.GetNoteByOrgID(in.GetOrgid())
 	return &pb.GetNoteResponse{Orgid: fnote.N.OrgID, Type: fnote.N.Type, Content: fnote.N.Content}, nil
 }
 	
@@ -27,10 +27,19 @@ func (s *noteServer) CreateNote(ctx context.Context, in *pb.CreateNoteRequest) (
 	// use for test function
 	note := fsrs.Note{Content: in.GetContent(), Type: in.GetType(), OrgID: in.GetOrgid()}
 
-	fnote := &fsrs.FSRSNote{}
+	fapi := &fsrs.FSRSApi{}
 
-	fnote = fnote.CreateNote(&note)
+	fnote := fapi.CreateNote(&note)
 
 	return &pb.CreateNoteResponse{Orgid: fnote.N.OrgID }, nil
 }
 	
+
+func (s *noteServer) RemoveNote(ctx context.Context, in *pb.DeleteNoteRequest) (*pb.DeleteNoteResponse, error) {
+	// use for test function
+	fapi := &fsrs.FSRSApi{}
+
+	err := fapi.RemoveNote(in.GetOrgid())
+
+	return &pb.DeleteNoteResponse{ErrMsg: err.Error()}, err
+}

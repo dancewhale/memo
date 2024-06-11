@@ -18,13 +18,13 @@ import (
 	"gorm.io/gen/field"
 )
 
-var DB = storage.InitDBEngine()
 
 type FSRSStore struct {
     	db      *gorm.DB
 }
 
 func NewFSRSStore() *FSRSStore {
+	var DB = storage.InitDBEngine()
 	return &FSRSStore{db: DB}
 }
 
@@ -58,14 +58,14 @@ func (store *FSRSStore) CreateNote(fnote *FSRSNote) *FSRSNote {
 }
 
     // GetNote 获取一张卡片。
-func (store *FSRSStore) GetNote(orgid string) *FSRSNote {
+func (store *FSRSStore) GetNoteByOrgID(orgid string) *FSRSNote {
 	note := &storage.Note{}
 	store.db.Preload("Card").Where("org_id = ?", orgid).First(note)
 	return dbCardToFsrsCard(note)
 }
 
-    // SetNote 设置一张卡片。
-func (store *FSRSStore) SetNote(fnote *FSRSNote) *FSRSNote {
+    // UpdateNote 设置一张卡片。
+func (store *FSRSStore) UpdateNote(fnote *FSRSNote) *FSRSNote {
 	note := fsrsCardToDbCard(fnote)
 	n := dal.Use(store.db).Note
 
