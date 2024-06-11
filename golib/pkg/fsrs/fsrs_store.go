@@ -13,7 +13,9 @@ import (
 	
 	//import copier
 	"github.com/jinzhu/copier"	
+	//"github.com/spewerspew/spew"
 	"gorm.io/gorm"
+	"gorm.io/gen/field"
 )
 
 var DB = storage.InitDBEngine()
@@ -26,41 +28,67 @@ func NewFSRSStore() *FSRSStore {
 	return &FSRSStore{db: DB}
 }
 
-    // AddCard 添加一张卡片。
-func (store *FSRSStore) AddCard(fcard FSRSNote) FSRSNote {
+func fsrsCardToDbCard(fnote *FSRSNote) *storage.Note {
 	note := storage.Note{}
-	card := storage.Card{}
-	note.Card = card
-	copier.Copy(&note, &fcard.N)
-	copier.Copy(&card, &fcard.C)
-	c := dal.Use(store.db).Card
-	c.WithContext(context.Background()).Create(&card)
-	return FSRSNote{}
+	copier.Copy(&note, fnote.N)
+	copier.Copy(note.Card, fnote.C)
+
+	return &note
 }
 
-    // GetCard 获取一张卡片。
-func (store *FSRSStore) GetCard(card FSRSNote) error {
+func dbCardToFsrsCard(note *storage.Note) *FSRSNote {
+	fnote := FSRSNote{}
+	copier.Copy(fnote.N, note)
+	copier.Copy(fnote.C, note.Card)
 
-	return nil
+	return &fnote
 }
 
-    // SetCard 设置一张卡片。
-func (store *FSRSStore) SetCard(card FSRSNote) error {
-	return nil
+
+    // CreateNote 添加一张卡片。
+func (store *FSRSStore) CreateNote(fnote *FSRSNote) *FSRSNote {
+	note := fsrsCardToDbCard(fnote)
+	n := dal.Use(store.db).Note
+
+	err := n.WithContext(context.Background()).Create(note)
+	if err != nil {
+		return  nil
+	}
+	return fnote
 }
 
-    // RemoveCard 移除一张卡片。
-func (store *FSRSStore) RemoveCard(id string) error {
-	return nil
+    // GetNote 获取一张卡片。
+func (store *FSRSStore) GetNote(orgid string) *FSRSNote {
+	note := &storage.Note{}
+	store.db.Preload("Card").Where("org_id = ?", orgid).First(note)
+	return dbCardToFsrsCard(note)
 }
 
-    // 获取指定OrgID的所有卡片。
-func (store *FSRSStore) GetCardsByOrgID(blockID string) (ret []FSRSNote) {
-	return nil
+    // SetNote 设置一张卡片。
+func (store *FSRSStore) SetNote(fnote *FSRSNote) *FSRSNote {
+	note := fsrsCardToDbCard(fnote)
+	n := dal.Use(store.db).Note
+
+	_, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.N.OrgID)).Updates(note)
+	if err != nil {
+		return nil
+	}
+	return fnote
+}
+
+// RemoveNote 移除一张卡片。
+func (store *FSRSStore) RemoveNote(fnote *FSRSNote) error {
+	n := dal.Use(store.db).Note
+	note, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.N.OrgID)).First()
+	if err != nil {
+		return err
+	}
+	_, error := n.Select(field.AssociationFields).Delete(note)
+	return error
 }
 
     // 获取指定OrgId的新的卡片（制卡后没有进行过复习的卡片）。
-func (store *FSRSStore) GetNewCardsByOrgIDs(blockIDs []string) (ret []FSRSNote) {
+func (store *FSRSStore) GetNewNotesByOrgIDs(blockIDs []string) (ret []FSRSNote) {
 
 	//	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
 	//	for _, card := range store.cards {
@@ -77,7 +105,7 @@ func (store *FSRSStore) GetNewCardsByOrgIDs(blockIDs []string) (ret []FSRSNote) 
 }
 
     //获取指定OrgId的所有到期的卡片。
-func (store *FSRSStore) GetDueCardsByOrgIDs(blockIDs []string) (ret []FSRSNote) {
+func (store *FSRSStore) GetDueNotesByOrgIDs(blockIDs []string) (ret []FSRSNote) {
 
 	//	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
 	//	now := time.Now()
@@ -96,8 +124,8 @@ func (store *FSRSStore) GetDueCardsByOrgIDs(blockIDs []string) (ret []FSRSNote) 
 
 
 
-// CountCards 获取卡包中的闪卡数量。
-func (store *FSRSStore) CountCards() int {
+// CountNotes 获取卡包中的闪卡数量。
+func (store *FSRSStore) CountNotes() int {
 	return 0
 }
 

@@ -5,12 +5,9 @@ import (
 
 	pb "memo/proto/grpc/memo/v1"
 	"memo/pkg/fsrs"
-	//gfsrs "memo/pkg/fsrs"
 
 	//import dump
 	//"github.com/spewerspew/spew"
-	//import fsrs
-	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 )
 
 
@@ -20,16 +17,20 @@ type noteServer struct {
 
 func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.GetNoteResponse, error) {
 	// use for test function
-	return &pb.GetNoteResponse{Orgid: "jjj" }, nil
+	fnote := &fsrs.FSRSNote{}
+
+	fnote = fnote.GetNoteByOrgID(in.GetOrgid())
+	return &pb.GetNoteResponse{Orgid: fnote.N.OrgID, Type: fnote.N.Type, Content: fnote.N.Content}, nil
 }
 	
 func (s *noteServer) CreateNote(ctx context.Context, in *pb.CreateNoteRequest) (*pb.CreateNoteResponse, error) {
 	// use for test function
+	note := fsrs.Note{Content: in.GetContent(), Type: in.GetType(), OrgID: in.GetOrgid()}
 
-	fnote := fsrs.FSRSNote{C: &gfsrs.Card{}, N: &fsrs.Note{Content: in.GetContent(), Type: in.GetType(), OrgID: in.GetOrgid()}}
+	fnote := &fsrs.FSRSNote{}
 
-	fnote.AddCard()
+	fnote = fnote.CreateNote(&note)
 
-	return &pb.CreateNoteResponse{Orgid: "test for create card"}, nil
+	return &pb.CreateNoteResponse{Orgid: fnote.N.OrgID }, nil
 }
 	
