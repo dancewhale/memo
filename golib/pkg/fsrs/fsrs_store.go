@@ -77,9 +77,9 @@ func (store *FSRSStore) UpdateNote(fnote *FSRSNote) *FSRSNote {
 }
 
 // RemoveNote 移除一张卡片。
-func (store *FSRSStore) RemoveNote(fnote *FSRSNote) error {
+func (store *FSRSStore) RemoveNote(orgid string) error {
 	n := dal.Use(store.db).Note
-	note, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.N.OrgID)).First()
+	note, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(orgid)).First()
 	if err != nil {
 		return err
 	}

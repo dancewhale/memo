@@ -3,9 +3,9 @@
 package fsrs
 
 import (
-	"time"
-	"strings"
 	"strconv"
+	"strings"
+	"time"
 
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 )
@@ -47,6 +47,9 @@ type FSRSNote struct {
 	C *gfsrs.Card
 }
 
+func NewFsrsApi() *FSRSApi {
+	return &FSRSApi{store: NewFSRSStore()}
+}
 
 type FSRSApi struct {
 	store  *FSRSStore
@@ -74,9 +77,8 @@ func (api *FSRSApi) CreateNote(note *Note) *FSRSNote {
  }
 
 
-func (api *FSRSApi) RemoveNote(Orgid string) error {
-	fnote := api.store.GetNoteByOrgID(Orgid)
-	return api.store.RemoveNote(fnote)
+func (api *FSRSApi) RemoveNote(orgid string) error {
+	return api.store.RemoveNote(orgid)
 }
 
 	// NextDues 返回每种评分对应的下次到期时间。
