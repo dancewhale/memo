@@ -41,11 +41,6 @@ func newCard(db *gorm.DB, opts ...gen.DOOption) card {
 	_card.State = field.NewInt8(tableName, "state")
 	_card.LastReview = field.NewTime(tableName, "last_review")
 	_card.NoteID = field.NewUint(tableName, "note_id")
-	_card.ReviewLogs = cardHasManyReviewLogs{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("ReviewLogs", "storage.ReviewLog"),
-	}
 
 	_card.fillFieldMap()
 
@@ -70,7 +65,6 @@ type card struct {
 	State         field.Int8
 	LastReview    field.Time
 	NoteID        field.Uint
-	ReviewLogs    cardHasManyReviewLogs
 
 	fieldMap map[string]field.Expr
 }
@@ -117,7 +111,7 @@ func (c *card) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (c *card) fillFieldMap() {
-	c.fieldMap = make(map[string]field.Expr, 15)
+	c.fieldMap = make(map[string]field.Expr, 14)
 	c.fieldMap["id"] = c.ID
 	c.fieldMap["created_at"] = c.CreatedAt
 	c.fieldMap["updated_at"] = c.UpdatedAt
@@ -132,7 +126,6 @@ func (c *card) fillFieldMap() {
 	c.fieldMap["state"] = c.State
 	c.fieldMap["last_review"] = c.LastReview
 	c.fieldMap["note_id"] = c.NoteID
-
 }
 
 func (c card) clone(db *gorm.DB) card {
@@ -143,77 +136,6 @@ func (c card) clone(db *gorm.DB) card {
 func (c card) replaceDB(db *gorm.DB) card {
 	c.cardDo.ReplaceDB(db)
 	return c
-}
-
-type cardHasManyReviewLogs struct {
-	db *gorm.DB
-
-	field.RelationField
-}
-
-func (a cardHasManyReviewLogs) Where(conds ...field.Expr) *cardHasManyReviewLogs {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a cardHasManyReviewLogs) WithContext(ctx context.Context) *cardHasManyReviewLogs {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a cardHasManyReviewLogs) Session(session *gorm.Session) *cardHasManyReviewLogs {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a cardHasManyReviewLogs) Model(m *storage.Card) *cardHasManyReviewLogsTx {
-	return &cardHasManyReviewLogsTx{a.db.Model(m).Association(a.Name())}
-}
-
-type cardHasManyReviewLogsTx struct{ tx *gorm.Association }
-
-func (a cardHasManyReviewLogsTx) Find() (result []*storage.ReviewLog, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a cardHasManyReviewLogsTx) Append(values ...*storage.ReviewLog) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a cardHasManyReviewLogsTx) Replace(values ...*storage.ReviewLog) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a cardHasManyReviewLogsTx) Delete(values ...*storage.ReviewLog) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a cardHasManyReviewLogsTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a cardHasManyReviewLogsTx) Count() int64 {
-	return a.tx.Count()
 }
 
 type cardDo struct{ gen.DO }

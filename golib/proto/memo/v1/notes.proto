@@ -8,6 +8,7 @@ service NoteService {
   rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
   rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
   rpc RemoveNote(DeleteNoteRequest) returns (DeleteNoteResponse);
+  rpc ReviewNote(ReviewNoteRequest) returns (ReviewNoteResponse);
 }
 
 message CreateNoteRequest {
@@ -36,4 +37,14 @@ message DeleteNoteRequest {
 
 message DeleteNoteResponse {
   string errMsg = 1;
+}
+
+
+message ReviewNoteRequest {
+  string orgid = 1;
+  int64  rate  = 2;
+}
+
+message ReviewNoteResponse {
+  string orgid = 1;
 }

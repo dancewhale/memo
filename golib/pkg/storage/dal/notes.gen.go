@@ -40,11 +40,12 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("Card", "storage.Card"),
-		ReviewLogs: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Card.ReviewLogs", "storage.ReviewLog"),
-		},
+	}
+
+	_note.Logs = noteHasManyLogs{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Logs", "storage.ReviewLog"),
 	}
 
 	_note.fillFieldMap()
@@ -65,6 +66,8 @@ type note struct {
 	Orgid     field.String
 	Hash      field.String
 	Card      noteHasOneCard
+
+	Logs noteHasManyLogs
 
 	fieldMap map[string]field.Expr
 }
@@ -105,7 +108,7 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (n *note) fillFieldMap() {
-	n.fieldMap = make(map[string]field.Expr, 9)
+	n.fieldMap = make(map[string]field.Expr, 10)
 	n.fieldMap["id"] = n.ID
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
@@ -131,10 +134,6 @@ type noteHasOneCard struct {
 	db *gorm.DB
 
 	field.RelationField
-
-	ReviewLogs struct {
-		field.RelationField
-	}
 }
 
 func (a noteHasOneCard) Where(conds ...field.Expr) *noteHasOneCard {
@@ -199,6 +198,77 @@ func (a noteHasOneCardTx) Clear() error {
 }
 
 func (a noteHasOneCardTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type noteHasManyLogs struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a noteHasManyLogs) Where(conds ...field.Expr) *noteHasManyLogs {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a noteHasManyLogs) WithContext(ctx context.Context) *noteHasManyLogs {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a noteHasManyLogs) Session(session *gorm.Session) *noteHasManyLogs {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a noteHasManyLogs) Model(m *storage.Note) *noteHasManyLogsTx {
+	return &noteHasManyLogsTx{a.db.Model(m).Association(a.Name())}
+}
+
+type noteHasManyLogsTx struct{ tx *gorm.Association }
+
+func (a noteHasManyLogsTx) Find() (result []*storage.ReviewLog, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a noteHasManyLogsTx) Append(values ...*storage.ReviewLog) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a noteHasManyLogsTx) Replace(values ...*storage.ReviewLog) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a noteHasManyLogsTx) Delete(values ...*storage.ReviewLog) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a noteHasManyLogsTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a noteHasManyLogsTx) Count() int64 {
 	return a.tx.Count()
 }
 

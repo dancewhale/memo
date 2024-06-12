@@ -36,7 +36,7 @@ func newReviewLog(db *gorm.DB, opts ...gen.DOOption) reviewLog {
 	_reviewLog.ElapsedDays = field.NewUint64(tableName, "elapsed_days")
 	_reviewLog.Review = field.NewTime(tableName, "review")
 	_reviewLog.State = field.NewInt8(tableName, "state")
-	_reviewLog.CardID = field.NewUint(tableName, "card_id")
+	_reviewLog.NoteID = field.NewUint(tableName, "note_id")
 
 	_reviewLog.fillFieldMap()
 
@@ -56,7 +56,7 @@ type reviewLog struct {
 	ElapsedDays   field.Uint64
 	Review        field.Time
 	State         field.Int8
-	CardID        field.Uint
+	NoteID        field.Uint
 
 	fieldMap map[string]field.Expr
 }
@@ -82,7 +82,7 @@ func (r *reviewLog) updateTableName(table string) *reviewLog {
 	r.ElapsedDays = field.NewUint64(table, "elapsed_days")
 	r.Review = field.NewTime(table, "review")
 	r.State = field.NewInt8(table, "state")
-	r.CardID = field.NewUint(table, "card_id")
+	r.NoteID = field.NewUint(table, "note_id")
 
 	r.fillFieldMap()
 
@@ -109,7 +109,7 @@ func (r *reviewLog) fillFieldMap() {
 	r.fieldMap["elapsed_days"] = r.ElapsedDays
 	r.fieldMap["review"] = r.Review
 	r.fieldMap["state"] = r.State
-	r.fieldMap["card_id"] = r.CardID
+	r.fieldMap["note_id"] = r.NoteID
 }
 
 func (r reviewLog) clone(db *gorm.DB) reviewLog {

@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"errors"
+
+	"memo/pkg/logger"
 
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 )
@@ -29,7 +32,13 @@ func (n *Note) 	GetType() string {
 	return n.Type
 }
 
-func InitParams(requestRetention float64, maximumInterval int, weights string) gfsrs.Parameters {
+type FSRSNote struct {
+	N       *Note
+	C       *gfsrs.Card
+	Logs    *gfsrs.ReviewLog
+}
+
+func NewParams(requestRetention float64, maximumInterval int, weights string) gfsrs.Parameters {
 	params := gfsrs.DefaultParam()
 	params.RequestRetention = requestRetention
 	params.MaximumInterval = float64(maximumInterval)
@@ -42,17 +51,17 @@ func InitParams(requestRetention float64, maximumInterval int, weights string) g
 	return params
 }
 
-type FSRSNote struct {
-	N *Note
-	C *gfsrs.Card
-}
+var defaultFsrsWeights = "0.5701, 1.4436, 4.1386, 10.9355, 5.1443, 1.2006, 0.8627, 0.0362, 1.629, 0.1342, 1.0166, 2.1174, 0.0839, 0.3204, 1.4676, 0.219, 2.8237"
 
 func NewFsrsApi() *FSRSApi {
-	return &FSRSApi{store: NewFSRSStore()}
+	// TODO: 从环境变量中读取相应的配置
+	return &FSRSApi{store: NewFSRSStore(), params: NewParams(0.9, 365, defaultFsrsWeights)}
 }
 
 type FSRSApi struct {
 	store  *FSRSStore
+	params gfsrs.Parameters
+
 }
 
 func (api *FSRSApi) CreateNote(note *Note) *FSRSNote {
@@ -71,15 +80,36 @@ func (api *FSRSApi) CreateNote(note *Note) *FSRSNote {
 	// 更新闪卡 ID。
  func (api *FSRSApi) UpdateNote(note Note) *FSRSNote {
 	// 通过store 函数更新卡片
-	fnote := FSRSNote{}
+	fnote := &FSRSNote{}
 	fnote.N = &note
-	return api.store.UpdateNote(&fnote)
+	return api.store.UpdateNote(fnote)
  }
 
 
 func (api *FSRSApi) RemoveNote(orgid string) error {
 	return api.store.RemoveNote(orgid)
 }
+
+    // Review 闪卡复习。
+func (api *FSRSApi) ReviewNote(orgID string, rating Rating) error {
+
+	now := time.Now()
+	fnote := api.store.GetNoteByOrgID(orgID)	
+	if fnote.N == nil {
+		logger.Errorf("not found card [orgid=%s] to review", orgID)
+		return errors.New("When review card, not found card.")
+	}
+	
+	schedulingInfo := api.params.Repeat(*fnote.C, now)
+	updatedCard := schedulingInfo[gfsrs.Rating(rating)].Card
+
+	api.store.UpdateCardOfNote(fnote, updatedCard)
+	
+	reviewLog := schedulingInfo[gfsrs.Rating(rating)].ReviewLog
+
+	return api.store.AddReviewLog(orgID, &reviewLog)
+}
+
 
 	// NextDues 返回每种评分对应的下次到期时间。
  func (api *FSRSApi) 	NextDues() map[Rating]time.Time {

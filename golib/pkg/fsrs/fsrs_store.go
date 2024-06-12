@@ -3,6 +3,7 @@ package fsrs
 import (
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+	"memo/pkg/logger"
 	//"os"
 	//"path/filepath"
 	//"strconv"
@@ -11,24 +12,23 @@ import (
 	//"time"
 
 	
-	//import copier
 	"github.com/jinzhu/copier"	
+	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 	//"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 	"gorm.io/gen/field"
 )
-
-
-type FSRSStore struct {
-    	db      *gorm.DB
-}
 
 func NewFSRSStore() *FSRSStore {
 	var DB = storage.InitDBEngine()
 	return &FSRSStore{db: DB}
 }
 
-func fsrsCardToDbCard(fnote *FSRSNote) *storage.Note {
+type FSRSStore struct {
+    	db      *gorm.DB
+}
+
+func fsrsNoteToDbNote(fnote *FSRSNote) *storage.Note {
 	note := storage.Note{}
 	copier.Copy(&note, fnote.N)
 	copier.Copy(note.Card, fnote.C)
@@ -47,7 +47,7 @@ func dbCardToFsrsCard(note *storage.Note) *FSRSNote {
 
     // CreateNote 添加一张卡片。
 func (store *FSRSStore) CreateNote(fnote *FSRSNote) *FSRSNote {
-	note := fsrsCardToDbCard(fnote)
+	note := fsrsNoteToDbNote(fnote)
 	n := dal.Use(store.db).Note
 
 	err := n.WithContext(context.Background()).Create(note)
@@ -66,13 +66,32 @@ func (store *FSRSStore) GetNoteByOrgID(orgid string) *FSRSNote {
 
     // UpdateNote 设置一张卡片。
 func (store *FSRSStore) UpdateNote(fnote *FSRSNote) *FSRSNote {
-	note := fsrsCardToDbCard(fnote)
+	note := fsrsNoteToDbNote(fnote)
 	n := dal.Use(store.db).Note
 
 	_, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.N.OrgID)).Updates(note)
 	if err != nil {
 		return nil
 	}
+	return fnote
+}
+
+    // UpdateCardOfNote 更新一张卡片中的记录。
+func (store *FSRSStore) UpdateCardOfNote(fnote *FSRSNote, newCard gfsrs.Card) *FSRSNote {
+	snote := storage.Note{}
+	scard := storage.Card{}
+	err := copier.Copy(&scard, newCard)
+	if err != nil {
+		logger.Errorf("Copy use copier from card failed: %v", err)
+		return nil
+	}
+	store.db.Preload("Card").Where("org_id = ?", fnote.N.OrgID).First(snote)
+	err = store.db.Model(&snote).Association("Card").Replace(snote.Card, newCard)
+	if err != nil {
+		logger.Errorf("Update card of note in db association failed: %v", err)
+		return nil
+	}
+	fnote = dbCardToFsrsCard(&snote)
 	return fnote
 }
 
@@ -86,6 +105,18 @@ func (store *FSRSStore) RemoveNote(orgid string) error {
 	_, error := n.Select(field.AssociationFields).Delete(note)
 	return error
 }
+
+// 增加复习记录
+func (store *FSRSStore) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
+	note := &storage.Note{}
+	log := &storage.ReviewLog{}
+	copier.Copy(log, rlog)
+	n := dal.Use(store.db).Note
+	store.db.Preload("Logs").Where("org_id = ?", orgid).First(note)
+
+	return n.Logs.Model(note).Append(log)
+}
+
 
     // 获取指定OrgId的新的卡片（制卡后没有进行过复习的卡片）。
 func (store *FSRSStore) GetNewNotesByOrgIDs(blockIDs []string) (ret []FSRSNote) {
@@ -129,34 +160,6 @@ func (store *FSRSStore) CountNotes() int {
 	return 0
 }
 
-    // Review 闪卡复习。
-func (store *FSRSStore) Review(cardId string, rating Rating) (ret *Log) {
-
-	//	now := time.Now()
-	//	card := store.cards[cardId]
-	//	if nil == card {
-	//		logging.LogWarnf("not found card [id=%s] to review", cardId)
-	//		return
-	//	}
-	//
-	//	schedulingInfo := store.params.Repeat(*card.C, now)
-	//	updated := schedulingInfo[fsrs.Rating(rating)].Card
-	//	card.SetImpl(&updated)
-	//	store.cards[cardId] = card
-	//
-	//	reviewLog := schedulingInfo[fsrs.Rating(rating)].ReviewLog
-	//	ret = &Log{
-	//		ID:            newID(),
-	//		CardID:        cardId,
-	//		Rating:        rating,
-	//		ScheduledDays: reviewLog.ScheduledDays,
-	//		ElapsedDays:   reviewLog.ElapsedDays,
-	//		Reviewed:      reviewLog.Review.Unix(),
-	//		State:         State(reviewLog.State),
-	//	}
-	return
-}
-
     // Dues 获取所有到期的闪卡列表。
 func (store *FSRSStore) Dues() (ret []FSRSNote) {
 
@@ -177,45 +180,4 @@ func (store *FSRSStore) Dues() (ret []FSRSNote) {
 	//	}
 	return
 }
-
-    // SaveLog 保存复习日志。
-func (store *FSRSStore) SaveLog(log *Log) (err error) {
-
-	//	saveDir := store.GetSaveDir()
-	//	saveDir = filepath.Join(saveDir, "logs")
-	//	if !gulu.File.IsDir(saveDir) {
-	//		if err = os.MkdirAll(saveDir, 0755); nil != err {
-	//			return
-	//		}
-	//	}
-	//
-	//	yyyyMM := time.Now().Format("200601")
-	//	p := filepath.Join(saveDir, yyyyMM+".msgpack")
-	//	logs := []*Log{}
-	//	var data []byte
-	//	if filelock.IsExist(p) {
-	//		data, err = filelock.ReadFile(p)
-	//		if nil != err {
-	//			logging.LogErrorf("load logs failed: %s", err)
-	//			return
-	//		}
-	//
-	//		if err = msgpack.Unmarshal(data, &logs); nil != err {
-	//			logging.LogErrorf("unmarshal logs failed: %s", err)
-	//			return
-	//		}
-	//	}
-	//	logs = append(logs, log)
-	//
-	//	if data, err = msgpack.Marshal(logs); nil != err {
-	//		logging.LogErrorf("marshal logs failed: %s", err)
-	//		return
-	//	}
-	//	if err = filelock.WriteFile(p, data); nil != err {
-	//		logging.LogErrorf("write logs failed: %s", err)
-	//		return
-	//	}
-	return
-}
-
 

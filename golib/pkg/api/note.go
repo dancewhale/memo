@@ -54,3 +54,17 @@ func (s *noteServer) RemoveNote(ctx context.Context, in *pb.DeleteNoteRequest) (
 		return &pb.DeleteNoteResponse{ErrMsg: ""}, nil
 	}
 }
+
+func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (*pb.ReviewNoteResponse, error) {
+	// use for test function
+	fapi := fsrs.NewFsrsApi()
+	orgid := in.GetOrgid()
+	rate := fsrs.Rating(in.GetRate())
+
+	err := fapi.ReviewNote(orgid, rate)
+	if err != nil {
+		return &pb.ReviewNoteResponse{Orgid: orgid}, err
+	} else {
+		return &pb.ReviewNoteResponse{Orgid: orgid}, nil
+	}
+}
