@@ -5,6 +5,7 @@ import (
 
 	pb "memo/proto/grpc/memo/v1"
 	"memo/pkg/fsrs"
+	"memo/pkg/storage"
 
 	//import dump
 	//"github.com/spewerspew/spew"
@@ -21,7 +22,7 @@ func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.Ge
 
 	fnote := fapi.GetNoteByOrgID(in.GetOrgid())
 	if fnote != nil {
-		return &pb.GetNoteResponse{Orgid: fnote.N.OrgID, Type: fnote.N.Type, Content: fnote.N.Content}, nil
+		return &pb.GetNoteResponse{Orgid: fnote.Orgid, Type: fnote.Type, Content: fnote.Content}, nil
 	} else {
 		return &pb.GetNoteResponse{Orgid: "", Type: "", Content: ""}, nil
 	}
@@ -29,14 +30,14 @@ func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.Ge
 	
 func (s *noteServer) CreateNote(ctx context.Context, in *pb.CreateNoteRequest) (*pb.CreateNoteResponse, error) {
 	// use for test function
-	note := fsrs.Note{Content: in.GetContent(), Type: in.GetType(), OrgID: in.GetOrgid()}
+	note := storage.Note{Content: in.GetContent(), Type: in.GetType(), Orgid: in.GetOrgid()}
 
 	fapi := fsrs.NewFsrsApi()
 
 	fnote := fapi.CreateNote(&note)
 
 	if fnote != nil {
-		return &pb.CreateNoteResponse{Orgid: fnote.N.OrgID }, nil
+		return &pb.CreateNoteResponse{Orgid: fnote.Orgid }, nil
 	} else {
 		return &pb.CreateNoteResponse{Orgid: "" }, nil
 	}

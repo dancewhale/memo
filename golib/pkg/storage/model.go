@@ -11,19 +11,19 @@ type Note struct {
 	Type          string      `json:"Type",copier:"Type`
 	Orgid         string      `gorm:"unique,not null,index",copier:"Orgid`
 	Hash          string      `json:"Hash",copier:"Hash"`
-	Card          Card        `gorm:"foreignKey:NoteID",copier:"-"`
-	Logs          []ReviewLog `gorm:"foreignKey:NoteID",json:"Logs"`
+	Card          Card        `json:"Card"`
+	Logs          []ReviewLog `json:"Logs"`
 }
 
 type Card struct {
 	gorm.Model
-	fcard         fsrs.Card    `gorm:"embedded"`
+	fsrs.Card    `json:"Fcard",gorm:"embedded"`
 	NoteID	      uint         `json:"NoteID"`
 }
 
 type ReviewLog struct {
 	gorm.Model
-	flog	  fsrs.ReviewLog `gorm:"embedded"`
+	fsrs.ReviewLog    `json:"Flog",gorm:"embedded"`
 	NoteID	      uint          `json:"NoteID"`
 }
 

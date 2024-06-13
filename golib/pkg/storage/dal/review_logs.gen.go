@@ -31,6 +31,11 @@ func newReviewLog(db *gorm.DB, opts ...gen.DOOption) reviewLog {
 	_reviewLog.CreatedAt = field.NewTime(tableName, "created_at")
 	_reviewLog.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_reviewLog.DeletedAt = field.NewField(tableName, "deleted_at")
+	_reviewLog.Rating = field.NewInt8(tableName, "rating")
+	_reviewLog.ScheduledDays = field.NewUint64(tableName, "scheduled_days")
+	_reviewLog.ElapsedDays = field.NewUint64(tableName, "elapsed_days")
+	_reviewLog.Review = field.NewTime(tableName, "review")
+	_reviewLog.State = field.NewInt8(tableName, "state")
 	_reviewLog.NoteID = field.NewUint(tableName, "note_id")
 
 	_reviewLog.fillFieldMap()
@@ -41,12 +46,17 @@ func newReviewLog(db *gorm.DB, opts ...gen.DOOption) reviewLog {
 type reviewLog struct {
 	reviewLogDo
 
-	ALL       field.Asterisk
-	ID        field.Uint
-	CreatedAt field.Time
-	UpdatedAt field.Time
-	DeletedAt field.Field
-	NoteID    field.Uint
+	ALL           field.Asterisk
+	ID            field.Uint
+	CreatedAt     field.Time
+	UpdatedAt     field.Time
+	DeletedAt     field.Field
+	Rating        field.Int8
+	ScheduledDays field.Uint64
+	ElapsedDays   field.Uint64
+	Review        field.Time
+	State         field.Int8
+	NoteID        field.Uint
 
 	fieldMap map[string]field.Expr
 }
@@ -67,6 +77,11 @@ func (r *reviewLog) updateTableName(table string) *reviewLog {
 	r.CreatedAt = field.NewTime(table, "created_at")
 	r.UpdatedAt = field.NewTime(table, "updated_at")
 	r.DeletedAt = field.NewField(table, "deleted_at")
+	r.Rating = field.NewInt8(table, "rating")
+	r.ScheduledDays = field.NewUint64(table, "scheduled_days")
+	r.ElapsedDays = field.NewUint64(table, "elapsed_days")
+	r.Review = field.NewTime(table, "review")
+	r.State = field.NewInt8(table, "state")
 	r.NoteID = field.NewUint(table, "note_id")
 
 	r.fillFieldMap()
@@ -84,11 +99,16 @@ func (r *reviewLog) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (r *reviewLog) fillFieldMap() {
-	r.fieldMap = make(map[string]field.Expr, 5)
+	r.fieldMap = make(map[string]field.Expr, 10)
 	r.fieldMap["id"] = r.ID
 	r.fieldMap["created_at"] = r.CreatedAt
 	r.fieldMap["updated_at"] = r.UpdatedAt
 	r.fieldMap["deleted_at"] = r.DeletedAt
+	r.fieldMap["rating"] = r.Rating
+	r.fieldMap["scheduled_days"] = r.ScheduledDays
+	r.fieldMap["elapsed_days"] = r.ElapsedDays
+	r.fieldMap["review"] = r.Review
+	r.fieldMap["state"] = r.State
 	r.fieldMap["note_id"] = r.NoteID
 }
 

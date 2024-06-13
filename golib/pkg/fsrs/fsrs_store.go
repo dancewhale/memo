@@ -28,29 +28,11 @@ type FSRSStore struct {
     	db      *gorm.DB
 }
 
-func fsrsNoteToDbNote(fnote *FSRSNote) *storage.Note {
-	note := storage.Note{}
-	copier.Copy(&note, fnote.N)
-	copier.Copy(note.Card, fnote.C)
-
-	return &note
-}
-
-func dbCardToFsrsCard(note *storage.Note) *FSRSNote {
-	fnote := FSRSNote{}
-	copier.Copy(fnote.N, note)
-	copier.Copy(fnote.C, note.Card)
-
-	return &fnote
-}
-
-
     // CreateNote 添加一张卡片。
-func (store *FSRSStore) CreateNote(fnote *FSRSNote) *FSRSNote {
-	note := fsrsNoteToDbNote(fnote)
+func (store *FSRSStore) CreateNote(fnote *storage.Note) *storage.Note {
 	n := dal.Use(store.db).Note
 
-	err := n.WithContext(context.Background()).Create(note)
+	err := n.WithContext(context.Background()).Create(fnote)
 	if err != nil {
 		return  nil
 	}
@@ -58,18 +40,16 @@ func (store *FSRSStore) CreateNote(fnote *FSRSNote) *FSRSNote {
 }
 
     // GetNote 获取一张卡片。
-func (store *FSRSStore) GetNoteByOrgID(orgid string) *FSRSNote {
+func (store *FSRSStore) GetNoteByOrgID(orgid string) *storage.Note {
 	note := &storage.Note{}
 	store.db.Preload("Card").Where("org_id = ?", orgid).First(note)
-	return dbCardToFsrsCard(note)
+	return note
 }
 
     // UpdateNote 设置一张卡片。
-func (store *FSRSStore) UpdateNote(fnote *FSRSNote) *FSRSNote {
-	note := fsrsNoteToDbNote(fnote)
+func (store *FSRSStore) UpdateNote(fnote *storage.Note) *storage.Note {
 	n := dal.Use(store.db).Note
-
-	_, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.N.OrgID)).Updates(note)
+	_, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.Orgid)).Updates(fnote)
 	if err != nil {
 		return nil
 	}
@@ -77,22 +57,15 @@ func (store *FSRSStore) UpdateNote(fnote *FSRSNote) *FSRSNote {
 }
 
     // UpdateCardOfNote 更新一张卡片中的记录。
-func (store *FSRSStore) UpdateCardOfNote(fnote *FSRSNote, newCard gfsrs.Card) *FSRSNote {
+func (store *FSRSStore) UpdateCardOfNote(fnote *storage.Note, newCard gfsrs.Card) *storage.Note {
 	snote := storage.Note{}
-	scard := storage.Card{}
-	err := copier.Copy(&scard, newCard)
-	if err != nil {
-		logger.Errorf("Copy use copier from card failed: %v", err)
-		return nil
-	}
-	store.db.Preload("Card").Where("org_id = ?", fnote.N.OrgID).First(snote)
-	err = store.db.Model(&snote).Association("Card").Replace(snote.Card, newCard)
+	store.db.Preload("Card").Where("org_id = ?", fnote.Orgid).First(snote)
+	err := store.db.Model(&snote).Association("Card").Replace(snote.Card, newCard)
 	if err != nil {
 		logger.Errorf("Update card of note in db association failed: %v", err)
 		return nil
 	}
-	fnote = dbCardToFsrsCard(&snote)
-	return fnote
+	return &snote
 }
 
 // RemoveNote 移除一张卡片。
@@ -119,7 +92,7 @@ func (store *FSRSStore) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error 
 
 
     // 获取指定OrgId的新的卡片（制卡后没有进行过复习的卡片）。
-func (store *FSRSStore) GetNewNotesByOrgIDs(blockIDs []string) (ret []FSRSNote) {
+func (store *FSRSStore) GetNewNotesByOrgIDs(blockIDs []string) (ret []storage.Note) {
 
 	//	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
 	//	for _, card := range store.cards {
@@ -136,7 +109,7 @@ func (store *FSRSStore) GetNewNotesByOrgIDs(blockIDs []string) (ret []FSRSNote) 
 }
 
     //获取指定OrgId的所有到期的卡片。
-func (store *FSRSStore) GetDueNotesByOrgIDs(blockIDs []string) (ret []FSRSNote) {
+func (store *FSRSStore) GetDueNotesByOrgIDs(blockIDs []string) (ret []storage.Note) {
 
 	//	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
 	//	now := time.Now()
@@ -161,7 +134,7 @@ func (store *FSRSStore) CountNotes() int {
 }
 
     // Dues 获取所有到期的闪卡列表。
-func (store *FSRSStore) Dues() (ret []FSRSNote) {
+func (store *FSRSStore) Dues() (ret []storage.Note) {
 
 	//	now := time.Now()
 	//	for _, card := range store.cards {

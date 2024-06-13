@@ -9,34 +9,10 @@ import (
 	"errors"
 
 	"memo/pkg/logger"
+	"memo/pkg/storage"
 
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 )
-
-// note 描述了闪卡保存内容。
-type Note struct {
-	Content   string  `json:"Content",copier:"Content`
-	Type      string  `json:"Type",copier:"Type`
-	OrgID     string  `gorm:"unique",copier:"Orgid`
-	Hash      string  `json:"Hash",copier:"Hash"`
-}
-
-func (n *Note) 	GetOrgId() string {
-	return n.OrgID
-}
-func (n *Note) 	GetContent() string {
-	return n.Content
-}
-
-func (n *Note) 	GetType() string {
-	return n.Type
-}
-
-type FSRSNote struct {
-	N       *Note
-	C       *gfsrs.Card
-	Logs    *gfsrs.ReviewLog
-}
 
 func NewParams(requestRetention float64, maximumInterval int, weights string) gfsrs.Parameters {
 	params := gfsrs.DefaultParam()
@@ -64,25 +40,22 @@ type FSRSApi struct {
 
 }
 
-func (api *FSRSApi) CreateNote(note *Note) *FSRSNote {
-	fnote := FSRSNote{}
-	fnote.N = note
-	card := gfsrs.NewCard()
-	fnote.C = &card
+func (api *FSRSApi) CreateNote(note *storage.Note) *storage.Note {
+	fnote := storage.Note{}
+	fcard := gfsrs.NewCard()
+	fnote.Card.Card = fcard
 	return api.store.CreateNote(&fnote)
 }
 
 	// 创建新卡
- func (api *FSRSApi) GetNoteByOrgID(orgid string) *FSRSNote {
+ func (api *FSRSApi) GetNoteByOrgID(orgid string) *storage.Note {
 	// 通过store 函数获取卡片, 返回本身内部card
 	return api.store.GetNoteByOrgID(orgid)
  }
 	// 更新闪卡 ID。
- func (api *FSRSApi) UpdateNote(note Note) *FSRSNote {
+ func (api *FSRSApi) UpdateNote(note *storage.Note) *storage.Note {
 	// 通过store 函数更新卡片
-	fnote := &FSRSNote{}
-	fnote.N = &note
-	return api.store.UpdateNote(fnote)
+	return api.store.UpdateNote(note)
  }
 
 
@@ -95,12 +68,12 @@ func (api *FSRSApi) ReviewNote(orgID string, rating Rating) error {
 
 	now := time.Now()
 	fnote := api.store.GetNoteByOrgID(orgID)	
-	if fnote.N == nil {
+	if fnote == nil {
 		logger.Errorf("not found card [orgid=%s] to review", orgID)
 		return errors.New("When review card, not found card.")
 	}
 	
-	schedulingInfo := api.params.Repeat(*fnote.C, now)
+	schedulingInfo := api.params.Repeat(fnote.Card.Card, now)
 	updatedCard := schedulingInfo[gfsrs.Rating(rating)].Card
 
 	api.store.UpdateCardOfNote(fnote, updatedCard)
@@ -143,17 +116,17 @@ func (api *FSRSApi) 	GetReps() int {
  }
 
 
-func (card *FSRSApi) Clone() FSRSNote {
+func (card *FSRSApi) Clone() storage.Note {
 //	data, err := gulu.JSON.MarshalJSON(card)
 //	if nil != err {
 //		logging.LogErrorf("marshal card failed: %s", err)
 //		return nil
 //	}
-//	ret := &FSRSNote{}
+//	ret := &storage.Note{}
 //	if err = gulu.JSON.UnmarshalJSON(data, ret); nil != err {
 //		logging.LogErrorf("unmarshal card failed: %s", err)
 //		return nil
 //	}
 //	return ret
-	return FSRSNote{}
+	return storage.Note{}
 }
