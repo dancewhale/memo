@@ -9,7 +9,7 @@ type Note struct {
 	gorm.Model
 	Content       string      `json:"Content",copier:"Content`
 	Type          string      `json:"Type",copier:"Type`
-	Orgid         string      `gorm:"unique,not null,index",copier:"Orgid`
+	Orgid         string      `gorm:"unique;not null;index",copier:"Orgid`
 	Hash          string      `json:"Hash",copier:"Hash"`
 	Card          Card        `json:"Card"`
 	Logs          []ReviewLog `json:"Logs"`

@@ -41,10 +41,9 @@ type FSRSApi struct {
 }
 
 func (api *FSRSApi) CreateNote(note *storage.Note) *storage.Note {
-	fnote := storage.Note{}
 	fcard := gfsrs.NewCard()
-	fnote.Card.Card = fcard
-	return api.store.CreateNote(&fnote)
+	note.Card.Card = fcard
+	return api.store.CreateNote(note)
 }
 
 	// 创建新卡
