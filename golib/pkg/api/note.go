@@ -16,9 +16,10 @@ type noteServer struct {
 	pb.UnimplementedNoteServiceServer
 }
 
+var fapi = fsrs.NewFsrsApi()
+
 func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.GetNoteResponse, error) {
 	// use for test function
-	fapi := fsrs.NewFsrsApi()
 
 	fnote := fapi.GetNoteByOrgID(in.GetOrgid())
 	if fnote != nil {
@@ -32,8 +33,6 @@ func (s *noteServer) CreateNote(ctx context.Context, in *pb.CreateNoteRequest) (
 	// use for test function
 	note := storage.Note{Content: in.GetContent(), Type: in.GetType(), Orgid: in.GetOrgid()}
 
-	fapi := fsrs.NewFsrsApi()
-
 	fnote := fapi.CreateNote(&note)
 
 	if fnote != nil {
@@ -46,7 +45,6 @@ func (s *noteServer) CreateNote(ctx context.Context, in *pb.CreateNoteRequest) (
 
 func (s *noteServer) RemoveNote(ctx context.Context, in *pb.DeleteNoteRequest) (*pb.DeleteNoteResponse, error) {
 	// use for test function
-	fapi := fsrs.NewFsrsApi()
 
 	err := fapi.RemoveNote(in.GetOrgid())
 	if err != nil {
@@ -58,7 +56,6 @@ func (s *noteServer) RemoveNote(ctx context.Context, in *pb.DeleteNoteRequest) (
 
 func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (*pb.ReviewNoteResponse, error) {
 	// use for test function
-	fapi := fsrs.NewFsrsApi()
 	orgid := in.GetOrgid()
 	rate := fsrs.Rating(in.GetRate())
 
