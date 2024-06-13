@@ -31,7 +31,6 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 	_note.ID = field.NewUint(tableName, "id")
 	_note.CreatedAt = field.NewTime(tableName, "created_at")
 	_note.UpdatedAt = field.NewTime(tableName, "updated_at")
-	_note.DeletedAt = field.NewField(tableName, "deleted_at")
 	_note.Content = field.NewString(tableName, "content")
 	_note.Type = field.NewString(tableName, "type")
 	_note.Orgid = field.NewString(tableName, "orgid")
@@ -60,7 +59,6 @@ type note struct {
 	ID        field.Uint
 	CreatedAt field.Time
 	UpdatedAt field.Time
-	DeletedAt field.Field
 	Content   field.String
 	Type      field.String
 	Orgid     field.String
@@ -87,7 +85,6 @@ func (n *note) updateTableName(table string) *note {
 	n.ID = field.NewUint(table, "id")
 	n.CreatedAt = field.NewTime(table, "created_at")
 	n.UpdatedAt = field.NewTime(table, "updated_at")
-	n.DeletedAt = field.NewField(table, "deleted_at")
 	n.Content = field.NewString(table, "content")
 	n.Type = field.NewString(table, "type")
 	n.Orgid = field.NewString(table, "orgid")
@@ -108,11 +105,10 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (n *note) fillFieldMap() {
-	n.fieldMap = make(map[string]field.Expr, 10)
+	n.fieldMap = make(map[string]field.Expr, 9)
 	n.fieldMap["id"] = n.ID
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
-	n.fieldMap["deleted_at"] = n.DeletedAt
 	n.fieldMap["content"] = n.Content
 	n.fieldMap["type"] = n.Type
 	n.fieldMap["orgid"] = n.Orgid

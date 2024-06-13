@@ -30,7 +30,7 @@ func newCard(db *gorm.DB, opts ...gen.DOOption) card {
 	_card.ID = field.NewUint(tableName, "id")
 	_card.CreatedAt = field.NewTime(tableName, "created_at")
 	_card.UpdatedAt = field.NewTime(tableName, "updated_at")
-	_card.DeletedAt = field.NewField(tableName, "deleted_at")
+	_card.NoteID = field.NewUint(tableName, "note_id")
 	_card.Due = field.NewTime(tableName, "due")
 	_card.Stability = field.NewFloat64(tableName, "stability")
 	_card.Difficulty = field.NewFloat64(tableName, "difficulty")
@@ -40,7 +40,6 @@ func newCard(db *gorm.DB, opts ...gen.DOOption) card {
 	_card.Lapses = field.NewUint64(tableName, "lapses")
 	_card.State = field.NewInt8(tableName, "state")
 	_card.LastReview = field.NewTime(tableName, "last_review")
-	_card.NoteID = field.NewUint(tableName, "note_id")
 
 	_card.fillFieldMap()
 
@@ -54,7 +53,7 @@ type card struct {
 	ID            field.Uint
 	CreatedAt     field.Time
 	UpdatedAt     field.Time
-	DeletedAt     field.Field
+	NoteID        field.Uint
 	Due           field.Time
 	Stability     field.Float64
 	Difficulty    field.Float64
@@ -64,7 +63,6 @@ type card struct {
 	Lapses        field.Uint64
 	State         field.Int8
 	LastReview    field.Time
-	NoteID        field.Uint
 
 	fieldMap map[string]field.Expr
 }
@@ -84,7 +82,7 @@ func (c *card) updateTableName(table string) *card {
 	c.ID = field.NewUint(table, "id")
 	c.CreatedAt = field.NewTime(table, "created_at")
 	c.UpdatedAt = field.NewTime(table, "updated_at")
-	c.DeletedAt = field.NewField(table, "deleted_at")
+	c.NoteID = field.NewUint(table, "note_id")
 	c.Due = field.NewTime(table, "due")
 	c.Stability = field.NewFloat64(table, "stability")
 	c.Difficulty = field.NewFloat64(table, "difficulty")
@@ -94,7 +92,6 @@ func (c *card) updateTableName(table string) *card {
 	c.Lapses = field.NewUint64(table, "lapses")
 	c.State = field.NewInt8(table, "state")
 	c.LastReview = field.NewTime(table, "last_review")
-	c.NoteID = field.NewUint(table, "note_id")
 
 	c.fillFieldMap()
 
@@ -111,11 +108,11 @@ func (c *card) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (c *card) fillFieldMap() {
-	c.fieldMap = make(map[string]field.Expr, 14)
+	c.fieldMap = make(map[string]field.Expr, 13)
 	c.fieldMap["id"] = c.ID
 	c.fieldMap["created_at"] = c.CreatedAt
 	c.fieldMap["updated_at"] = c.UpdatedAt
-	c.fieldMap["deleted_at"] = c.DeletedAt
+	c.fieldMap["note_id"] = c.NoteID
 	c.fieldMap["due"] = c.Due
 	c.fieldMap["stability"] = c.Stability
 	c.fieldMap["difficulty"] = c.Difficulty
@@ -125,7 +122,6 @@ func (c *card) fillFieldMap() {
 	c.fieldMap["lapses"] = c.Lapses
 	c.fieldMap["state"] = c.State
 	c.fieldMap["last_review"] = c.LastReview
-	c.fieldMap["note_id"] = c.NoteID
 }
 
 func (c card) clone(db *gorm.DB) card {
