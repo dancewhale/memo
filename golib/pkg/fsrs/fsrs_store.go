@@ -43,7 +43,7 @@ func (store *FSRSStore) CreateNote(fnote *storage.Note) *storage.Note {
     // GetNote 获取一张卡片。
 func (store *FSRSStore) GetNoteByOrgID(orgid string) *storage.Note {
 	note := &storage.Note{}
-	store.db.Preload("Card").Where("org_id = ?", orgid).First(note)
+	store.db.Preload("Card").Where("orgid = ?", orgid).First(note)
 	return note
 }
 
