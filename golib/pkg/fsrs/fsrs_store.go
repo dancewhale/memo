@@ -74,6 +74,7 @@ func (store *FSRSStore) RemoveNote(orgid string) error {
 	n := dal.Use(store.db).Note
 	note, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(orgid)).First()
 	if err != nil {
+		logger.Errorf("Remove note in db failed: %v", err)
 		return err
 	}
 	_, error := n.Select(field.AssociationFields).Delete(note)

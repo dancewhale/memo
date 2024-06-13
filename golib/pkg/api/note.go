@@ -48,9 +48,9 @@ func (s *noteServer) RemoveNote(ctx context.Context, in *pb.DeleteNoteRequest) (
 
 	err := fapi.RemoveNote(in.GetOrgid())
 	if err != nil {
-		return &pb.DeleteNoteResponse{ErrMsg: err.Error()}, err
+		return &pb.DeleteNoteResponse{Result: "failed"}, nil
 	} else {
-		return &pb.DeleteNoteResponse{ErrMsg: ""}, nil
+		return &pb.DeleteNoteResponse{Result: "success"}, nil
 	}
 }
 
@@ -61,7 +61,7 @@ func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (
 
 	err := fapi.ReviewNote(orgid, rate)
 	if err != nil {
-		return &pb.ReviewNoteResponse{Orgid: orgid}, err
+		return &pb.ReviewNoteResponse{Orgid: orgid}, nil
 	} else {
 		return &pb.ReviewNoteResponse{Orgid: orgid}, nil
 	}

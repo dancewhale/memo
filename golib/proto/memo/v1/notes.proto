@@ -36,7 +36,7 @@ message DeleteNoteRequest {
 }
 
 message DeleteNoteResponse {
-  string errMsg = 1;
+  string result = 1;
 }
 
 
