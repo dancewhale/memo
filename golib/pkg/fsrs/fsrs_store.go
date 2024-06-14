@@ -14,7 +14,7 @@ import (
 	
 	"github.com/jinzhu/copier"	
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
-	"github.com/spewerspew/spew"
+	//"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 	"gorm.io/gen/field"
 )
@@ -30,13 +30,7 @@ type FSRSStore struct {
 
     // CreateNote 添加一张卡片。
 func (store *FSRSStore) CreateNote(fnote *storage.Note) *storage.Note {
-	n := dal.Use(store.db).Note
-	spew.Dump(fnote)
-	err := n.WithContext(context.Background()).Create(fnote)
-	if err != nil {
-		logger.Errorf("Create note in db failed: %v", err)
-		return  nil
-	}
+	store.db.Create(fnote)
 	return fnote
 }
 
