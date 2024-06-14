@@ -9,12 +9,12 @@ import (
 	//"strconv"
 	//"strings"
 	"context"
-	//"time"
+	"time"
 
 	
 	"github.com/jinzhu/copier"	
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
-	//"github.com/spewerspew/spew"
+	"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 	"gorm.io/gen/field"
 )
@@ -30,7 +30,12 @@ type FSRSStore struct {
 
     // CreateNote 添加一张卡片。
 func (store *FSRSStore) CreateNote(fnote *storage.Note) *storage.Note {
-	store.db.Create(fnote)
+	spew.Dump(fnote)
+	fcard := gfsrs.Card{Due: time.Now(), Stability: 0.0, Difficulty: 0.0, ElapsedDays: 0, ScheduledDays: 0, Reps: 0, Lapses: 0, LastReview: time.Now(), State: gfsrs.New}
+	scard := storage.Card{}
+	scard.Card = fcard
+	fnote.Card = scard
+	store.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fnote)
 	return fnote
 }
 

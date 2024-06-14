@@ -41,8 +41,6 @@ type FSRSApi struct {
 }
 
 func (api *FSRSApi) CreateNote(note *storage.Note) *storage.Note {
-	fcard := gfsrs.NewCard()
-	note.Card.Card = fcard
 	return api.store.CreateNote(note)
 }
 
@@ -65,21 +63,22 @@ func (api *FSRSApi) RemoveNote(orgid string) error {
     // Review 闪卡复习。
 func (api *FSRSApi) ReviewNote(orgID string, rating Rating) error {
 
-	now := time.Now()
+	//now := time.Now()
 	fnote := api.store.GetNoteByOrgID(orgID)	
 	if fnote == nil {
 		logger.Errorf("not found card [orgid=%s] to review", orgID)
 		return errors.New("When review card, not found card.")
 	}
-	
-	schedulingInfo := api.params.Repeat(fnote.Card.Card, now)
-	updatedCard := schedulingInfo[gfsrs.Rating(rating)].Card
-
-	api.store.UpdateCardOfNote(fnote, updatedCard)
-	
-	reviewLog := schedulingInfo[gfsrs.Rating(rating)].ReviewLog
-
-	return api.store.AddReviewLog(orgID, &reviewLog)
+	//	
+	//	schedulingInfo := api.params.Repeat(fnote.Card.Card, now)
+	//	updatedCard := schedulingInfo[gfsrs.Rating(rating)].Card
+	//
+	//	api.store.UpdateCardOfNote(fnote, updatedCard)
+	//	
+	//	reviewLog := schedulingInfo[gfsrs.Rating(rating)].ReviewLog
+	//
+	//return api.store.AddReviewLog(orgID, &reviewLog)
+	return nil
 }
 
 

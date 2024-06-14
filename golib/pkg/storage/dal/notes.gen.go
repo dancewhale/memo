@@ -6,7 +6,6 @@ package dal
 
 import (
 	"context"
-	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -269,21 +268,6 @@ func (a noteHasManyLogsTx) Count() int64 {
 }
 
 type noteDo struct{ gen.DO }
-
-// where("orgid=@orgid")
-func (n noteDo) FindByOrgID(orgid string) (result storage.Note, err error) {
-	var params []interface{}
-
-	var generateSQL strings.Builder
-	params = append(params, orgid)
-	generateSQL.WriteString("orgid=? ")
-
-	var executeSQL *gorm.DB
-	executeSQL = n.UnderlyingDB().Where(generateSQL.String(), params...).Take(&result) // ignore_security_alert
-	err = executeSQL.Error
-
-	return
-}
 
 func (n noteDo) Debug() *noteDo {
 	return n.withDO(n.DO.Debug())
