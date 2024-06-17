@@ -1,2 +1,14 @@
 #+title: Readme
 For supermemo in emacs.
+* tjj
+** test
+*Lorem ipsum dolor* sit amet, consectetur adipisicing elit, sed do
+eiusmod tempor incididunt ut labore et dolore magna aliqua.
+(prin1 (org-element-at-point))
+(prin1 (org-element-context))
+#+begin_src elisp  :comments link
+(prin1 (org-element-at-point))
+(prin1 (org-element-context))
+    #+end_src
+
+

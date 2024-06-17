@@ -42,7 +42,7 @@ message DeleteNoteResponse {
 
 message ReviewNoteRequest {
   string orgid = 1;
-  int64  rate  = 2;
+  string  rate  = 2;
 }
 
 message ReviewNoteResponse {

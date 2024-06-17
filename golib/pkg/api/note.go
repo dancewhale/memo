@@ -7,7 +7,6 @@ import (
 	"memo/pkg/fsrs"
 	"memo/pkg/storage"
 
-	//import dump
 	//"github.com/spewerspew/spew"
 )
 
@@ -57,7 +56,7 @@ func (s *noteServer) RemoveNote(ctx context.Context, in *pb.DeleteNoteRequest) (
 func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (*pb.ReviewNoteResponse, error) {
 	// use for test function
 	orgid := in.GetOrgid()
-	rate := fsrs.Rating(in.GetRate())
+	rate := fsrs.Rate(in.GetRate())
 
 	err := fapi.ReviewNote(orgid, rate)
 	if err != nil {

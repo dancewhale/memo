@@ -14,7 +14,7 @@ import (
 	
 	"github.com/jinzhu/copier"	
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
-	"github.com/spewerspew/spew"
+	//"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 	"gorm.io/gen/field"
 )
@@ -30,7 +30,6 @@ type FSRSStore struct {
 
     // CreateNote 添加一张卡片。
 func (store *FSRSStore) CreateNote(fnote *storage.Note) *storage.Note {
-	spew.Dump(fnote)
 	fcard := gfsrs.Card{Due: time.Now(), Stability: 0.0, Difficulty: 0.0, ElapsedDays: 0, ScheduledDays: 0, Reps: 0, Lapses: 0, LastReview: time.Now(), State: gfsrs.New}
 	scard := storage.Card{}
 	scard.Card = fcard
@@ -57,15 +56,9 @@ func (store *FSRSStore) UpdateNote(fnote *storage.Note) *storage.Note {
 }
 
     // UpdateCardOfNote 更新一张卡片中的记录。
-func (store *FSRSStore) UpdateCardOfNote(fnote *storage.Note, newCard gfsrs.Card) *storage.Note {
-	snote := storage.Note{}
-	store.db.Preload("Card").Where("org_id = ?", fnote.Orgid).First(snote)
-	err := store.db.Model(&snote).Association("Card").Replace(snote.Card, newCard)
-	if err != nil {
-		logger.Errorf("Update card of note in db association failed: %v", err)
-		return nil
-	}
-	return &snote
+func (store *FSRSStore) UpdateCardOfNote(fnote *storage.Note) *storage.Note {
+	store.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fnote)
+	return fnote
 }
 
 // RemoveNote 移除一张卡片。

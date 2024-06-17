@@ -33,17 +33,3 @@ type ReviewLog struct {
 	fsrs.ReviewLog  `gorm:"embedded",json:"Flog"`
 	NoteID	        uint
 }
-
-
-
-type FCard struct {
-	Due           time.Time `json:"Due"`
-	Stability     float64   `json:"Stability"`
-	Difficulty    float64   `json:"Difficulty"`
-	ElapsedDays   uint64    `json:"ElapsedDays"`
-	ScheduledDays uint64    `json:"ScheduledDays"`
-	Reps          uint64    `json:"Reps"`
-	Lapses        uint64    `json:"Lapses"`
-	LastReview    time.Time `json:"LastReview"`
-	State         fsrs.State     `json:"State"`
-}

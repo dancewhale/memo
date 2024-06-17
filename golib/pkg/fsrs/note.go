@@ -6,11 +6,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"errors"
+	//"errors"
 
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 
+	//import spew
+	"github.com/spewerspew/spew"
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 )
 
@@ -61,24 +63,30 @@ func (api *FSRSApi) RemoveNote(orgid string) error {
 }
 
     // Review 闪卡复习。
-func (api *FSRSApi) ReviewNote(orgID string, rating Rating) error {
+func (api *FSRSApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
 
-	//now := time.Now()
+	now := time.Now()
 	fnote := api.store.GetNoteByOrgID(orgID)	
 	if fnote == nil {
 		logger.Errorf("not found card [orgid=%s] to review", orgID)
-		return errors.New("When review card, not found card.")
+		return nil
 	}
-	//	
-	//	schedulingInfo := api.params.Repeat(fnote.Card.Card, now)
-	//	updatedCard := schedulingInfo[gfsrs.Rating(rating)].Card
-	//
-	//	api.store.UpdateCardOfNote(fnote, updatedCard)
-	//	
-	//	reviewLog := schedulingInfo[gfsrs.Rating(rating)].ReviewLog
-	//
-	//return api.store.AddReviewLog(orgID, &reviewLog)
-	return nil
+		
+	spew.Dump(fnote)
+	schedulingInfo := api.params.Repeat(fnote.Card.Card, now)
+	updatedCard := schedulingInfo[rating].Card
+	spew.Dump(schedulingInfo)
+	
+	rLog := schedulingInfo[rating].ReviewLog
+	spew.Dump(rLog)
+
+	fnote.Card.Card = updatedCard
+	reviewlog := storage.ReviewLog{}
+	reviewlog.ReviewLog = rLog
+	fnote.Logs = append(fnote.Logs, reviewlog)
+	
+	
+	return api.store.UpdateCardOfNote(fnote)
 }
 
 
