@@ -65,6 +65,7 @@ func (api *FSRSApi) RemoveNote(orgid string) error {
     // Review 闪卡复习。
 func (api *FSRSApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
 
+	logger.Debugf("Function Args print orgID: %s, rating: %s", orgID, rating)
 	now := time.Now()
 	fnote := api.store.GetNoteByOrgID(orgID)	
 	if fnote == nil {
@@ -72,19 +73,20 @@ func (api *FSRSApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 		return nil
 	}
 		
-	spew.Dump(fnote)
+	logger.Debugf("First find fnote: %s", spew.Sdump(fnote))
+
 	schedulingInfo := api.params.Repeat(fnote.Card.Card, now)
 	updatedCard := schedulingInfo[rating].Card
-	spew.Dump(schedulingInfo)
+	logger.Debugf("After Repeat function for now we Get: %s", spew.Sdump(schedulingInfo))
 	
 	rLog := schedulingInfo[rating].ReviewLog
-	spew.Dump(rLog)
 
 	fnote.Card.Card = updatedCard
 	reviewlog := storage.ReviewLog{}
 	reviewlog.ReviewLog = rLog
 	fnote.Logs = append(fnote.Logs, reviewlog)
 	
+	logger.Debugf("After Repeat we Get fnote: %s", spew.Sdump(fnote))
 	
 	return api.store.UpdateCardOfNote(fnote)
 }

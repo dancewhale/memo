@@ -7,6 +7,11 @@ memo.so: cmd/main.go
 clean:
 	rm -f  memo.so
 
+debug:
+	$(GO) build -o memo cmd/main.go
+	chmod +x memo
+	./memo --loglevel -1 daemon
+
 run:
 	$(GO) build -o memo cmd/main.go
 	chmod +x memo

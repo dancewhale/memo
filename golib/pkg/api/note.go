@@ -6,6 +6,7 @@ import (
 	pb "memo/proto/grpc/memo/v1"
 	"memo/pkg/fsrs"
 	"memo/pkg/storage"
+	"memo/pkg/logger"
 
 	//"github.com/spewerspew/spew"
 )
@@ -57,8 +58,11 @@ func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (
 	// use for test function
 	orgid := in.GetOrgid()
 	rate := fsrs.Rate(in.GetRate())
+	logger.Debugf("ReviewNote: orgid: %s, input rate: %s , rate: %s", orgid, in.GetRate(), rate)
 
+	//err := fapi.ReviewNote(orgid, rate)
 	err := fapi.ReviewNote(orgid, rate)
+
 	if err != nil {
 		return &pb.ReviewNoteResponse{Orgid: orgid}, nil
 	} else {

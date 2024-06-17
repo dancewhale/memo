@@ -12,9 +12,9 @@ service NoteService {
 }
 
 message CreateNoteRequest {
-  string content = 1;
-  string type = 2;
-  string orgid = 3;
+  string orgid = 1;
+  string content = 2;
+  string type = 3;
 }
 
 message CreateNoteResponse {
@@ -26,9 +26,9 @@ message GetNoteRequest {
 }
 
 message GetNoteResponse {
-  string content = 1;
-  string type = 2;
-  string orgid = 3;
+  string orgid = 1;
+  string content = 2;
+  string type = 3;
 }
 
 message DeleteNoteRequest {
