@@ -1,7 +1,7 @@
 * 这个是一篇文章
 :PROPERTIES:
 :ID:       0555cfbb-e7c6-46ce-a62a-ed6510ddff90
-:MEMO_TYPE:  text
+:MEMO_NOTE_TYPE:  text
 :END:
 你们知道跟党走，和跟将军走，最大的区别是什么吗？
 

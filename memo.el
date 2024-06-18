@@ -22,10 +22,8 @@
 (require 'cl-lib)
 (require 'org-element)
 
-					;(setq load-path (append load-path (list (file-truename "~/cao/memo/golib"))))
-
-					;(load-file "~/cao/memo/golib/memo.so")
-					;(setq testj (memo-create-card "font test" "back test"))
+(setq load-path (append load-path (list (file-truename default-directory))))
+(load-file (concat default-directory "memo.so"))
 
 ;;; Core primitives
 
@@ -64,13 +62,19 @@ If heading without an `ID' property create it."
 		    :content content-current-heading)))
 
 
+;(defun memo--push-note (note)
+;  "Request AnkiConnect for updating or creating NOTE."
+;  (cond
+;   ((null (memo-get-note-from-id note))
+;    (memo--create-note note))
+;   (t
+;    (memo--update-note note))))
+
 (defun memo--push-note (note)
   "Request AnkiConnect for updating or creating NOTE."
-  (cond
-   ((null (memo-get-note-from-id note))
-    (memo--create-note note))
-   (t
-    (memo--update-note note))))
+  (memo--create-note (memo-note-id note)
+		     (memo-note-type note)
+		     (memo-note-content note)))
 
 
 

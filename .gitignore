@@ -3,3 +3,4 @@ golib/memo
 
 *.db
 *.sqlite
+*.so

@@ -117,3 +117,15 @@ rm mymod.o
 函数的调用传参,通过env 的函数获取.
 函数的参数返回emacs, 也是通过go 调用emacs 的env 内函数,在emacs 内构造对应
 数据进行返回
+<#+name: 
+#+begin_src c  :comments link
+  type FunctionCallContext interface {
+	Environment() Environment // 用于反向操作emacs,创建变量,调用函数 
+	NumberArgs() int          // 以下均为获取从Emacs 来的参数
+	Arg(int) Value
+	StringArg(int) String
+	UserPointerArg(int) UserPointer
+	GoStringArg(int) (string, error)
+}
+    #+end_src
+
