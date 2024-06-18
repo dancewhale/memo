@@ -25,7 +25,7 @@
 ** 这个时第二个
 :PROPERTIES:
 :ID:       3040130e-a772-46f4-a8c2-5c473644c696
-:MEMO_TYPE:  default
+:MEMO_NOTE_TYPE:  default
 :END:
 
 党领导军队,和军阀领导军队,区别到底时什么?
