@@ -42,21 +42,21 @@ func (e *EModule) CreateNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	defer cancel()
 
 	orgid, err := ectx.GoStringArg(0) 
-	if err != nil {
+	if err != nil || orgid == "" {
 		logger.Errorf("Pass arg orgid from emacs in create note failed: %v", err)
-	}
-	if orgid == "" {
 		return env.Bool(false), nil
 	}
 
 	ntype, err := ectx.GoStringArg(1)
 	if err != nil {
 		logger.Errorf("Pass arg type from emacs create note failed: %v", err)
+		return env.Bool(false), nil
 	}
 
 	ncontent, err := ectx.GoStringArg(2)
 	if err != nil {
 		logger.Errorf("Pass arg content from emacs create note failed: %v", err)
+		return env.Bool(false), nil
 	}
 
 	noteReq := pb.CreateNoteRequest{Orgid: orgid, Type: ntype, Content: ncontent}
@@ -67,7 +67,7 @@ func (e *EModule) CreateNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	}
 	logger.Infof("Create note success: %s", r.GetOrgid())
 
-	return env.Bool(false), nil
+	return env.Bool(true), nil
 }
 
 func (e *EModule) DeleteNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {

@@ -46,8 +46,9 @@ If heading without an `ID' property create it."
       (setq note-id (org-id-get-create))
       (if (not note-type)
 	  (user-error "No note to push found")
-	(memo--push-note (memo-note-at-point))
-	(message "Successfully pushed note at point to Anki.")))))
+	(if (memo--push-note (memo-note-at-point))
+	    (message "Create note to memo successful.")
+	  (message "Create note to memo failed."))))))
 
 
 (defun memo-note-at-point ()
