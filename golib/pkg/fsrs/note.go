@@ -91,14 +91,19 @@ func (api *FSRSApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 	return api.store.UpdateCardOfNote(fnote)
 }
 
+	// DueCards 返回当前和未来到期的闪卡。
+ func (api *FSRSApi) DueNotes(day int64) []*storage.Note {
+	// 通过store 函数获取到期卡片
+	return api.store.DueNotes(day)
+ }
 
 	// NextDues 返回每种评分对应的下次到期时间。
- func (api *FSRSApi) 	NextDues() map[Rating]time.Time {
+ func (api *FSRSApi) 	NextDues() map[gfsrs.Rating]time.Time {
 	return nil
  }
 
 	// SetNextDues 设置每种评分对应的下次到期时间。
- func (api *FSRSApi) 	SetNextDues(map[Rating]time.Time) {}
+ func (api *FSRSApi) 	SetNextDues(map[gfsrs.Rating]time.Time) {}
 
 	// SetDue 设置到期时间。
  func (api *FSRSApi) 	SetDue(time.Time) {}
@@ -114,8 +119,8 @@ func (api *FSRSApi) 	GetReps() int {
 }
 
 	// GetState 返回闪卡状态。
- func (api *FSRSApi) 	GetState() State {
-	return State(Hard)
+ func (api *FSRSApi) 	GetState() gfsrs.State {
+	return gfsrs.State(gfsrs.Hard)
  }
 
 	// GetLastReview 返回闪卡的最后复习时间。

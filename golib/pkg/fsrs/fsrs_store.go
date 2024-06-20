@@ -127,24 +127,33 @@ func (store *FSRSStore) CountNotes() int {
 	return 0
 }
 
-    // Dues 获取所有到期的闪卡列表。
-func (store *FSRSStore) Dues() (ret []storage.Note) {
+    // Dues 获取在day 天之后以前到期的所有闪卡。
+func (store *FSRSStore) DueNotes(day int64) ([]*storage.Note) {
+	n := dal.Use(store.db).Note
+	notes, err := n.WithContext(context.Background()).Preload(n.Card).Find()
+	if err != nil {
+		logger.Errorf("Get all notes failed: %v", err)
+		return nil
+	}
+	ret := []*storage.Note{}
 
-	//	now := time.Now()
-	//	for _, card := range store.cards {
-	//		c := card.Impl().(*fsrs.Card)
-	//		if now.Before(c.Due) {
-	//			continue
-	//		}
-	//
-	//		schedulingInfos := store.params.Repeat(*c, now)
-	//		nextDues := map[Rating]time.Time{}
-	//		for rating, schedulingInfo := range schedulingInfos {
-	//			nextDues[Rating(rating)] = schedulingInfo.Card.Due
-	//		}
-	//		card.SetNextDues(nextDues)
-	//		ret = append(ret, card)
-	//	}
-	return
+	for _, note := range notes {
+		cardDueYear := note.Card.Due.Year()
+		cardDueMonth := note.Card.Due.Month()
+		cardDueDay := note.Card.Due.Day()
+		cardDue := time.Date(cardDueYear, cardDueMonth, cardDueDay, 0, 0, 0, 0, time.UTC)
+
+		torrow  := time.Now().AddDate(0, 0, int(day))
+		dueTimeYear := torrow.Year()
+		dueTimeMonth := torrow.Month()
+		dueTimeDay := torrow.Day()
+		dueTime := time.Date(dueTimeYear, dueTimeMonth, dueTimeDay, 0, 0, 0, 0, time.UTC)
+		
+		//check  cardDue before tody 24:00
+		if cardDue.Before(dueTime) || cardDue.Equal(dueTime) {
+			ret = append(ret, note)
+		}
+	}
+	return ret
 }
 

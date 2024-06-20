@@ -8,9 +8,13 @@ import (
 	"memo/pkg/storage"
 	"memo/pkg/logger"
 
+	"google.golang.org/grpc"
 	//"github.com/spewerspew/spew"
 )
 
+func ApiRegister(s *grpc.Server) {
+	pb.RegisterNoteServiceServer(s, &noteServer{})
+}
 
 type noteServer struct {
 	pb.UnimplementedNoteServiceServer
@@ -55,12 +59,10 @@ func (s *noteServer) RemoveNote(ctx context.Context, in *pb.DeleteNoteRequest) (
 }
 
 func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (*pb.ReviewNoteResponse, error) {
-	// use for test function
 	orgid := in.GetOrgid()
 	rate := fsrs.Rate(in.GetRate())
 	logger.Debugf("ReviewNote: orgid: %s, input rate: %s , rate: %s", orgid, in.GetRate(), rate)
 
-	//err := fapi.ReviewNote(orgid, rate)
 	err := fapi.ReviewNote(orgid, rate)
 
 	if err != nil {
@@ -68,4 +70,18 @@ func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (
 	} else {
 		return &pb.ReviewNoteResponse{Orgid: orgid}, nil
 	}
+}
+
+
+func (s *noteServer) DueNotes(ctx context.Context, in *pb.DueNotesRequest) (*pb.DueNotesResponse, error) {
+	dueDay := in.GetDay()
+	notes := fapi.DueNotes(dueDay)
+
+	noteOrgIdList := []string{}
+
+	for _, note := range notes {
+		noteOrgIdList = append(noteOrgIdList, note.Orgid)
+	}
+		
+	return &pb.DueNotesResponse{Orgid: noteOrgIdList}, nil
 }

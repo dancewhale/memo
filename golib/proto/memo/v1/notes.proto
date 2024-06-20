@@ -9,6 +9,7 @@ service NoteService {
   rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
   rpc RemoveNote(DeleteNoteRequest) returns (DeleteNoteResponse);
   rpc ReviewNote(ReviewNoteRequest) returns (ReviewNoteResponse);
+  rpc DueNotes(DueNotesRequest) returns (DueNotesResponse);
 }
 
 message CreateNoteRequest {
@@ -47,4 +48,12 @@ message ReviewNoteRequest {
 
 message ReviewNoteResponse {
   string orgid = 1;
+}
+
+message DueNotesRequest {
+  int64 day = 1;
+}
+
+message DueNotesResponse {
+  repeated string orgid = 1;
 }
