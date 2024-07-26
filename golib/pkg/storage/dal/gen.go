@@ -18,6 +18,7 @@ import (
 var (
 	Q         = new(Query)
 	Card      *card
+	FsrsInfo  *fsrsInfo
 	Note      *note
 	ReviewLog *reviewLog
 )
@@ -25,6 +26,7 @@ var (
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	*Q = *Use(db, opts...)
 	Card = &Q.Card
+	FsrsInfo = &Q.FsrsInfo
 	Note = &Q.Note
 	ReviewLog = &Q.ReviewLog
 }
@@ -33,6 +35,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
 		db:        db,
 		Card:      newCard(db, opts...),
+		FsrsInfo:  newFsrsInfo(db, opts...),
 		Note:      newNote(db, opts...),
 		ReviewLog: newReviewLog(db, opts...),
 	}
@@ -42,6 +45,7 @@ type Query struct {
 	db *gorm.DB
 
 	Card      card
+	FsrsInfo  fsrsInfo
 	Note      note
 	ReviewLog reviewLog
 }
@@ -52,6 +56,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
 		db:        db,
 		Card:      q.Card.clone(db),
+		FsrsInfo:  q.FsrsInfo.clone(db),
 		Note:      q.Note.clone(db),
 		ReviewLog: q.ReviewLog.clone(db),
 	}
@@ -69,6 +74,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
 		db:        db,
 		Card:      q.Card.replaceDB(db),
+		FsrsInfo:  q.FsrsInfo.replaceDB(db),
 		Note:      q.Note.replaceDB(db),
 		ReviewLog: q.ReviewLog.replaceDB(db),
 	}
@@ -76,6 +82,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 
 type queryCtx struct {
 	Card      *cardDo
+	FsrsInfo  *fsrsInfoDo
 	Note      *noteDo
 	ReviewLog *reviewLogDo
 }
@@ -83,6 +90,7 @@ type queryCtx struct {
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
 		Card:      q.Card.WithContext(ctx),
+		FsrsInfo:  q.FsrsInfo.WithContext(ctx),
 		Note:      q.Note.WithContext(ctx),
 		ReviewLog: q.ReviewLog.WithContext(ctx),
 	}

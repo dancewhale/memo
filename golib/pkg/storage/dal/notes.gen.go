@@ -34,16 +34,22 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 	_note.Type = field.NewString(tableName, "type")
 	_note.Orgid = field.NewString(tableName, "orgid")
 	_note.Hash = field.NewString(tableName, "hash")
-	_note.Card = noteHasOneCard{
+	_note.Fsrs = noteHasOneFsrs{
 		db: db.Session(&gorm.Session{}),
 
-		RelationField: field.NewRelation("Card", "storage.Card"),
+		RelationField: field.NewRelation("Fsrs", "storage.FsrsInfo"),
 	}
 
-	_note.Logs = noteHasManyLogs{
+	_note.ReviewLogs = noteHasManyReviewLogs{
 		db: db.Session(&gorm.Session{}),
 
-		RelationField: field.NewRelation("Logs", "storage.ReviewLog"),
+		RelationField: field.NewRelation("ReviewLogs", "storage.ReviewLog"),
+	}
+
+	_note.Cards = noteHasManyCards{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Cards", "storage.Card"),
 	}
 
 	_note.fillFieldMap()
@@ -62,9 +68,11 @@ type note struct {
 	Type      field.String
 	Orgid     field.String
 	Hash      field.String
-	Card      noteHasOneCard
+	Fsrs      noteHasOneFsrs
 
-	Logs noteHasManyLogs
+	ReviewLogs noteHasManyReviewLogs
+
+	Cards noteHasManyCards
 
 	fieldMap map[string]field.Expr
 }
@@ -104,7 +112,7 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (n *note) fillFieldMap() {
-	n.fieldMap = make(map[string]field.Expr, 9)
+	n.fieldMap = make(map[string]field.Expr, 10)
 	n.fieldMap["id"] = n.ID
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
@@ -125,13 +133,13 @@ func (n note) replaceDB(db *gorm.DB) note {
 	return n
 }
 
-type noteHasOneCard struct {
+type noteHasOneFsrs struct {
 	db *gorm.DB
 
 	field.RelationField
 }
 
-func (a noteHasOneCard) Where(conds ...field.Expr) *noteHasOneCard {
+func (a noteHasOneFsrs) Where(conds ...field.Expr) *noteHasOneFsrs {
 	if len(conds) == 0 {
 		return &a
 	}
@@ -144,27 +152,27 @@ func (a noteHasOneCard) Where(conds ...field.Expr) *noteHasOneCard {
 	return &a
 }
 
-func (a noteHasOneCard) WithContext(ctx context.Context) *noteHasOneCard {
+func (a noteHasOneFsrs) WithContext(ctx context.Context) *noteHasOneFsrs {
 	a.db = a.db.WithContext(ctx)
 	return &a
 }
 
-func (a noteHasOneCard) Session(session *gorm.Session) *noteHasOneCard {
+func (a noteHasOneFsrs) Session(session *gorm.Session) *noteHasOneFsrs {
 	a.db = a.db.Session(session)
 	return &a
 }
 
-func (a noteHasOneCard) Model(m *storage.Note) *noteHasOneCardTx {
-	return &noteHasOneCardTx{a.db.Model(m).Association(a.Name())}
+func (a noteHasOneFsrs) Model(m *storage.Note) *noteHasOneFsrsTx {
+	return &noteHasOneFsrsTx{a.db.Model(m).Association(a.Name())}
 }
 
-type noteHasOneCardTx struct{ tx *gorm.Association }
+type noteHasOneFsrsTx struct{ tx *gorm.Association }
 
-func (a noteHasOneCardTx) Find() (result *storage.Card, err error) {
+func (a noteHasOneFsrsTx) Find() (result *storage.FsrsInfo, err error) {
 	return result, a.tx.Find(&result)
 }
 
-func (a noteHasOneCardTx) Append(values ...*storage.Card) (err error) {
+func (a noteHasOneFsrsTx) Append(values ...*storage.FsrsInfo) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -172,7 +180,7 @@ func (a noteHasOneCardTx) Append(values ...*storage.Card) (err error) {
 	return a.tx.Append(targetValues...)
 }
 
-func (a noteHasOneCardTx) Replace(values ...*storage.Card) (err error) {
+func (a noteHasOneFsrsTx) Replace(values ...*storage.FsrsInfo) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -180,7 +188,7 @@ func (a noteHasOneCardTx) Replace(values ...*storage.Card) (err error) {
 	return a.tx.Replace(targetValues...)
 }
 
-func (a noteHasOneCardTx) Delete(values ...*storage.Card) (err error) {
+func (a noteHasOneFsrsTx) Delete(values ...*storage.FsrsInfo) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -188,21 +196,21 @@ func (a noteHasOneCardTx) Delete(values ...*storage.Card) (err error) {
 	return a.tx.Delete(targetValues...)
 }
 
-func (a noteHasOneCardTx) Clear() error {
+func (a noteHasOneFsrsTx) Clear() error {
 	return a.tx.Clear()
 }
 
-func (a noteHasOneCardTx) Count() int64 {
+func (a noteHasOneFsrsTx) Count() int64 {
 	return a.tx.Count()
 }
 
-type noteHasManyLogs struct {
+type noteHasManyReviewLogs struct {
 	db *gorm.DB
 
 	field.RelationField
 }
 
-func (a noteHasManyLogs) Where(conds ...field.Expr) *noteHasManyLogs {
+func (a noteHasManyReviewLogs) Where(conds ...field.Expr) *noteHasManyReviewLogs {
 	if len(conds) == 0 {
 		return &a
 	}
@@ -215,27 +223,27 @@ func (a noteHasManyLogs) Where(conds ...field.Expr) *noteHasManyLogs {
 	return &a
 }
 
-func (a noteHasManyLogs) WithContext(ctx context.Context) *noteHasManyLogs {
+func (a noteHasManyReviewLogs) WithContext(ctx context.Context) *noteHasManyReviewLogs {
 	a.db = a.db.WithContext(ctx)
 	return &a
 }
 
-func (a noteHasManyLogs) Session(session *gorm.Session) *noteHasManyLogs {
+func (a noteHasManyReviewLogs) Session(session *gorm.Session) *noteHasManyReviewLogs {
 	a.db = a.db.Session(session)
 	return &a
 }
 
-func (a noteHasManyLogs) Model(m *storage.Note) *noteHasManyLogsTx {
-	return &noteHasManyLogsTx{a.db.Model(m).Association(a.Name())}
+func (a noteHasManyReviewLogs) Model(m *storage.Note) *noteHasManyReviewLogsTx {
+	return &noteHasManyReviewLogsTx{a.db.Model(m).Association(a.Name())}
 }
 
-type noteHasManyLogsTx struct{ tx *gorm.Association }
+type noteHasManyReviewLogsTx struct{ tx *gorm.Association }
 
-func (a noteHasManyLogsTx) Find() (result []*storage.ReviewLog, err error) {
+func (a noteHasManyReviewLogsTx) Find() (result []*storage.ReviewLog, err error) {
 	return result, a.tx.Find(&result)
 }
 
-func (a noteHasManyLogsTx) Append(values ...*storage.ReviewLog) (err error) {
+func (a noteHasManyReviewLogsTx) Append(values ...*storage.ReviewLog) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -243,7 +251,7 @@ func (a noteHasManyLogsTx) Append(values ...*storage.ReviewLog) (err error) {
 	return a.tx.Append(targetValues...)
 }
 
-func (a noteHasManyLogsTx) Replace(values ...*storage.ReviewLog) (err error) {
+func (a noteHasManyReviewLogsTx) Replace(values ...*storage.ReviewLog) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -251,7 +259,7 @@ func (a noteHasManyLogsTx) Replace(values ...*storage.ReviewLog) (err error) {
 	return a.tx.Replace(targetValues...)
 }
 
-func (a noteHasManyLogsTx) Delete(values ...*storage.ReviewLog) (err error) {
+func (a noteHasManyReviewLogsTx) Delete(values ...*storage.ReviewLog) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -259,11 +267,82 @@ func (a noteHasManyLogsTx) Delete(values ...*storage.ReviewLog) (err error) {
 	return a.tx.Delete(targetValues...)
 }
 
-func (a noteHasManyLogsTx) Clear() error {
+func (a noteHasManyReviewLogsTx) Clear() error {
 	return a.tx.Clear()
 }
 
-func (a noteHasManyLogsTx) Count() int64 {
+func (a noteHasManyReviewLogsTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type noteHasManyCards struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a noteHasManyCards) Where(conds ...field.Expr) *noteHasManyCards {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a noteHasManyCards) WithContext(ctx context.Context) *noteHasManyCards {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a noteHasManyCards) Session(session *gorm.Session) *noteHasManyCards {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a noteHasManyCards) Model(m *storage.Note) *noteHasManyCardsTx {
+	return &noteHasManyCardsTx{a.db.Model(m).Association(a.Name())}
+}
+
+type noteHasManyCardsTx struct{ tx *gorm.Association }
+
+func (a noteHasManyCardsTx) Find() (result []*storage.Card, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a noteHasManyCardsTx) Append(values ...*storage.Card) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a noteHasManyCardsTx) Replace(values ...*storage.Card) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a noteHasManyCardsTx) Delete(values ...*storage.Card) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a noteHasManyCardsTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a noteHasManyCardsTx) Count() int64 {
 	return a.tx.Count()
 }
 

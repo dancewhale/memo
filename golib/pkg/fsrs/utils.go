@@ -5,6 +5,13 @@ import (
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 )
 
+
+const (
+	QuestionType string = "Question"
+	ClozeType = "Cloze"
+)
+
+
 // change string to fsrs.rate
 func Rate(rate string) gfsrs.Rating {
 	switch rate {

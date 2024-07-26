@@ -20,9 +20,16 @@ card = schedulingCards[Good].Card
 Card 用来保存卡片难度,计算下一次复习时间,保存的是记忆的元数据.
 ReviewLog 用来保存历史复习记录, Card 和ReviewLog 进行一对多的映射.
 
-那么还有另外的设计,就是需要复习的内容该怎么规划?
-内容和Card 应该是一对一映射的,但是内容可能有多种类型,这个怎么设计数据结构.
-内容之间也是有上下结构的.
+Note 作为保存的实际内容,和Card 一对一映射, 和ReviewLog 一对多映射.
 
-我想到的是使用emacs 的treemacs 包构建和supermemo 近似的使用界面.
-然后跳转来进行编辑.
+Note 自动生成对应的待review queue.
+
+* 代码结构
+api 用于实现grpc api 接口提供emodule 模块调用.
+emodule 用于实现emacs 中的对接函数, 用于elisp 代码调用, 通过grpc 库调用对应的api 中的接口函数.
+
+storage 用于实现基础的数据库操作代码.
+fsrs 实现基本的卡片数据操作封装.
+quene 实现卡片队列的实现,用于生成review 队列.
+
+

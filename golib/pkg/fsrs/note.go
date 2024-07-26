@@ -1,19 +1,20 @@
-// 本文件用于抽象最上层卡片的操作
-// 操作函数定义在api 中
 package fsrs
 
 import (
 	"strconv"
 	"strings"
+	"context"
 	"time"
-	//"errors"
 
-	"memo/pkg/logger"
 	"memo/pkg/storage"
-
-	//import spew
-	"github.com/spewerspew/spew"
+	"memo/pkg/storage/dal"
+	"memo/pkg/logger"
+	
+	"github.com/jinzhu/copier"	
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
+	"github.com/spewerspew/spew"
+	"gorm.io/gorm"
+	"gorm.io/gen/field"
 )
 
 func NewParams(requestRetention float64, maximumInterval int, weights string) gfsrs.Parameters {
@@ -31,43 +32,151 @@ func NewParams(requestRetention float64, maximumInterval int, weights string) gf
 
 var defaultFsrsWeights = "0.5701, 1.4436, 4.1386, 10.9355, 5.1443, 1.2006, 0.8627, 0.0362, 1.629, 0.1342, 1.0166, 2.1174, 0.0839, 0.3204, 1.4676, 0.219, 2.8237"
 
-func NewFsrsApi() *FSRSApi {
-	// TODO: 从环境变量中读取相应的配置
-	return &FSRSApi{store: NewFSRSStore(), params: NewParams(0.9, 365, defaultFsrsWeights)}
+func NewNoteApi() *NoteApi {
+	var DB = storage.InitDBEngine()
+	return &NoteApi{db: DB, params: NewParams(0.9, 365, defaultFsrsWeights)}
 }
 
-type FSRSApi struct {
-	store  *FSRSStore
-	params gfsrs.Parameters
-
+type NoteApi struct {
+    	db      *gorm.DB
+	params  gfsrs.Parameters
 }
 
-func (api *FSRSApi) CreateNote(note *storage.Note) *storage.Note {
-	return api.store.CreateNote(note)
+    // CreateNote 添加一张卡片。
+func (api *NoteApi) CreateNote(fnote *storage.Note) *storage.Note {
+	fcard := gfsrs.Card{Due: time.Now(), Stability: 0.0, Difficulty: 0.0, ElapsedDays: 0, ScheduledDays: 0, Reps: 0, Lapses: 0, LastReview: time.Now(), State: gfsrs.New}
+	scard := storage.FsrsInfo{}
+	scard.Card = fcard
+	fnote.Fsrs = scard
+	api.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fnote)
+	return fnote
 }
 
-	// 创建新卡
- func (api *FSRSApi) GetNoteByOrgID(orgid string) *storage.Note {
-	// 通过store 函数获取卡片, 返回本身内部card
-	return api.store.GetNoteByOrgID(orgid)
- }
-	// 更新闪卡 ID。
- func (api *FSRSApi) UpdateNote(note *storage.Note) *storage.Note {
-	// 通过store 函数更新卡片
-	return api.store.UpdateNote(note)
- }
+    // GetNote 获取一张卡片。
+func (store *NoteApi) GetNoteByOrgID(orgid string) *storage.Note {
+	note := &storage.Note{}
+	store.db.Preload("Card").Where("orgid = ?", orgid).First(note)
+	return note
+}
+
+    // UpdateNote 设置一张卡片。
+func (store *NoteApi) UpdateNote(fnote *storage.Note) *storage.Note {
+	n := dal.Use(store.db).Note
+	_, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.Orgid)).Updates(fnote)
+	if err != nil {
+		return nil
+	}
+	return fnote
+}
+
+    // UpdateCardOfNote 更新一张卡片中的记录。
+func (store *NoteApi) UpdateCardOfNote(fnote *storage.Note) *storage.Note {
+	store.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fnote)
+	return fnote
+}
+
+// RemoveNote 移除一张卡片。
+func (store *NoteApi) RemoveNote(orgid string) error {
+	n := dal.Use(store.db).Note
+	note, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(orgid)).First()
+	if err != nil {
+		logger.Errorf("Remove note in db failed: %v", err)
+		return err
+	}
+	_, error := n.Select(field.AssociationFields).Delete(note)
+	return error
+}
+
+// 增加复习记录
+func (store *NoteApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
+	note := &storage.Note{}
+	log := &storage.ReviewLog{}
+	copier.Copy(log, rlog)
+	n := dal.Use(store.db).Note
+	store.db.Preload("Logs").Where("org_id = ?", orgid).First(note)
+
+	return n.ReviewLogs.Model(note).Append(log)
+}
 
 
-func (api *FSRSApi) RemoveNote(orgid string) error {
-	return api.store.RemoveNote(orgid)
+    // 获取指定OrgId的新的卡片（制卡后没有进行过复习的卡片）。
+func (store *NoteApi) GetNewNotesByOrgIDs(blockIDs []string) (ret []storage.Note) {
+
+	//	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
+	//	for _, card := range store.cards {
+	//		c := card.Impl().(*fsrs.Card)
+	//		if !c.LastReview.IsZero() {
+	//			continue
+	//		}
+	//
+	//		if gulu.Str.Contains(card.BlockID(), blockIDs) {
+	//			ret = append(ret, card)
+	//		}
+	//	}
+	return nil
+}
+
+    //获取指定OrgId的所有到期的卡片。
+func (store *NoteApi) GetDueNotesByOrgIDs(blockIDs []string) (ret []storage.Note) {
+
+	//	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
+	//	now := time.Now()
+	//	for _, card := range store.cards {
+	//		c := card.Impl().(*fsrs.Card)
+	//		if now.Before(c.Due) {
+	//			continue
+	//		}
+	//
+	//		if gulu.Str.Contains(card.BlockID(), blockIDs) {
+	//			ret = append(ret, card)
+	//		}
+	//	}
+	return nil
+}
+
+
+
+// CountNotes 获取卡包中的闪卡数量。
+func (store *NoteApi) CountNotes() int {
+	return 0
+}
+
+    // Dues 获取在day 天之后以前到期的所有闪卡。
+func (store *NoteApi) DueNotes(day int64) ([]*storage.Note) {
+	n := dal.Use(store.db).Note
+	notes, err := n.WithContext(context.Background()).Preload(n.Cards).Find()
+	if err != nil {
+		logger.Errorf("Get all notes failed: %v", err)
+		return nil
+	}
+	ret := []*storage.Note{}
+
+	for _, note := range notes {
+		cardDueYear := note.Fsrs.Due.Year()
+		cardDueMonth := note.Fsrs.Due.Month()
+		cardDueDay := note.Fsrs.Due.Day()
+		cardDue := time.Date(cardDueYear, cardDueMonth, cardDueDay, 0, 0, 0, 0, time.UTC)
+
+		torrow  := time.Now().AddDate(0, 0, int(day))
+		dueTimeYear := torrow.Year()
+		dueTimeMonth := torrow.Month()
+		dueTimeDay := torrow.Day()
+		dueTime := time.Date(dueTimeYear, dueTimeMonth, dueTimeDay, 0, 0, 0, 0, time.UTC)
+		
+		//check  cardDue before tody 24:00
+		if cardDue.Before(dueTime) || cardDue.Equal(dueTime) {
+			ret = append(ret, note)
+		}
+	}
+	return ret
 }
 
     // Review 闪卡复习。
-func (api *FSRSApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
+func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
 
 	logger.Debugf("Function Args print orgID: %s, rating: %s", orgID, rating)
 	now := time.Now()
-	fnote := api.store.GetNoteByOrgID(orgID)	
+	fnote := api.GetNoteByOrgID(orgID)	
 	if fnote == nil {
 		logger.Errorf("not found card [orgid=%s] to review", orgID)
 		return nil
@@ -75,71 +184,18 @@ func (api *FSRSApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 		
 	logger.Debugf("First find fnote: %s", spew.Sdump(fnote))
 
-	schedulingInfo := api.params.Repeat(fnote.Card.Card, now)
+	schedulingInfo := api.params.Repeat(fnote.Fsrs.Card, now)
 	updatedCard := schedulingInfo[rating].Card
 	logger.Debugf("After Repeat function for now we Get: %s", spew.Sdump(schedulingInfo))
 	
 	rLog := schedulingInfo[rating].ReviewLog
 
-	fnote.Card.Card = updatedCard
+	fnote.Fsrs.Card = updatedCard
 	reviewlog := storage.ReviewLog{}
 	reviewlog.ReviewLog = rLog
-	fnote.Logs = append(fnote.Logs, reviewlog)
+	fnote.ReviewLogs = append(fnote.ReviewLogs, reviewlog)
 	
 	logger.Debugf("After Repeat we Get fnote: %s", spew.Sdump(fnote))
 	
-	return api.store.UpdateCardOfNote(fnote)
-}
-
-	// DueCards 返回当前和未来到期的闪卡。
- func (api *FSRSApi) DueNotes(day int64) []*storage.Note {
-	// 通过store 函数获取到期卡片
-	return api.store.DueNotes(day)
- }
-
-	// NextDues 返回每种评分对应的下次到期时间。
- func (api *FSRSApi) 	NextDues() map[gfsrs.Rating]time.Time {
-	return nil
- }
-
-	// SetNextDues 设置每种评分对应的下次到期时间。
- func (api *FSRSApi) 	SetNextDues(map[gfsrs.Rating]time.Time) {}
-
-	// SetDue 设置到期时间。
- func (api *FSRSApi) 	SetDue(time.Time) {}
-
-	// GetLapses 返回闪卡的遗忘次数。
-func (api *FSRSApi) 	GetLapses() int {
-	return 0
-}
-
-	// GetReps 返回闪卡的复习次数。
-func (api *FSRSApi) 	GetReps() int {
-	return 0
-}
-
-	// GetState 返回闪卡状态。
- func (api *FSRSApi) 	GetState() gfsrs.State {
-	return gfsrs.State(gfsrs.Hard)
- }
-
-	// GetLastReview 返回闪卡的最后复习时间。
- func (api *FSRSApi) 	GetLastReview() time.Time {
-	return time.Now()
- }
-
-
-func (card *FSRSApi) Clone() storage.Note {
-//	data, err := gulu.JSON.MarshalJSON(card)
-//	if nil != err {
-//		logging.LogErrorf("marshal card failed: %s", err)
-//		return nil
-//	}
-//	ret := &storage.Note{}
-//	if err = gulu.JSON.UnmarshalJSON(data, ret); nil != err {
-//		logging.LogErrorf("unmarshal card failed: %s", err)
-//		return nil
-//	}
-//	return ret
-	return storage.Note{}
+	return api.UpdateCardOfNote(fnote)
 }
