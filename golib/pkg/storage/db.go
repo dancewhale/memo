@@ -33,7 +33,7 @@ func InitDBEngine() *gorm.DB {
 		panic(err)
 	}
 
-        Engine.AutoMigrate(&Card{}, &Note{}, &ReviewLog{})
+        Engine.AutoMigrate(&Note{}, FsrsInfo{}, &ReviewLog{}, &Card{})
 
         sqlDB, err := Engine.DB()
 	sqlDB.SetMaxIdleConns(DBConfig.MaxIdleConn)

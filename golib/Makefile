@@ -13,7 +13,7 @@ debug:
 	./memo --loglevel -1 daemon
 
 run:
-	$(GO) build -o memo cmd/main.go
+	$(GO) build -o memo cmd/main.go || exit
 	chmod +x memo
 	./memo daemon
 

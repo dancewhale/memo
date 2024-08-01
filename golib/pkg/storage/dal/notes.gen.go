@@ -6,6 +6,7 @@ package dal
 
 import (
 	"context"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -34,6 +35,7 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 	_note.Type = field.NewString(tableName, "type")
 	_note.Orgid = field.NewString(tableName, "orgid")
 	_note.Hash = field.NewString(tableName, "hash")
+	_note.ReviewState = field.NewInt8(tableName, "review_state")
 	_note.Fsrs = noteHasOneFsrs{
 		db: db.Session(&gorm.Session{}),
 
@@ -60,15 +62,16 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 type note struct {
 	noteDo
 
-	ALL       field.Asterisk
-	ID        field.Uint
-	CreatedAt field.Time
-	UpdatedAt field.Time
-	Content   field.String
-	Type      field.String
-	Orgid     field.String
-	Hash      field.String
-	Fsrs      noteHasOneFsrs
+	ALL         field.Asterisk
+	ID          field.Uint
+	CreatedAt   field.Time
+	UpdatedAt   field.Time
+	Content     field.String
+	Type        field.String
+	Orgid       field.String
+	Hash        field.String
+	ReviewState field.Int8
+	Fsrs        noteHasOneFsrs
 
 	ReviewLogs noteHasManyReviewLogs
 
@@ -96,6 +99,7 @@ func (n *note) updateTableName(table string) *note {
 	n.Type = field.NewString(table, "type")
 	n.Orgid = field.NewString(table, "orgid")
 	n.Hash = field.NewString(table, "hash")
+	n.ReviewState = field.NewInt8(table, "review_state")
 
 	n.fillFieldMap()
 
@@ -112,7 +116,7 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (n *note) fillFieldMap() {
-	n.fieldMap = make(map[string]field.Expr, 10)
+	n.fieldMap = make(map[string]field.Expr, 11)
 	n.fieldMap["id"] = n.ID
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
@@ -120,6 +124,7 @@ func (n *note) fillFieldMap() {
 	n.fieldMap["type"] = n.Type
 	n.fieldMap["orgid"] = n.Orgid
 	n.fieldMap["hash"] = n.Hash
+	n.fieldMap["review_state"] = n.ReviewState
 
 }
 
@@ -347,6 +352,36 @@ func (a noteHasManyCardsTx) Count() int64 {
 }
 
 type noteDo struct{ gen.DO }
+
+// where("orgid=@orgid")
+func (n noteDo) FindByOrgID(orgid string) (result storage.Note, err error) {
+	var params []interface{}
+
+	var generateSQL strings.Builder
+	params = append(params, orgid)
+	generateSQL.WriteString("orgid=? ")
+
+	var executeSQL *gorm.DB
+	executeSQL = n.UnderlyingDB().Where(generateSQL.String(), params...).Take(&result) // ignore_security_alert
+	err = executeSQL.Error
+
+	return
+}
+
+// sql(select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<@today)
+func (n noteDo) FindDueCard(today string) (result []*storage.Note, err error) {
+	var params []interface{}
+
+	var generateSQL strings.Builder
+	params = append(params, today)
+	generateSQL.WriteString("select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<? ")
+
+	var executeSQL *gorm.DB
+	executeSQL = n.UnderlyingDB().Raw(generateSQL.String(), params...).Find(&result) // ignore_security_alert
+	err = executeSQL.Error
+
+	return
+}
 
 func (n noteDo) Debug() *noteDo {
 	return n.withDO(n.DO.Debug())

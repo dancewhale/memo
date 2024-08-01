@@ -2,35 +2,23 @@
 package card
 
 import (
-	"memo/pkg/fsrs"
+	"fmt"
+
 	"memo/pkg/storage"
 	//"memo/pkg/storage/dal"
 	"memo/pkg/card/utils"
-
-	"gorm.io/gorm"
 )
 
-func NewCardApi() *CardApi {
-	var DB = storage.InitDBEngine()
-	return &CardApi{db: DB}
-}
-
-type CardApi struct {
-    	db      *gorm.DB
-}
 
 // 初始化note的卡片
-func (api *CardApi) InitCardOfNote(note *storage.Note) {
-	//var newCards, oldCards  []storage.Card
-	//oldCards = note.Cards
+func InitCardOfNote(note *storage.Note) *storage.Note {
 
-	//n := dal.Use(api.db).Note
-	if note.Type == fsrs.QuestionType {
+	if note.Type == storage.QuestionType {
+		fmt.Println("InitCardOfNote QuestionType")
 		note.Cards = utils.QueNoteToCard(note)
-	} else if note.Type == fsrs.ClozeType {
+	} else if note.Type == storage.ClozeType {
 		note.Cards = utils.ClozeNoteToCard(note)
 	}
-	//api.db.Model(note).Association("Cards").Clear()
-	api.db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(note)
+	return note
 }
 

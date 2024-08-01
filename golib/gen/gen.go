@@ -14,10 +14,7 @@ func main() {
 
 	g.ApplyBasic(storage.Card{}, storage.Note{}, storage.FsrsInfo{}, storage.ReviewLog{})
 
-	//g.ApplyInterface(func(storage.NoteMethod) {}, storage.Note{})
-
-	//g.ApplyInterface(func(model.Method) {}, model.User{})
-	//g.ApplyInterface(func(model.UserMethod) {}, model.User{})
+	g.ApplyInterface(func(storage.NoteMethod) {}, storage.Note{})
 
 	g.Execute()
 }

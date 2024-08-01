@@ -10,6 +10,15 @@ service NoteService {
   rpc RemoveNote(DeleteNoteRequest) returns (DeleteNoteResponse);
   rpc ReviewNote(ReviewNoteRequest) returns (ReviewNoteResponse);
   rpc DueNotes(DueNotesRequest) returns (DueNotesResponse);
+  rpc InitDueNotes(InitDueNotesRequest) returns (MessageResponse);
+}
+
+message InitDueNotesRequest {
+  int32 day = 1;
+}
+
+message MessageResponse {
+  string message = 1;
 }
 
 message CreateNoteRequest {
