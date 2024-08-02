@@ -34,6 +34,7 @@ func newCard(db *gorm.DB, opts ...gen.DOOption) card {
 	_card.Front = field.NewString(tableName, "front")
 	_card.Back = field.NewString(tableName, "back")
 	_card.NoteID = field.NewUint(tableName, "note_id")
+	_card.Orgid = field.NewString(tableName, "orgid")
 
 	_card.fillFieldMap()
 
@@ -51,6 +52,7 @@ type card struct {
 	Front     field.String
 	Back      field.String
 	NoteID    field.Uint
+	Orgid     field.String
 
 	fieldMap map[string]field.Expr
 }
@@ -74,6 +76,7 @@ func (c *card) updateTableName(table string) *card {
 	c.Front = field.NewString(table, "front")
 	c.Back = field.NewString(table, "back")
 	c.NoteID = field.NewUint(table, "note_id")
+	c.Orgid = field.NewString(table, "orgid")
 
 	c.fillFieldMap()
 
@@ -90,7 +93,7 @@ func (c *card) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (c *card) fillFieldMap() {
-	c.fieldMap = make(map[string]field.Expr, 7)
+	c.fieldMap = make(map[string]field.Expr, 8)
 	c.fieldMap["id"] = c.ID
 	c.fieldMap["created_at"] = c.CreatedAt
 	c.fieldMap["updated_at"] = c.UpdatedAt
@@ -98,6 +101,7 @@ func (c *card) fillFieldMap() {
 	c.fieldMap["front"] = c.Front
 	c.fieldMap["back"] = c.Back
 	c.fieldMap["note_id"] = c.NoteID
+	c.fieldMap["orgid"] = c.Orgid
 }
 
 func (c card) clone(db *gorm.DB) card {

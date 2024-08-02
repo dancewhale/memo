@@ -27,15 +27,46 @@ func Rate(rate string) gfsrs.Rating {
 	}
 }
 
-type State int8
+// change string to int8 for sqlite record.
+func RateInt(rate string) int8 {
+	switch rate {
+	case "Good":
+		return Good
+	case "Easy":
+		return Easy
+	case "Hard":
+		return Hard
+	case "Again":
+		return Again
+	default:
+		return Again
+	}
+}
+
+// change string to int8 for sqlite record.
+func IntRate(rate int8) string {
+	switch rate {
+	case 4:
+		return "Good"
+	case 3:
+		return "Easy"
+	case 2:
+		return "Hard"
+	case 1:
+		return "Again"
+	default:
+		return "Again"
+	}
+}
+
 
 const (
-	WaitReview State = iota  // wait for next review date of note
-	Again                    // review again
-	Hard                     // review hard
-	Good                     // review good
-	Easy                     // review easy
-	ReviewCardsReady         // review cards of note are init already.
+	WaitReview int8 = iota  // wait for next review date of note  0
+	Again                    // review again 1
+	Hard                     // review hard  2
+	Good                     // review good  3
+	Easy                     // review easy  4
+	ReviewCardsReady         // review cards of note are init already. 5
 )
 
 type Note struct {
@@ -49,7 +80,7 @@ type Note struct {
 	Fsrs          FsrsInfo
 	ReviewLogs    []ReviewLog
 	Cards         []Card // 等待review的卡片
-	ReviewState   State
+	ReviewState   int8
 }
 
 
@@ -77,4 +108,5 @@ type Card struct {
 	Front     string `json:"Front"`
 	Back      string `json:"Back"`
 	NoteID    uint
+	Orgid     string
 }

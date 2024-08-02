@@ -18,6 +18,7 @@ func QueNoteToCard(note *storage.Note) []storage.Card {
 		Back:  split[1],
 		Type:  note.Type,
 		NoteID: note.ID,
+		Orgid: note.Orgid,
 	}
 	cards := []storage.Card{card}
 	

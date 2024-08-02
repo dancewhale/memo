@@ -229,3 +229,6 @@ func (store *NoteApi) InitTodayDueNotes(day int) {
 		}
 	}
 }
+
+
+
