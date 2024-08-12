@@ -9,7 +9,6 @@ import (
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"memo/pkg/logger"
-	"memo/pkg/card"
 	
 	"github.com/jinzhu/copier"	
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
@@ -176,7 +175,7 @@ func (store *NoteApi) DueNotes(day int64) ([]*storage.Note) {
     // Review 闪卡复习。
 func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
 
-	logger.Debugf("Function Args print orgID: %s, rating: %s", orgID, rating)
+	logger.Debugf("Start Review Note with orgID: %s, rating: %s", orgID, rating)
 	now := time.Now()
 	fnote := api.GetNoteByOrgID(orgID)	
 	if fnote == nil {
@@ -184,11 +183,8 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 		return nil
 	}
 		
-	logger.Debugf("First find fnote: %s", spew.Sdump(fnote))
-
 	schedulingInfo := api.params.Repeat(fnote.Fsrs.Card, now)
 	updatedCard := schedulingInfo[rating].Card
-	logger.Debugf("After Repeat function for now we Get: %s", spew.Sdump(schedulingInfo))
 	
 	rLog := schedulingInfo[rating].ReviewLog
 
@@ -196,39 +192,11 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 	reviewlog := storage.ReviewLog{}
 	reviewlog.ReviewLog = rLog
 	fnote.ReviewLogs = append(fnote.ReviewLogs, reviewlog)
+
+	fnote.ReviewState = storage.WaitReview
+	logger.Debugf("Setting ReviewState to WatiReview %d", fnote.ReviewState)
 	
-	logger.Debugf("After Repeat we Get fnote: %s", spew.Sdump(fnote))
 	
 	return api.UpdateCardOfNote(fnote)
 }
-
-
-    // 对当天所有到期和已到期的卡片做判断和card 初始化处理.
-// 在emacs 中的内容修改后.除非强制更新note 并初始化card,否则不会应用review 的卡片内容.
-func (store *NoteApi) InitTodayDueNotes(day int) {
-	sh, _ := time.LoadLocation("Asia/Shanghai")
-	year, month, day := time.Now().In(sh).Date()
-	today := time.Date(year, month, day, 0, 0, 0, 0, sh).AddDate(0, 0, day)
-
-	n := dal.Use(store.db).Note
-	notes, err := n.FindDueCard(today.String())
-	if err != nil {
-		logger.Errorf("Get today dued notes failed: %v", err)
-	}
-
-	for _, note := range notes {
-		if note.ReviewState == storage.WaitReview {
-			note = card.InitCardOfNote(note)
-			if note.Cards != nil {
-				note.ReviewState = storage.ReviewCardsReady
-				spew.Dump(note)
-				store.db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(note)
-			}
-		} else if note.ReviewState == storage.ReviewCardsReady {
-			continue
-		}
-	}
-}
-
-
 

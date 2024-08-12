@@ -5,11 +5,12 @@ import (
 
 	pb "memo/proto/grpc/memo/v1"
 	"memo/pkg/fsrs"
+	"memo/pkg/card"
 	"memo/pkg/storage"
 	"memo/pkg/logger"
 
 	"google.golang.org/grpc"
-	//"github.com/spewerspew/spew"
+	"github.com/spewerspew/spew"
 )
 
 func ApiRegister(s *grpc.Server) {
@@ -21,6 +22,7 @@ type noteServer struct {
 }
 
 var napi = fsrs.NewNoteApi()
+var capi = card.NewCardApi()
 
 func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.GetNoteResponse, error) {
 	// use for test function
@@ -63,12 +65,12 @@ func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (
 	rate := storage.Rate(in.GetRate())
 	logger.Debugf("ReviewNote: orgid: %s, input rate: %s , rate: %s", orgid, in.GetRate(), rate)
 
-	err := napi.ReviewNote(orgid, rate)
+	note := napi.ReviewNote(orgid, rate)
 
-	if err != nil {
-		return &pb.ReviewNoteResponse{Orgid: orgid}, nil
+	if note != nil {
+		return &pb.ReviewNoteResponse{Orgid: note.Orgid}, nil
 	} else {
-		return &pb.ReviewNoteResponse{Orgid: orgid}, nil
+		return &pb.ReviewNoteResponse{Orgid: note.Orgid}, nil
 	}
 }
 
@@ -88,7 +90,38 @@ func (s *noteServer) DueNotes(ctx context.Context, in *pb.DueNotesRequest) (*pb.
 
 func (s *noteServer) InitDueNotes(ctx context.Context, in *pb.InitDueNotesRequest) (*pb.MessageResponse, error) {
 	dueDay := in.GetDay()
-	napi.InitTodayDueNotes(int(dueDay))
+	capi.InitTodayDueNotes(int(dueDay))
 
 	return &pb.MessageResponse{Message: "Success"}, nil
+}
+
+func (s *noteServer) GetCard(ctx context.Context, in *pb.GetCardRequest) (*pb.GetCardResponse, error) {
+	card := capi.GetReviewCard()
+
+	if card != nil {
+		return &pb.GetCardResponse{Orgid: card.Orgid, Front: card.Front, Back: card.Back, Type: card.Type}, nil
+	} else {
+		return &pb.GetCardResponse{Orgid: "", Front: "", Back: "", Type: ""}, nil
+	}
+}
+
+func (s *noteServer) ReviewCard(ctx context.Context, in *pb.ReviewCardRequest) (*pb.ReviewCardResponse, error) {
+	orgid := in.GetOrgid()
+	rate := in.GetRate()
+
+	logger.Debugf("Start Review Card: orgid: %s", orgid)
+	note := capi.ReviewCard(orgid, int8(rate))
+	// 如果note 的card为空,则说明当前orgid 的卡片已经全部复习完毕, review 当前note
+	spew.Dump(note)
+	if len(note.Cards) == 0 {
+		rate := storage.IntToRate(note.ReviewState)
+		logger.Debugf("ReviewNote: orgid: %s, input rate: %d", orgid, in.GetRate())
+		note = napi.ReviewNote(orgid, rate)
+	}
+	if note != nil {
+		return &pb.ReviewCardResponse{Message: "Success"}, nil
+	} else {
+		return nil, nil
+	}
+
 }

@@ -2,20 +2,30 @@
 package card
 
 import (
-	"fmt"
 	"context"
+	"time"
+	"fmt"
 
-	"memo/pkg/storage"
-	"memo/pkg/storage/dal"
 	"memo/pkg/card/utils"
 	"memo/pkg/logger"
+	"memo/pkg/storage"
+	"memo/pkg/storage/dal"
 
 	"gorm.io/gorm"
+	"github.com/spewerspew/spew"
 )
 
+func NewCardApi() *CardApi {
+	var DB = storage.InitDBEngine()
+	return &CardApi{db: DB}
+}
+
+type CardApi struct {
+	db *gorm.DB
+}
 
 // 初始化note的卡片
-func InitCardOfNote(note *storage.Note) *storage.Note {
+func (api *CardApi) InitCardOfNote(note *storage.Note) *storage.Note {
 
 	if note.Type == storage.QuestionType {
 		fmt.Println("InitCardOfNote QuestionType")
@@ -26,9 +36,9 @@ func InitCardOfNote(note *storage.Note) *storage.Note {
 	return note
 }
 
-
-func  GetReviewCard(db *gorm.DB) *storage.Card {
-	c := dal.Use(db).Card
+// 从card队列中获取一个card
+func (api *CardApi) GetReviewCard() *storage.Card {
+	c := dal.Use(api.db).Card
 	// 获取完成card初始化的note
 	card, err := c.WithContext(context.Background()).First()
 	if err != nil {
@@ -39,16 +49,61 @@ func  GetReviewCard(db *gorm.DB) *storage.Card {
 }
 
 // ReviewCard 评价卡片, 删除card, 更新note reviewState
-func  ReviewCard(orgid string, rate string, db *gorm.DB) *storage.Note {
+// 返回card review后的note
+func (api *CardApi) ReviewCard(orgid string, rate int8) *storage.Note {
 	// 删除card
-	c := dal.Use(db).Card
+	c := dal.Use(api.db).Card
 	info, error := c.WithContext(context.Background()).Where(c.Orgid.Eq(orgid)).Delete()
-	if error != nil || info.RowsAffected != 1 {
+	if error != nil  {
 		logger.Errorf("Delete card failed: %v, delete card %d", error, info.RowsAffected)
 		return nil
 	}
+	logger.Debugf("Delete card %d", info.RowsAffected)
 
-	// 更新note reviewState
-	n := dal.Use(db).Note
-	info, error = n.WithContext(context.Background()).Where(n.Orgid.Eq(orgid)).Where(n.ReviewState .Gt(storage.RateInt(rate))).Update(n.ReviewState, storage.RateInt(rate))
+	// 更新note reviewState, 如果review 的结果比当前note reviewState 小,则更新
+	// easy > good > hard > again = 1
+	n := dal.Use(api.db).Note
+	info, error = n.WithContext(context.Background()).Where(n.Orgid.Eq(orgid)).Where(n.ReviewState.Gt(rate)).Update(n.ReviewState, rate)
+
+	if error != nil {
+		logger.Errorf("Card note info update failed: %v.", error)
+		return nil
+	}
+
+	note, error := n.WithContext(context.Background()).Preload(n.Cards).Where(n.Orgid.Eq(orgid)).First()
+	if error != nil {
+		logger.Errorf("Note search failed: %v.", error)
+		return nil
+	}
+	return note
 }
+
+
+// 对当天所有到期和已到期的卡片做判断和card 初始化处理.
+// 在emacs 中的内容修改后.除非强制更新note 并初始化card,否则不会应用review 的卡片内容.
+func (api *CardApi) InitTodayDueNotes(day int) {
+	sh, _ := time.LoadLocation("Asia/Shanghai")
+	year, month, day := time.Now().In(sh).Date()
+	today := time.Date(year, month, day, 0, 0, 0, 0, sh).AddDate(0, 0, day)
+
+	n := dal.Use(api.db).Note
+	notes, err := n.FindDueCard(today.String())
+	if err != nil {
+		logger.Errorf("Get today dued notes failed: %v", err)
+	}
+
+	for _, note := range notes {
+		if note.ReviewState == storage.WaitReview {
+			note = api.InitCardOfNote(note)
+			if note.Cards != nil {
+				note.ReviewState = storage.ReviewCardsReady
+				spew.Dump(note)
+				api.db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(note)
+			}
+		} else if note.ReviewState == storage.ReviewCardsReady {
+			continue
+		}
+	}
+}
+
+

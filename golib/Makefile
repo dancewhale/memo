@@ -13,9 +13,12 @@ debug:
 	./memo --loglevel -1 daemon
 
 run:
+	./memo daemon
+
+dev:
 	$(GO) build -o memo cmd/main.go || exit
 	chmod +x memo
-	./memo daemon
+	./memo --loglevel -1 daemon 
 
 so: clean memo.so
 

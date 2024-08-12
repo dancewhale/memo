@@ -28,40 +28,40 @@ func Rate(rate string) gfsrs.Rating {
 }
 
 // change string to int8 for sqlite record.
-func RateInt(rate string) int8 {
+func RateToInt(rate gfsrs.Rating) int8 {
 	switch rate {
-	case "Good":
-		return Good
-	case "Easy":
-		return Easy
-	case "Hard":
-		return Hard
-	case "Again":
-		return Again
+	case gfsrs.Good:
+		return 4
+	case gfsrs.Easy:
+		return 3
+	case gfsrs.Hard:
+		return 2
+	case gfsrs.Again:
+		return 1
 	default:
-		return Again
+		return 1
 	}
 }
 
 // change string to int8 for sqlite record.
-func IntRate(rate int8) string {
+func IntToRate(rate int8) gfsrs.Rating {
 	switch rate {
 	case 4:
-		return "Good"
+		return gfsrs.Good
 	case 3:
-		return "Easy"
+		return gfsrs.Easy
 	case 2:
-		return "Hard"
+		return gfsrs.Hard
 	case 1:
-		return "Again"
+		return gfsrs.Again
 	default:
-		return "Again"
+		return gfsrs.Again
 	}
 }
 
 
 const (
-	WaitReview int8 = iota  // wait for next review date of note  0
+	WaitReview int8 = iota  // wait for next card init for note  0
 	Again                    // review again 1
 	Hard                     // review hard  2
 	Good                     // review good  3

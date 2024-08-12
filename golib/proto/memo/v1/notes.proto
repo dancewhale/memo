@@ -11,6 +11,9 @@ service NoteService {
   rpc ReviewNote(ReviewNoteRequest) returns (ReviewNoteResponse);
   rpc DueNotes(DueNotesRequest) returns (DueNotesResponse);
   rpc InitDueNotes(InitDueNotesRequest) returns (MessageResponse);
+
+  rpc GetCard(GetCardRequest) returns (GetCardResponse);
+  rpc ReviewCard(ReviewCardRequest) returns (ReviewCardResponse);
 }
 
 message InitDueNotesRequest {
@@ -66,3 +69,25 @@ message DueNotesRequest {
 message DueNotesResponse {
   repeated string orgid = 1;
 }
+
+message GetCardRequest {
+  string day = 1; // 目前无效,没有使用
+}
+
+message GetCardResponse {
+  string orgid = 1;
+  string type = 2;
+  string front = 3;
+  string back = 4;
+}
+
+message ReviewCardRequest {
+  string orgid = 1;
+  int32  rate = 2; 
+}
+
+message ReviewCardResponse {
+  string message = 1;
+}
+
+
