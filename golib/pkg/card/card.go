@@ -12,7 +12,7 @@ import (
 	"memo/pkg/storage/dal"
 
 	"gorm.io/gorm"
-	"github.com/spewerspew/spew"
+	//"github.com/spewerspew/spew"
 )
 
 func NewCardApi() *CardApi {
@@ -94,6 +94,7 @@ func (api *CardApi) InitTodayDueNotes(dueday int) {
 	}
 
 	if len(notes) == 0 {
+		logger.Debugf("Init Card of note find 0 note due before: %s", today.String())
 		return
 	}
 
@@ -102,10 +103,10 @@ func (api *CardApi) InitTodayDueNotes(dueday int) {
 			note = api.InitCardOfNote(note)
 			if note.Cards != nil {
 				note.ReviewState = storage.ReviewCardsReady
-				spew.Dump(note)
 				api.db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(note)
 			}
-		} else if note.ReviewState == storage.ReviewCardsReady {
+		} else if note.ReviewState != storage.WaitReview {
+			logger.Debugf("Note %s is not WaitReview, skip.", note.Orgid)
 			continue
 		}
 	}

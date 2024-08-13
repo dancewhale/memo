@@ -55,8 +55,12 @@ func (api *NoteApi) CreateNote(fnote *storage.Note) *storage.Note {
 
     // GetNote 获取一张卡片。
 func (store *NoteApi) GetNoteByOrgID(orgid string) *storage.Note {
-	note := &storage.Note{}
-	store.db.Preload("Card").Where("orgid = ?", orgid).First(note)
+	n := dal.Use(store.db).Note
+	note, err := n.WithContext(context.Background()).Preload(n.Cards).Where(n.Orgid.Eq(orgid)).First()
+	if err != nil {
+		logger.Errorf("Get note by orgid failed: %v", err)
+		return nil
+	}
 	return note
 }
 
@@ -94,7 +98,11 @@ func (store *NoteApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
 	log := &storage.ReviewLog{}
 	copier.Copy(log, rlog)
 	n := dal.Use(store.db).Note
-	store.db.Preload("Logs").Where("org_id = ?", orgid).First(note)
+	note, err := n.WithContext(context.Background()).Preload(n.ReviewLogs).Where(n.Orgid.Eq(orgid)).First()
+	if err != nil {
+		logger.Errorf("Add review log in db failed: %v", err)
+		return err
+	}
 
 	return n.ReviewLogs.Model(note).Append(log)
 }
