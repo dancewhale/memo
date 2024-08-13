@@ -76,6 +76,7 @@ func (store *NoteApi) UpdateNote(fnote *storage.Note) *storage.Note {
 
     // UpdateCardOfNote 更新一张卡片中的记录。
 func (store *NoteApi) UpdateCardOfNote(fnote *storage.Note) *storage.Note {
+	store.db.Unscoped().Model(fnote).Association("Fsrs").Unscoped().Replace(&fnote.Fsrs)
 	store.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fnote)
 	return fnote
 }
@@ -183,7 +184,7 @@ func (store *NoteApi) DueNotes(day int64) ([]*storage.Note) {
     // Review 闪卡复习。
 func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
 
-	logger.Debugf("Start Review Note with orgID: %s, rating: %s", orgID, rating)
+	logger.Debugf("Start Review Note with orgID: %s, rating: %d", orgID, rating)
 	now := time.Now()
 	fnote := api.GetNoteByOrgID(orgID)	
 	if fnote == nil {
@@ -196,14 +197,13 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 	
 	rLog := schedulingInfo[rating].ReviewLog
 
-	fnote.Fsrs.Card = updatedCard
 	reviewlog := storage.ReviewLog{}
 	reviewlog.ReviewLog = rLog
-	fnote.ReviewLogs = append(fnote.ReviewLogs, reviewlog)
 
 	fnote.ReviewState = storage.WaitReview
+	fnote.Fsrs.Card = updatedCard
+	fnote.ReviewLogs = append(fnote.ReviewLogs, reviewlog)
 	logger.Debugf("Setting ReviewState to WatiReview %d", fnote.ReviewState)
-	
 	
 	return api.UpdateCardOfNote(fnote)
 }

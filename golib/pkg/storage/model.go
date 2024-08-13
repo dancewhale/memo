@@ -47,9 +47,9 @@ func RateToInt(rate gfsrs.Rating) int8 {
 func IntToRate(rate int8) gfsrs.Rating {
 	switch rate {
 	case 4:
-		return gfsrs.Good
-	case 3:
 		return gfsrs.Easy
+	case 3:
+		return gfsrs.Good
 	case 2:
 		return gfsrs.Hard
 	case 1:

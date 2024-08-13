@@ -10,7 +10,7 @@ import (
 	"memo/pkg/logger"
 
 	"google.golang.org/grpc"
-	"github.com/spewerspew/spew"
+	//"github.com/spewerspew/spew"
 )
 
 func ApiRegister(s *grpc.Server) {
@@ -113,11 +113,10 @@ func (s *noteServer) ReviewCard(ctx context.Context, in *pb.ReviewCardRequest) (
 	logger.Debugf("Start Review Card: orgid: %s", orgid)
 	note := capi.ReviewCard(orgid, int8(rate))
 	// 如果note 的card为空,则说明当前orgid 的卡片已经全部复习完毕, review 当前note
-	spew.Dump(note)
 	if len(note.Cards) == 0 {
-		rate := storage.IntToRate(note.ReviewState)
-		logger.Debugf("ReviewNote: orgid: %s, input rate: %d", orgid, in.GetRate())
-		note = napi.ReviewNote(orgid, rate)
+		fsrsRate := storage.IntToRate(int8(rate))
+		logger.Debugf("ReviewNote: orgid: %s, input rate: %d", orgid, rate)
+		note = napi.ReviewNote(orgid, fsrsRate)
 	}
 	if note != nil {
 		return &pb.ReviewCardResponse{Message: "Success"}, nil
