@@ -81,15 +81,20 @@ func (api *CardApi) ReviewCard(orgid string, rate int8) *storage.Note {
 
 // 对当天所有到期和已到期的卡片做判断和card 初始化处理.
 // 在emacs 中的内容修改后.除非强制更新note 并初始化card,否则不会应用review 的卡片内容.
-func (api *CardApi) InitTodayDueNotes(day int) {
+func (api *CardApi) InitTodayDueNotes(dueday int) {
 	sh, _ := time.LoadLocation("Asia/Shanghai")
 	year, month, day := time.Now().In(sh).Date()
-	today := time.Date(year, month, day, 0, 0, 0, 0, sh).AddDate(0, 0, day)
+	today := time.Date(year, month, day, 0, 0, 0, 0, sh).AddDate(0, 0, dueday)
+	logger.Debugf("Init Card of note which due before: %s", today.String())
 
 	n := dal.Use(api.db).Note
 	notes, err := n.FindDueCard(today.String())
 	if err != nil {
 		logger.Errorf("Get today dued notes failed: %v", err)
+	}
+
+	if len(notes) == 0 {
+		return
 	}
 
 	for _, note := range notes {

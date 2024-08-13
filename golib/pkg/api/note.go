@@ -90,6 +90,7 @@ func (s *noteServer) DueNotes(ctx context.Context, in *pb.DueNotesRequest) (*pb.
 
 func (s *noteServer) InitDueNotes(ctx context.Context, in *pb.InitDueNotesRequest) (*pb.MessageResponse, error) {
 	dueDay := in.GetDay()
+	logger.Infof("Init cards of Notes Due in %d day.", dueDay)
 	capi.InitTodayDueNotes(int(dueDay))
 
 	return &pb.MessageResponse{Message: "Success"}, nil
