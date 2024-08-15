@@ -61,12 +61,8 @@ func IntToRate(rate int8) gfsrs.Rating {
 
 
 const (
-	WaitReview int8 = iota  // wait for next card init for note  0
-	Again                    // review again 1
-	Hard                     // review hard  2
-	Good                     // review good  3
-	Easy                     // review easy  4
-	ReviewCardsReady         // review cards of note are init already. 5
+	WaitCardInit  int8 = iota    // review cards of note are init already 0.
+	WaitReview                   // wait for card init can't review  1.
 )
 
 type Note struct {
@@ -79,8 +75,6 @@ type Note struct {
 	Hash          string `json:"Hash"`
 	Fsrs          FsrsInfo
 	ReviewLogs    []ReviewLog
-	Cards         []Card // 等待review的卡片
-	ReviewState   int8
 }
 
 
@@ -100,13 +94,6 @@ type ReviewLog struct {
 	NoteID          uint
 }
 
-type Card struct {
-	ID        uint `gorm:"primarykey"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Type      string `json:"Type"`  // no use now
-	Front     string `json:"Front"`
-	Back      string `json:"Back"`
-	NoteID    uint
-	Orgid     string
+func (fs *FsrsInfo) IsEmpty() bool {
+	return *fs == FsrsInfo{}
 }

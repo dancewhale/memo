@@ -1,6 +1,7 @@
 package fsrs
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"context"
@@ -12,7 +13,7 @@ import (
 	
 	"github.com/jinzhu/copier"	
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
-	"github.com/spewerspew/spew"
+	//	"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 	"gorm.io/gen/field"
 )
@@ -48,15 +49,14 @@ func (api *NoteApi) CreateNote(fnote *storage.Note) *storage.Note {
 	scard := storage.FsrsInfo{}
 	scard.Card = fcard
 	fnote.Fsrs = scard
-	spew.Dump(fnote)
 	api.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fnote)
 	return fnote
 }
 
-    // GetNote 获取一张卡片。
+// GetNote 获取一张卡片。
 func (store *NoteApi) GetNoteByOrgID(orgid string) *storage.Note {
 	n := dal.Use(store.db).Note
-	note, err := n.WithContext(context.Background()).Preload(n.Cards).Where(n.Orgid.Eq(orgid)).First()
+	note, err := n.WithContext(context.Background()).Preload(n.Fsrs).Where(n.Orgid.Eq(orgid)).First()
 	if err != nil {
 		logger.Errorf("Get note by orgid failed: %v", err)
 		return nil
@@ -154,7 +154,7 @@ func (store *NoteApi) CountNotes() int {
     // Dues 获取在day 天之后以前到期的所有闪卡。
 func (store *NoteApi) DueNotes(day int64) ([]*storage.Note) {
 	n := dal.Use(store.db).Note
-	notes, err := n.WithContext(context.Background()).Preload(n.Cards).Find()
+	notes, err := n.WithContext(context.Background()).Preload(n.Fsrs).Find()
 	if err != nil {
 		logger.Errorf("Get all notes failed: %v", err)
 		return nil
@@ -181,7 +181,7 @@ func (store *NoteApi) DueNotes(day int64) ([]*storage.Note) {
 	return ret
 }
 
-    // Review 闪卡复习。
+    // Review 闪卡复习,返回复习后的闪卡,如果状态为WaitReviewInit,则返回未修改的note.
 func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
 
 	logger.Debugf("Start Review Note with orgID: %s, rating: %d", orgID, rating)
@@ -191,20 +191,46 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 		logger.Errorf("not found card [orgid=%s] to review", orgID)
 		return nil
 	}
+
+	// review 状态为waitReview 的note, 如果评价为easy,则设置为WaitCardInit
+	needReview, error := api.NeedReview(fnote)
+
+	if needReview && error == nil {
+		schedulingInfo := api.params.Repeat(fnote.Fsrs.Card, now)
+		updatedCard := schedulingInfo[rating].Card
 		
-	schedulingInfo := api.params.Repeat(fnote.Fsrs.Card, now)
-	updatedCard := schedulingInfo[rating].Card
-	
-	rLog := schedulingInfo[rating].ReviewLog
+		rLog := schedulingInfo[rating].ReviewLog
 
-	reviewlog := storage.ReviewLog{}
-	reviewlog.ReviewLog = rLog
+		reviewlog := storage.ReviewLog{}
+		reviewlog.ReviewLog = rLog
 
-	fnote.ReviewState = storage.WaitReview
-	fnote.Fsrs.Card = updatedCard
-	fnote.ReviewLogs = append(fnote.ReviewLogs, reviewlog)
-	logger.Debugf("Setting ReviewState to WatiReview %d", fnote.ReviewState)
-	
-	return api.UpdateCardOfNote(fnote)
+		fnote.Fsrs.Card = updatedCard
+		fnote.ReviewLogs = append(fnote.ReviewLogs, reviewlog)
+		return api.UpdateCardOfNote(fnote)
+	}
+	return nil
 }
 
+
+func (api *NoteApi) NeedReview(note *storage.Note) (bool, error) {
+	if note.Fsrs.IsEmpty() {
+		logger.Errorf("Note %d has no fsrs", note.Orgid)
+		return false, errors.New("Note has no fsrs info")
+	}
+	cardDueYear := note.Fsrs.Due.Year()
+	cardDueMonth := note.Fsrs.Due.Month()
+	cardDueDay := note.Fsrs.Due.Day()
+	cardDue := time.Date(cardDueYear, cardDueMonth, cardDueDay, 0, 0, 0, 0, time.UTC)
+
+	torrow  := time.Now().AddDate(0, 0, 1)
+	tomorrowYear := torrow.Year()
+	tomorrowMonth := torrow.Month()
+	tomorrowDay := torrow.Day()
+	tomorrowTime := time.Date(tomorrowYear, tomorrowMonth, tomorrowDay, 0, 0, 0, 0, time.UTC)
+	
+	//check  cardDue before tody 24:00
+	if cardDue.Before(tomorrowTime) || cardDue.Equal(tomorrowTime) {
+		return true, nil
+	}
+	return false, nil
+}

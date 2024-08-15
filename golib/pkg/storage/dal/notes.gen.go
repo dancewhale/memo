@@ -35,7 +35,6 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 	_note.Type = field.NewString(tableName, "type")
 	_note.Orgid = field.NewString(tableName, "orgid")
 	_note.Hash = field.NewString(tableName, "hash")
-	_note.ReviewState = field.NewInt8(tableName, "review_state")
 	_note.Fsrs = noteHasOneFsrs{
 		db: db.Session(&gorm.Session{}),
 
@@ -48,12 +47,6 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 		RelationField: field.NewRelation("ReviewLogs", "storage.ReviewLog"),
 	}
 
-	_note.Cards = noteHasManyCards{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("Cards", "storage.Card"),
-	}
-
 	_note.fillFieldMap()
 
 	return _note
@@ -62,20 +55,17 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 type note struct {
 	noteDo
 
-	ALL         field.Asterisk
-	ID          field.Uint
-	CreatedAt   field.Time
-	UpdatedAt   field.Time
-	Content     field.String
-	Type        field.String
-	Orgid       field.String
-	Hash        field.String
-	ReviewState field.Int8
-	Fsrs        noteHasOneFsrs
+	ALL       field.Asterisk
+	ID        field.Uint
+	CreatedAt field.Time
+	UpdatedAt field.Time
+	Content   field.String
+	Type      field.String
+	Orgid     field.String
+	Hash      field.String
+	Fsrs      noteHasOneFsrs
 
 	ReviewLogs noteHasManyReviewLogs
-
-	Cards noteHasManyCards
 
 	fieldMap map[string]field.Expr
 }
@@ -99,7 +89,6 @@ func (n *note) updateTableName(table string) *note {
 	n.Type = field.NewString(table, "type")
 	n.Orgid = field.NewString(table, "orgid")
 	n.Hash = field.NewString(table, "hash")
-	n.ReviewState = field.NewInt8(table, "review_state")
 
 	n.fillFieldMap()
 
@@ -116,7 +105,7 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (n *note) fillFieldMap() {
-	n.fieldMap = make(map[string]field.Expr, 11)
+	n.fieldMap = make(map[string]field.Expr, 9)
 	n.fieldMap["id"] = n.ID
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
@@ -124,7 +113,6 @@ func (n *note) fillFieldMap() {
 	n.fieldMap["type"] = n.Type
 	n.fieldMap["orgid"] = n.Orgid
 	n.fieldMap["hash"] = n.Hash
-	n.fieldMap["review_state"] = n.ReviewState
 
 }
 
@@ -277,77 +265,6 @@ func (a noteHasManyReviewLogsTx) Clear() error {
 }
 
 func (a noteHasManyReviewLogsTx) Count() int64 {
-	return a.tx.Count()
-}
-
-type noteHasManyCards struct {
-	db *gorm.DB
-
-	field.RelationField
-}
-
-func (a noteHasManyCards) Where(conds ...field.Expr) *noteHasManyCards {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a noteHasManyCards) WithContext(ctx context.Context) *noteHasManyCards {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a noteHasManyCards) Session(session *gorm.Session) *noteHasManyCards {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a noteHasManyCards) Model(m *storage.Note) *noteHasManyCardsTx {
-	return &noteHasManyCardsTx{a.db.Model(m).Association(a.Name())}
-}
-
-type noteHasManyCardsTx struct{ tx *gorm.Association }
-
-func (a noteHasManyCardsTx) Find() (result []*storage.Card, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a noteHasManyCardsTx) Append(values ...*storage.Card) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a noteHasManyCardsTx) Replace(values ...*storage.Card) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a noteHasManyCardsTx) Delete(values ...*storage.Card) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a noteHasManyCardsTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a noteHasManyCardsTx) Count() int64 {
 	return a.tx.Count()
 }
 

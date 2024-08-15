@@ -19,14 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NoteService_GetNote_FullMethodName      = "/memo.v1.NoteService/GetNote"
-	NoteService_CreateNote_FullMethodName   = "/memo.v1.NoteService/CreateNote"
-	NoteService_RemoveNote_FullMethodName   = "/memo.v1.NoteService/RemoveNote"
-	NoteService_ReviewNote_FullMethodName   = "/memo.v1.NoteService/ReviewNote"
-	NoteService_DueNotes_FullMethodName     = "/memo.v1.NoteService/DueNotes"
-	NoteService_InitDueNotes_FullMethodName = "/memo.v1.NoteService/InitDueNotes"
-	NoteService_GetCard_FullMethodName      = "/memo.v1.NoteService/GetCard"
-	NoteService_ReviewCard_FullMethodName   = "/memo.v1.NoteService/ReviewCard"
+	NoteService_GetNote_FullMethodName    = "/memo.v1.NoteService/GetNote"
+	NoteService_CreateNote_FullMethodName = "/memo.v1.NoteService/CreateNote"
+	NoteService_RemoveNote_FullMethodName = "/memo.v1.NoteService/RemoveNote"
+	NoteService_ReviewNote_FullMethodName = "/memo.v1.NoteService/ReviewNote"
+	NoteService_DueNotes_FullMethodName   = "/memo.v1.NoteService/DueNotes"
 )
 
 // NoteServiceClient is the client API for NoteService service.
@@ -38,9 +35,6 @@ type NoteServiceClient interface {
 	RemoveNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error)
 	ReviewNote(ctx context.Context, in *ReviewNoteRequest, opts ...grpc.CallOption) (*ReviewNoteResponse, error)
 	DueNotes(ctx context.Context, in *DueNotesRequest, opts ...grpc.CallOption) (*DueNotesResponse, error)
-	InitDueNotes(ctx context.Context, in *InitDueNotesRequest, opts ...grpc.CallOption) (*MessageResponse, error)
-	GetCard(ctx context.Context, in *GetCardRequest, opts ...grpc.CallOption) (*GetCardResponse, error)
-	ReviewCard(ctx context.Context, in *ReviewCardRequest, opts ...grpc.CallOption) (*ReviewCardResponse, error)
 }
 
 type noteServiceClient struct {
@@ -101,36 +95,6 @@ func (c *noteServiceClient) DueNotes(ctx context.Context, in *DueNotesRequest, o
 	return out, nil
 }
 
-func (c *noteServiceClient) InitDueNotes(ctx context.Context, in *InitDueNotesRequest, opts ...grpc.CallOption) (*MessageResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MessageResponse)
-	err := c.cc.Invoke(ctx, NoteService_InitDueNotes_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *noteServiceClient) GetCard(ctx context.Context, in *GetCardRequest, opts ...grpc.CallOption) (*GetCardResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCardResponse)
-	err := c.cc.Invoke(ctx, NoteService_GetCard_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *noteServiceClient) ReviewCard(ctx context.Context, in *ReviewCardRequest, opts ...grpc.CallOption) (*ReviewCardResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ReviewCardResponse)
-	err := c.cc.Invoke(ctx, NoteService_ReviewCard_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // NoteServiceServer is the server API for NoteService service.
 // All implementations must embed UnimplementedNoteServiceServer
 // for forward compatibility.
@@ -140,9 +104,6 @@ type NoteServiceServer interface {
 	RemoveNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error)
 	ReviewNote(context.Context, *ReviewNoteRequest) (*ReviewNoteResponse, error)
 	DueNotes(context.Context, *DueNotesRequest) (*DueNotesResponse, error)
-	InitDueNotes(context.Context, *InitDueNotesRequest) (*MessageResponse, error)
-	GetCard(context.Context, *GetCardRequest) (*GetCardResponse, error)
-	ReviewCard(context.Context, *ReviewCardRequest) (*ReviewCardResponse, error)
 	mustEmbedUnimplementedNoteServiceServer()
 }
 
@@ -167,15 +128,6 @@ func (UnimplementedNoteServiceServer) ReviewNote(context.Context, *ReviewNoteReq
 }
 func (UnimplementedNoteServiceServer) DueNotes(context.Context, *DueNotesRequest) (*DueNotesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DueNotes not implemented")
-}
-func (UnimplementedNoteServiceServer) InitDueNotes(context.Context, *InitDueNotesRequest) (*MessageResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InitDueNotes not implemented")
-}
-func (UnimplementedNoteServiceServer) GetCard(context.Context, *GetCardRequest) (*GetCardResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCard not implemented")
-}
-func (UnimplementedNoteServiceServer) ReviewCard(context.Context, *ReviewCardRequest) (*ReviewCardResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReviewCard not implemented")
 }
 func (UnimplementedNoteServiceServer) mustEmbedUnimplementedNoteServiceServer() {}
 func (UnimplementedNoteServiceServer) testEmbeddedByValue()                     {}
@@ -288,60 +240,6 @@ func _NoteService_DueNotes_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NoteService_InitDueNotes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(InitDueNotesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NoteServiceServer).InitDueNotes(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NoteService_InitDueNotes_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NoteServiceServer).InitDueNotes(ctx, req.(*InitDueNotesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _NoteService_GetCard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetCardRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NoteServiceServer).GetCard(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NoteService_GetCard_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NoteServiceServer).GetCard(ctx, req.(*GetCardRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _NoteService_ReviewCard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReviewCardRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NoteServiceServer).ReviewCard(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NoteService_ReviewCard_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NoteServiceServer).ReviewCard(ctx, req.(*ReviewCardRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // NoteService_ServiceDesc is the grpc.ServiceDesc for NoteService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -368,18 +266,6 @@ var NoteService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DueNotes",
 			Handler:    _NoteService_DueNotes_Handler,
-		},
-		{
-			MethodName: "InitDueNotes",
-			Handler:    _NoteService_InitDueNotes_Handler,
-		},
-		{
-			MethodName: "GetCard",
-			Handler:    _NoteService_GetCard_Handler,
-		},
-		{
-			MethodName: "ReviewCard",
-			Handler:    _NoteService_ReviewCard_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
