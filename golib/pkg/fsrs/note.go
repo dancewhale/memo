@@ -71,7 +71,6 @@ func (store *NoteApi) GetDueNoteOrderByDueTime() []*storage.Note {
 	dueTimeMonth := torrow.Month()
 	dueTimeDay := torrow.Day()
 	dueTime := time.Date(dueTimeYear, dueTimeMonth, dueTimeDay, 0, 0, 0, 0, time.UTC)
-	
 
 	n := dal.Use(store.db).Note
 	notes, err := n.WithContext(context.Background()).GetNoteOrderByDueTime(dueTime.String())
@@ -162,7 +161,7 @@ func (store *NoteApi) DueNotes(day int64) ([]*storage.Note) {
 }
 
 // get nodes need to review
-func (api *NoteApi) GetReviewNote() *storage.Note {
+func (api *NoteApi) GetReviewNoteByDueTime() *storage.Note {
 	notes := api.GetDueNoteOrderByDueTime()
 	if  len(notes) == 0 {
 		logger.Infof("No note need to review.")

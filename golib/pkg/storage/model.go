@@ -12,7 +12,7 @@ var ClozeType    string = "Cloze"
 
 
 // change string to fsrs.rate
-func Rate(rate string) gfsrs.Rating {
+func StringToRate(rate string) gfsrs.Rating {
 	switch rate {
 	case "Good":
 		return gfsrs.Good

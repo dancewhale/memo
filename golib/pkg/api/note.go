@@ -22,6 +22,7 @@ type noteServer struct {
 
 var napi = fsrs.NewNoteApi()
 
+// api GetNote by orgid.
 func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.GetNoteResponse, error) {
 	// use for test function
 
@@ -33,10 +34,11 @@ func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.Ge
 	}
 }
 
+// api GetNextReviewNote.
 func (s *noteServer) GetNextReviewNote(ctx context.Context, in *pb.GetNextReviewNoteRequest) (*pb.GetNextReviewNoteResponse, error) {
 	// use for test function
 
-	fnote := napi.GetReviewNote()
+	fnote := napi.GetReviewNoteByDueTime()
 	if fnote != nil {
 		return &pb.GetNextReviewNoteResponse{Orgid: fnote.Orgid, Type: fnote.Type, Content: fnote.Content}, nil
 	} else {
@@ -71,7 +73,7 @@ func (s *noteServer) RemoveNote(ctx context.Context, in *pb.DeleteNoteRequest) (
 
 func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (*pb.ReviewNoteResponse, error) {
 	orgid := in.GetOrgid()
-	rate := storage.Rate(in.GetRate())
+	rate := storage.StringToRate(in.GetRate())
 	logger.Debugf("ReviewNote: orgid: %s, input rate: %s , rate: %s", orgid, in.GetRate(), rate)
 
 	note := napi.ReviewNote(orgid, rate)
@@ -79,7 +81,7 @@ func (s *noteServer) ReviewNote(ctx context.Context, in *pb.ReviewNoteRequest) (
 	if note != nil {
 		return &pb.ReviewNoteResponse{Orgid: note.Orgid}, nil
 	} else {
-		return &pb.ReviewNoteResponse{Orgid: note.Orgid}, nil
+		return &pb.ReviewNoteResponse{}, nil
 	}
 }
 
