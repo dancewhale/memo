@@ -1,6 +1,7 @@
 package emodule
 
 import (
+	"errors"
 	"context"
 	"time"
 
@@ -17,6 +18,9 @@ import (
 type EModule struct {
 	addr string
 	con *grpc.ClientConn
+	noteClient pb.NoteServiceClient	
+	ctx context.Context
+	ctxCancel context.CancelFunc
 }
 
 func (e *EModule) Init() {
@@ -24,46 +28,52 @@ func (e *EModule) Init() {
 	// use for test function
 }
 
-func (e *EModule) CreateNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+func (e *EModule) common() error{
 	logger.Init()
-
-	env := ectx.Environment()
 
 	con, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		logger.Errorf("did not connect: %v", err)
-		return env.Bool(false), nil
+		logger.Errorf("Server not connect: %v", err)
+		return errors.New("Server did not connect")
 	}
-	defer con.Close()
+	e.con = con
+	e.ctx, e.ctxCancel = context.WithTimeout(context.Background(), time.Second)
 
-	noteClient := pb.NewNoteServiceClient(con)
+	e.noteClient = pb.NewNoteServiceClient(con)
 	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	return nil
+
+}
+
+func (e *EModule) CreateNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	env := ectx.Environment()
+	e.common()
+	defer e.con.Close()
+	defer e.ctxCancel()
 
 	orgid, err := ectx.GoStringArg(0) 
 	if err != nil || orgid == "" {
 		logger.Errorf("Pass arg orgid from emacs in create note failed: %v", err)
-		return env.Bool(false), nil
+		return env.Bool(false), err
 	}
 
 	ntype, err := ectx.GoStringArg(1)
 	if err != nil {
 		logger.Errorf("Pass arg type from emacs create note failed: %v", err)
-		return env.Bool(false), nil
+		return env.Bool(false), err
 	}
 
 	ncontent, err := ectx.GoStringArg(2)
 	if err != nil {
 		logger.Errorf("Pass arg content from emacs create note failed: %v", err)
-		return env.Bool(false), nil
+		return env.Bool(false), err
 	}
 
 	noteReq := pb.CreateNoteRequest{Orgid: orgid, Type: ntype, Content: ncontent}
-	r, err := noteClient.CreateNote(ctx, &noteReq)
+	r, err := e.noteClient.CreateNote(e.ctx, &noteReq)
 	if err != nil {
 		logger.Infof("Create note failed: %v", err)
-		return env.Bool(false), nil
+		return env.Bool(false), err
 	}
 	logger.Infof("Create note success: %s", r.GetOrgid())
 
@@ -71,20 +81,12 @@ func (e *EModule) CreateNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 }
 
 func (e *EModule) DeleteNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
-	logger.Init()
-
 	env := ectx.Environment()
+	e.common()
+	defer e.con.Close()
+	defer e.ctxCancel()
 
-	con, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		logger.Errorf("did not connect: %v", err)
-	}
-	defer con.Close()
-
-	noteClient := pb.NewNoteServiceClient(con)
-	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	noteClient := pb.NewNoteServiceClient(e.con)
 
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
@@ -95,7 +97,7 @@ func (e *EModule) DeleteNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	}
 
 	noteReq := pb.DeleteNoteRequest{Orgid: orgid}
-	r, err := noteClient.RemoveNote(ctx, &noteReq)
+	r, err := noteClient.RemoveNote(e.ctx, &noteReq)
 	if err != nil {
 		logger.Errorf("Delete note failed: %v", err)
 		return env.Bool(false), nil
@@ -107,20 +109,12 @@ func (e *EModule) DeleteNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 }
 
 func (e *EModule) GetNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
-	logger.Init()
-
 	env := ectx.Environment()
+	e.common()
+	defer e.con.Close()
+	defer e.ctxCancel()
 
-	con, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		logger.Errorf("did not connect: %v", err)
-	}
-	defer con.Close()
-
-	noteClient := pb.NewNoteServiceClient(con)
-	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	noteClient := pb.NewNoteServiceClient(e.con)
 
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
@@ -131,7 +125,7 @@ func (e *EModule) GetNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	}
 
 	noteReq := pb.GetNoteRequest{Orgid: orgid}
-	r, err := noteClient.GetNote(ctx, &noteReq)
+	r, err := noteClient.GetNote(e.ctx, &noteReq)
 	if err != nil {
 		logger.Errorf("Delete note failed: %v", err)
 		return env.Bool(false), nil
@@ -143,20 +137,12 @@ func (e *EModule) GetNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 }
 
 func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
-	logger.Init()
-
 	env := ectx.Environment()
+	e.common()
+	defer e.con.Close()
+	defer e.ctxCancel()
 
-	con, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		logger.Errorf("did not connect: %v", err)
-	}
-	defer con.Close()
-
-	noteClient := pb.NewNoteServiceClient(con)
-	// Contact the server and print out its response.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	noteClient := pb.NewNoteServiceClient(e.con)
 
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
@@ -167,7 +153,7 @@ func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	}
 
 	noteReq := pb.ReviewNoteRequest{Orgid: orgid}
-	r, err := noteClient.ReviewNote(ctx, &noteReq)
+	r, err := noteClient.ReviewNote(e.ctx, &noteReq)
 	if err != nil {
 		logger.Errorf("Delete note failed: %v", err)
 		return env.Bool(false), nil
