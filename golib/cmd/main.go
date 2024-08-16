@@ -27,6 +27,7 @@ func initModule(env emacs.Environment) {
 	env.RegisterFunction("memo--delete-note", em.DeleteNote, 1, "Delete note, first args is card orgid string.", nil)
 	env.RegisterFunction("memo--review-note", em.ReviewNote, 1, "Review note, first args is card orgid string.", nil)
 	env.RegisterFunction("memo--get-note", em.GetNote, 1, "Get note, first args is card orgid string.", nil)
+	env.RegisterFunction("memo--get-next-review-note", em.GetNextReviewNote, 0, "Get next review note, return (orgid, type, content).", nil)
 
 	env.ProvideFeature("memo")
 }

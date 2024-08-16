@@ -108,6 +108,27 @@ func (e *EModule) DeleteNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	return env.Bool(false), nil
 }
 
+func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	env := ectx.Environment()
+	e.common()
+	defer e.con.Close()
+	defer e.ctxCancel()
+
+	noteClient := pb.NewNoteServiceClient(e.con)
+
+
+	noteReq := pb.GetNextReviewNoteRequest{}
+	r, err := noteClient.GetNextReviewNote(e.ctx, &noteReq)
+	if err != nil {
+		logger.Errorf("Get next review note failed: %v", err)
+		return env.Bool(false), nil
+	}
+	reviewNote := env.StdLib().List(env.String(r.Orgid), env.String(r.Type), env.String(r.Content))
+
+
+	return reviewNote, nil
+}
+
 func (e *EModule) GetNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
 	e.common()

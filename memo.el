@@ -33,7 +33,6 @@
 (cl-defstruct memo-note
   id type content)
 
-
 (defun memo-push-note-at-point ()
   "Push note at point to memo db.
 If heading without an `MEMO_NOTE_TYPE' property push failed.
@@ -46,12 +45,17 @@ If heading without an `ID' property create it."
       (setq note-id (org-id-get-create))
       (if (not note-type)
 	  (user-error "No note to push found")
-	(if (memo--push-note (memo-note-at-point))
+	(if (memo--push-note (memo--note-at-point))
 	    (message "Create note to memo successful.")
 	  (message "Create note to memo failed."))))))
 
+(defun memo-get-review-note ()
+  "Get note need review."
+  (interactive)
+  (message (memo--get-next-review-note))
+  )
 
-(defun memo-note-at-point ()
+(defun memo--note-at-point ()
   "Make a note struct from current entry."
   (let* ((note-id (org-id-get-create))
 	 (note-type (org-entry-get nil memo-prop-note-type))

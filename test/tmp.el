@@ -1,4 +1,7 @@
 ;; 测试研究使用的代码
+(load-file "/media/psf/my/my-memo/memo/memo.so")
+
+
 (defun memo-update-create-note ()
   (interactive)
   (setq memo--property (memo--get-property-id))
