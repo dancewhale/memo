@@ -6,6 +6,7 @@ option go_package = "memo/proto/grpc/memo/v1;note";
 
 service NoteService {
   rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
+  rpc GetNextReviewNote(GetNextReviewNoteRequest) returns (GetNextReviewNoteResponse);
   rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
   rpc RemoveNote(DeleteNoteRequest) returns (DeleteNoteResponse);
   rpc ReviewNote(ReviewNoteRequest) returns (ReviewNoteResponse);
@@ -64,4 +65,14 @@ message DueNotesRequest {
 
 message DueNotesResponse {
   repeated string orgid = 1;
+}
+
+message GetNextReviewNoteRequest {
+   
+}
+
+message GetNextReviewNoteResponse {
+  string orgid = 1;
+  string type = 2;
+  string content = 3;
 }

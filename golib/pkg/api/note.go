@@ -32,6 +32,17 @@ func (s *noteServer) GetNote(ctx context.Context, in *pb.GetNoteRequest) (*pb.Ge
 		return &pb.GetNoteResponse{Orgid: "", Type: "", Content: ""}, nil
 	}
 }
+
+func (s *noteServer) GetNextReviewNote(ctx context.Context, in *pb.GetNextReviewNoteRequest) (*pb.GetNextReviewNoteResponse, error) {
+	// use for test function
+
+	fnote := napi.GetReviewNote()
+	if fnote != nil {
+		return &pb.GetNextReviewNoteResponse{Orgid: fnote.Orgid, Type: fnote.Type, Content: fnote.Content}, nil
+	} else {
+		return &pb.GetNextReviewNoteResponse{Orgid: "", Type: "", Content: ""}, nil
+	}
+}
 	
 func (s *noteServer) CreateNote(ctx context.Context, in *pb.CreateNoteRequest) (*pb.CreateNoteResponse, error) {
 	// use for test function

@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NoteService_GetNote_FullMethodName    = "/memo.v1.NoteService/GetNote"
-	NoteService_CreateNote_FullMethodName = "/memo.v1.NoteService/CreateNote"
-	NoteService_RemoveNote_FullMethodName = "/memo.v1.NoteService/RemoveNote"
-	NoteService_ReviewNote_FullMethodName = "/memo.v1.NoteService/ReviewNote"
-	NoteService_DueNotes_FullMethodName   = "/memo.v1.NoteService/DueNotes"
+	NoteService_GetNote_FullMethodName           = "/memo.v1.NoteService/GetNote"
+	NoteService_GetNextReviewNote_FullMethodName = "/memo.v1.NoteService/GetNextReviewNote"
+	NoteService_CreateNote_FullMethodName        = "/memo.v1.NoteService/CreateNote"
+	NoteService_RemoveNote_FullMethodName        = "/memo.v1.NoteService/RemoveNote"
+	NoteService_ReviewNote_FullMethodName        = "/memo.v1.NoteService/ReviewNote"
+	NoteService_DueNotes_FullMethodName          = "/memo.v1.NoteService/DueNotes"
 )
 
 // NoteServiceClient is the client API for NoteService service.
@@ -31,6 +32,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NoteServiceClient interface {
 	GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*GetNoteResponse, error)
+	GetNextReviewNote(ctx context.Context, in *GetNextReviewNoteRequest, opts ...grpc.CallOption) (*GetNextReviewNoteResponse, error)
 	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*CreateNoteResponse, error)
 	RemoveNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error)
 	ReviewNote(ctx context.Context, in *ReviewNoteRequest, opts ...grpc.CallOption) (*ReviewNoteResponse, error)
@@ -49,6 +51,16 @@ func (c *noteServiceClient) GetNote(ctx context.Context, in *GetNoteRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetNoteResponse)
 	err := c.cc.Invoke(ctx, NoteService_GetNote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *noteServiceClient) GetNextReviewNote(ctx context.Context, in *GetNextReviewNoteRequest, opts ...grpc.CallOption) (*GetNextReviewNoteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetNextReviewNoteResponse)
+	err := c.cc.Invoke(ctx, NoteService_GetNextReviewNote_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +112,7 @@ func (c *noteServiceClient) DueNotes(ctx context.Context, in *DueNotesRequest, o
 // for forward compatibility.
 type NoteServiceServer interface {
 	GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error)
+	GetNextReviewNote(context.Context, *GetNextReviewNoteRequest) (*GetNextReviewNoteResponse, error)
 	CreateNote(context.Context, *CreateNoteRequest) (*CreateNoteResponse, error)
 	RemoveNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error)
 	ReviewNote(context.Context, *ReviewNoteRequest) (*ReviewNoteResponse, error)
@@ -116,6 +129,9 @@ type UnimplementedNoteServiceServer struct{}
 
 func (UnimplementedNoteServiceServer) GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNote not implemented")
+}
+func (UnimplementedNoteServiceServer) GetNextReviewNote(context.Context, *GetNextReviewNoteRequest) (*GetNextReviewNoteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNextReviewNote not implemented")
 }
 func (UnimplementedNoteServiceServer) CreateNote(context.Context, *CreateNoteRequest) (*CreateNoteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
@@ -164,6 +180,24 @@ func _NoteService_GetNote_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(NoteServiceServer).GetNote(ctx, req.(*GetNoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NoteService_GetNextReviewNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNextReviewNoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NoteServiceServer).GetNextReviewNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NoteService_GetNextReviewNote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NoteServiceServer).GetNextReviewNote(ctx, req.(*GetNextReviewNoteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -250,6 +284,10 @@ var NoteService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNote",
 			Handler:    _NoteService_GetNote_Handler,
+		},
+		{
+			MethodName: "GetNextReviewNote",
+			Handler:    _NoteService_GetNextReviewNote_Handler,
 		},
 		{
 			MethodName: "CreateNote",

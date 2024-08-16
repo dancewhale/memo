@@ -270,16 +270,17 @@ func (a noteHasManyReviewLogsTx) Count() int64 {
 
 type noteDo struct{ gen.DO }
 
-// where("orgid=@orgid")
-func (n noteDo) FindByOrgID(orgid string) (result storage.Note, err error) {
+// sql(select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<@today
+// order by fsrs_infos.due)
+func (n noteDo) GetNoteOrderByDueTime(today string) (result []*storage.Note, err error) {
 	var params []interface{}
 
 	var generateSQL strings.Builder
-	params = append(params, orgid)
-	generateSQL.WriteString("orgid=? ")
+	params = append(params, today)
+	generateSQL.WriteString("select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<? order by fsrs_infos.due ")
 
 	var executeSQL *gorm.DB
-	executeSQL = n.UnderlyingDB().Where(generateSQL.String(), params...).Take(&result) // ignore_security_alert
+	executeSQL = n.UnderlyingDB().Raw(generateSQL.String(), params...).Find(&result) // ignore_security_alert
 	err = executeSQL.Error
 
 	return

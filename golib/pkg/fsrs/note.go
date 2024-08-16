@@ -64,6 +64,24 @@ func (store *NoteApi) GetNoteByOrgID(orgid string) *storage.Note {
 	return note
 }
 
+// GetDueNote by due time order
+func (store *NoteApi) GetDueNoteOrderByDueTime() []*storage.Note {
+	torrow  := time.Now().AddDate(0, 0, 1)
+	dueTimeYear := torrow.Year()
+	dueTimeMonth := torrow.Month()
+	dueTimeDay := torrow.Day()
+	dueTime := time.Date(dueTimeYear, dueTimeMonth, dueTimeDay, 0, 0, 0, 0, time.UTC)
+	
+
+	n := dal.Use(store.db).Note
+	notes, err := n.WithContext(context.Background()).GetNoteOrderByDueTime(dueTime.String())
+	if err != nil {
+		logger.Errorf("Get due note order by duetime failed: %v", err)
+		return nil
+	}
+	return notes
+}
+
     // UpdateNote 设置一张卡片。
 func (store *NoteApi) UpdateNote(fnote *storage.Note) *storage.Note {
 	n := dal.Use(store.db).Note
@@ -108,44 +126,6 @@ func (store *NoteApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
 	return n.ReviewLogs.Model(note).Append(log)
 }
 
-
-    // 获取指定OrgId的新的卡片（制卡后没有进行过复习的卡片）。
-func (store *NoteApi) GetNewNotesByOrgIDs(blockIDs []string) (ret []storage.Note) {
-
-	//	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
-	//	for _, card := range store.cards {
-	//		c := card.Impl().(*fsrs.Card)
-	//		if !c.LastReview.IsZero() {
-	//			continue
-	//		}
-	//
-	//		if gulu.Str.Contains(card.BlockID(), blockIDs) {
-	//			ret = append(ret, card)
-	//		}
-	//	}
-	return nil
-}
-
-    //获取指定OrgId的所有到期的卡片。
-func (store *NoteApi) GetDueNotesByOrgIDs(blockIDs []string) (ret []storage.Note) {
-
-	//	blockIDs = gulu.Str.RemoveDuplicatedElem(blockIDs)
-	//	now := time.Now()
-	//	for _, card := range store.cards {
-	//		c := card.Impl().(*fsrs.Card)
-	//		if now.Before(c.Due) {
-	//			continue
-	//		}
-	//
-	//		if gulu.Str.Contains(card.BlockID(), blockIDs) {
-	//			ret = append(ret, card)
-	//		}
-	//	}
-	return nil
-}
-
-
-
 // CountNotes 获取卡包中的闪卡数量。
 func (store *NoteApi) CountNotes() int {
 	return 0
@@ -181,6 +161,16 @@ func (store *NoteApi) DueNotes(day int64) ([]*storage.Note) {
 	return ret
 }
 
+// get nodes need to review
+func (api *NoteApi) GetReviewNote() *storage.Note {
+	notes := api.GetDueNoteOrderByDueTime()
+	if  len(notes) == 0 {
+		logger.Infof("No note need to review.")
+		return nil
+	}
+	return notes[0]
+}
+
     // Review 闪卡复习,返回复习后的闪卡,如果状态为WaitReviewInit,则返回未修改的note.
 func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
 
@@ -208,6 +198,7 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 		fnote.ReviewLogs = append(fnote.ReviewLogs, reviewlog)
 		return api.UpdateCardOfNote(fnote)
 	}
+	logger.Infof("Note %s no need to review.", orgID)
 	return nil
 }
 
