@@ -39,53 +39,37 @@ If heading without an `MEMO_NOTE_TYPE' property push failed.
 If heading without an `ID' property create it."
   (interactive)
   (save-excursion
-    (let ((note-type) (note-id))
-      (setq note-type
-	    (org-entry-get nil memo-prop-note-type))
-      (setq note-id (org-id-get-create))
+    (let* ((note-type  (org-entry-get nil memo-prop-note-type))
+	   (note-content  (memo--note-contents-current-heading))
+	   (note-id (org-id-get-create)))
       (if (not note-type)
-	  (user-error "No note to push found")
-	(if (memo--push-note (memo--note-at-point))
+	  (user-error "Missing note type")
+	(if (memo--create-note note-id note-type note-content)
 	    (message "Create note to memo successful.")
 	  (message "Create note to memo failed."))))))
 
-(defun memo-get-review-note ()
+(defun memo-get-review-note-object ()
   "Get note need review."
   (interactive)
   (message (memo--get-next-review-note))
   )
 
+
 (defun memo--note-at-point ()
-  "Make a note struct from current entry."
+  "Make and return object from current note"
   (let* ((note-id (org-id-get-create))
+	 (note-content  (memo--note-contents-current-heading))
 	 (note-type (org-entry-get nil memo-prop-note-type))
-	 (content-current-heading
-	  (memo--note-contents-current-heading)))
     (unless note-type (user-error "Missing note type"))
     (make-memo-note :id note-id
 		    :type note-type
-		    :content content-current-heading)))
+		    :content note-content)))
 
-
-;(defun memo--push-note (note)
-;  "Request AnkiConnect for updating or creating NOTE."
-;  (cond
-;   ((null (memo-get-note-from-id note))
-;    (memo--create-note note))
-;   (t
-;    (memo--update-note note))))
-
-(defun memo--push-note (note)
-  "Request AnkiConnect for updating or creating NOTE."
-  (memo--create-note (memo-note-id note)
-		     (memo-note-type note)
-		     (memo-note-content note)))
 
 
 
 (defun memo--note-contents-current-heading ()
   "Get content between heading at point and next sub/heading.
-
 Leading whitespace, drawers, and planning content is skipped."
   (save-excursion
     (let* ((element (org-element-at-point))
@@ -123,6 +107,12 @@ Leading whitespace, drawers, and planning content is skipped."
 				   (min (point-max) end)))
 			     "")))
       contents-raw)))
+
+
+
+
+
+
 
 (provide 'memo)
 ;;; memo.el ends here
