@@ -86,6 +86,7 @@ func (store *NoteApi) UpdateNote(fnote *storage.Note) *storage.Note {
 	n := dal.Use(store.db).Note
 	_, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.Orgid)).Updates(fnote)
 	if err != nil {
+		logger.Errorf("Update note in database failed: %v", err)
 		return nil
 	}
 	return fnote

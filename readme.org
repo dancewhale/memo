@@ -2,7 +2,8 @@
 For supermemo in emacs.
 
 * TODO 等待
-** TODO card 进行联合排序查询,自定义查询语句,进行review
+** DONE card 进行联合排序查询,自定义查询语句,进行review
 ** DONE 只有当card 为easy 的时候,卡片才真正review 完毕,进行删除,否则只调整duetime 和卡片状态.
-** TODO 简化当前golang 的后端数据结构
+** DONE 简化当前golang 的后端数据结构
+** TODO 没有更新note 的elisp 代码和接口
 
