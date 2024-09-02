@@ -53,7 +53,7 @@ If heading without an `ID' property create it."
 	   (note-id (org-id-get-create)))
       (if (not note-type)
 	  (user-error "Missing note type")
-	(if (memo--create-note note-id note-type note-content)
+	(if (memo--create-or-update-note note-id note-type note-content)
 	    (message "Create note to memo successful.")
 	  (message "Create note to memo failed."))))))
 
@@ -75,13 +75,14 @@ If heading without an `ID' property create it."
 	(erase-buffer)
 	(insert (memo-note-content mnote))
 	(goto-char (point-min))
-	(if (re-search-forward "^-+$" t t)
-	  (forward-line)
-	  (beginning-of-line)
-	  (setq answer-start (point))
-	  (goto-char (point-max))
-	  (setq answer-end (point))
-	  (memo-hide-region answer-start answer-end))
+	(if (re-search-forward "^-+$" nil t)
+	    (progn
+	       (forward-line)
+	       (beginning-of-line)
+	       (setq answer-start (point))
+	       (goto-char (point-max))
+	       (setq answer-end (point))
+	       (memo-hide-region answer-start answer-end)))
 	(switch-to-buffer buf)
 	(org-mode)
       )
@@ -126,47 +127,20 @@ If heading without an `ID' property create it."
   )
 
 
-
-
 (defun memo--note-contents-current-heading ()
-  "Get content between heading at point and next sub/heading.
-Leading whitespace, drawers, and planning content is skipped."
+   "Get entry content until any subentry."
+  ;; We move around with regexes, so restore original position
   (save-excursion
-    (let* ((element (org-element-at-point))
-	   (begin (cl-loop for eoh = (org-element-property
-				      :contents-begin element)
-			   then (org-element-property :end subelem)
-			   while eoh
-			   for subelem = (progn
-					   (goto-char eoh)
-					   (org-element-context))
-			   while (memq (org-element-type subelem)
-				       '(drawer planning property-drawer))
-			   finally return (and eoh (org-element-property
-						    :begin subelem))))
-	   (end (cl-loop for eoh = (org-element-property
-				    :contents-begin element)
-			 then (org-element-property :end nextelem)
-			 while eoh
-			 for nextelem = (progn
-					  (goto-char eoh)
-					  (org-element-at-point))
-			 while (not (or (memq (org-element-type nextelem)
-					      '(headline))
-					(eobp)))
-			 finally return (and eoh (if (eobp)
-						     (org-element-property :end nextelem)
-						   (org-element-property :begin nextelem)))))
-	   (contents-raw (or (and begin
-				  end
-				  (buffer-substring-no-properties
-				   begin
-				   ;; in case the buffer is narrowed,
-				   ;; e.g. by `org-map-entries' when
-				   ;; scope is `tree'
-				   (min (point-max) end)))
-			     "")))
-      contents-raw)))
-
+    ;; Jump to beginning of entry
+    (goto-char (org-entry-beginning-position)) ;; was: (re-search-backward "^\\*+ .*\n")
+    ;; Skip heading
+    (re-search-forward ".*\n")
+    ;; Possibly skip property block until end of entry
+    (re-search-forward ":properties:\\(.*\n\\)*:end:" (org-entry-end-position) t)
+    ;; Get entry content
+    (let ((from (point))
+          (to (progn (outline-next-heading) (point))))
+      (buffer-substring-no-properties from to))))
+  
 (provide 'memo)
 ;;; memo.el ends here

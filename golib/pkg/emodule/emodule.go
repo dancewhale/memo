@@ -45,7 +45,7 @@ func (e *EModule) common() error{
 
 }
 
-func (e *EModule) CreateNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+func (e *EModule) CreateOrUpdateNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
 	e.common()
 	defer e.con.Close()
@@ -69,8 +69,8 @@ func (e *EModule) CreateNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 		return env.Bool(false), err
 	}
 
-	noteReq := pb.CreateNoteRequest{Orgid: orgid, Type: ntype, Content: ncontent}
-	r, err := e.noteClient.CreateNote(e.ctx, &noteReq)
+	noteReq := pb.CreateOrUpdateNoteRequest{Orgid: orgid, Type: ntype, Content: ncontent}
+	r, err := e.noteClient.CreateOrUpdateNote(e.ctx, &noteReq)
 	if err != nil {
 		logger.Infof("Create note failed: %v", err)
 		return env.Bool(false), err

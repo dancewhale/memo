@@ -66,12 +66,11 @@ const (
 )
 
 type Note struct {
-	ID            uint `gorm:"primarykey"`
+	Orgid         string `gorm:"primaryKey;index"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	Content       string `json:"Content"`
 	Type          string `json:"Type"`
-	Orgid         string `gorm:"unique;not null;index"`
 	Hash          string `json:"Hash"`
 	Fsrs          FsrsInfo
 	ReviewLogs    []ReviewLog
@@ -83,7 +82,7 @@ type FsrsInfo struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	gfsrs.Card `gorm:"embedded"`
-	NoteID     uint
+	NoteOrgid     string
 }
 
 type ReviewLog struct {
@@ -91,7 +90,7 @@ type ReviewLog struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	gfsrs.ReviewLog `gorm:"embedded",json:"Flog"`
-	NoteID          uint
+	NoteOrgid     string
 }
 
 func (fs *FsrsInfo) IsEmpty() bool {

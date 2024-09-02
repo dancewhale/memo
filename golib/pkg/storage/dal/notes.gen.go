@@ -28,12 +28,11 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 
 	tableName := _note.noteDo.TableName()
 	_note.ALL = field.NewAsterisk(tableName)
-	_note.ID = field.NewUint(tableName, "id")
+	_note.Orgid = field.NewString(tableName, "orgid")
 	_note.CreatedAt = field.NewTime(tableName, "created_at")
 	_note.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_note.Content = field.NewString(tableName, "content")
 	_note.Type = field.NewString(tableName, "type")
-	_note.Orgid = field.NewString(tableName, "orgid")
 	_note.Hash = field.NewString(tableName, "hash")
 	_note.Fsrs = noteHasOneFsrs{
 		db: db.Session(&gorm.Session{}),
@@ -56,12 +55,11 @@ type note struct {
 	noteDo
 
 	ALL       field.Asterisk
-	ID        field.Uint
+	Orgid     field.String
 	CreatedAt field.Time
 	UpdatedAt field.Time
 	Content   field.String
 	Type      field.String
-	Orgid     field.String
 	Hash      field.String
 	Fsrs      noteHasOneFsrs
 
@@ -82,12 +80,11 @@ func (n note) As(alias string) *note {
 
 func (n *note) updateTableName(table string) *note {
 	n.ALL = field.NewAsterisk(table)
-	n.ID = field.NewUint(table, "id")
+	n.Orgid = field.NewString(table, "orgid")
 	n.CreatedAt = field.NewTime(table, "created_at")
 	n.UpdatedAt = field.NewTime(table, "updated_at")
 	n.Content = field.NewString(table, "content")
 	n.Type = field.NewString(table, "type")
-	n.Orgid = field.NewString(table, "orgid")
 	n.Hash = field.NewString(table, "hash")
 
 	n.fillFieldMap()
@@ -105,13 +102,12 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (n *note) fillFieldMap() {
-	n.fieldMap = make(map[string]field.Expr, 9)
-	n.fieldMap["id"] = n.ID
+	n.fieldMap = make(map[string]field.Expr, 8)
+	n.fieldMap["orgid"] = n.Orgid
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
 	n.fieldMap["content"] = n.Content
 	n.fieldMap["type"] = n.Type
-	n.fieldMap["orgid"] = n.Orgid
 	n.fieldMap["hash"] = n.Hash
 
 }
@@ -270,14 +266,14 @@ func (a noteHasManyReviewLogsTx) Count() int64 {
 
 type noteDo struct{ gen.DO }
 
-// sql(select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<@today
+// sql(select * from notes inner join fsrs_infos on notes.orgid=fsrs_infos.note_orgid where fsrs_infos.due<@today
 // order by fsrs_infos.due)
 func (n noteDo) GetNoteOrderByDueTime(today string) (result []*storage.Note, err error) {
 	var params []interface{}
 
 	var generateSQL strings.Builder
 	params = append(params, today)
-	generateSQL.WriteString("select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<? order by fsrs_infos.due ")
+	generateSQL.WriteString("select * from notes inner join fsrs_infos on notes.orgid=fsrs_infos.note_orgid where fsrs_infos.due<? order by fsrs_infos.due ")
 
 	var executeSQL *gorm.DB
 	executeSQL = n.UnderlyingDB().Raw(generateSQL.String(), params...).Find(&result) // ignore_security_alert
@@ -286,13 +282,13 @@ func (n noteDo) GetNoteOrderByDueTime(today string) (result []*storage.Note, err
 	return
 }
 
-// sql(select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<@today)
+// sql(select * from notes inner join fsrs_infos on notes.orgid=fsrs_infos.note_orgid where fsrs_infos.due<@today)
 func (n noteDo) FindDueCard(today string) (result []*storage.Note, err error) {
 	var params []interface{}
 
 	var generateSQL strings.Builder
 	params = append(params, today)
-	generateSQL.WriteString("select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<? ")
+	generateSQL.WriteString("select * from notes inner join fsrs_infos on notes.orgid=fsrs_infos.note_orgid where fsrs_infos.due<? ")
 
 	var executeSQL *gorm.DB
 	executeSQL = n.UnderlyingDB().Raw(generateSQL.String(), params...).Find(&result) // ignore_security_alert

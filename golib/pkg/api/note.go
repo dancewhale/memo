@@ -46,16 +46,16 @@ func (s *noteServer) GetNextReviewNote(ctx context.Context, in *pb.GetNextReview
 	}
 }
 	
-func (s *noteServer) CreateNote(ctx context.Context, in *pb.CreateNoteRequest) (*pb.CreateNoteResponse, error) {
+func (s *noteServer) CreateOrUpdateNote(ctx context.Context, in *pb.CreateOrUpdateNoteRequest) (*pb.CreateOrUpdateNoteResponse, error) {
 	// use for test function
 	note := storage.Note{Content: in.GetContent(), Type: in.GetType(), Orgid: in.GetOrgid()}
 
-	fnote := napi.CreateNote(&note)
+	fnote := napi.CreateOrUpdateNote(&note)
 
 	if fnote != nil {
-		return &pb.CreateNoteResponse{Orgid: fnote.Orgid }, nil
+		return &pb.CreateOrUpdateNoteResponse{Orgid: fnote.Orgid }, nil
 	} else {
-		return &pb.CreateNoteResponse{Orgid: "" }, nil
+		return &pb.CreateOrUpdateNoteResponse{Orgid: "" }, nil
 	}
 }
 	

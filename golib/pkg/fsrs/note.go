@@ -44,7 +44,7 @@ type NoteApi struct {
 }
 
     // CreateNote 添加一张卡片。
-func (api *NoteApi) CreateNote(fnote *storage.Note) *storage.Note {
+func (api *NoteApi) CreateOrUpdateNote(fnote *storage.Note) *storage.Note {
 	fcard := gfsrs.Card{Due: time.Now(), Stability: 0.0, Difficulty: 0.0, ElapsedDays: 0, ScheduledDays: 0, Reps: 0, Lapses: 0, LastReview: time.Now(), State: gfsrs.New}
 	scard := storage.FsrsInfo{}
 	scard.Card = fcard

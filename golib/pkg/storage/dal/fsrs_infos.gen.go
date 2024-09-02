@@ -39,7 +39,7 @@ func newFsrsInfo(db *gorm.DB, opts ...gen.DOOption) fsrsInfo {
 	_fsrsInfo.Lapses = field.NewUint64(tableName, "lapses")
 	_fsrsInfo.State = field.NewInt8(tableName, "state")
 	_fsrsInfo.LastReview = field.NewTime(tableName, "last_review")
-	_fsrsInfo.NoteID = field.NewUint(tableName, "note_id")
+	_fsrsInfo.NoteOrgid = field.NewString(tableName, "note_orgid")
 
 	_fsrsInfo.fillFieldMap()
 
@@ -62,7 +62,7 @@ type fsrsInfo struct {
 	Lapses        field.Uint64
 	State         field.Int8
 	LastReview    field.Time
-	NoteID        field.Uint
+	NoteOrgid     field.String
 
 	fieldMap map[string]field.Expr
 }
@@ -91,7 +91,7 @@ func (f *fsrsInfo) updateTableName(table string) *fsrsInfo {
 	f.Lapses = field.NewUint64(table, "lapses")
 	f.State = field.NewInt8(table, "state")
 	f.LastReview = field.NewTime(table, "last_review")
-	f.NoteID = field.NewUint(table, "note_id")
+	f.NoteOrgid = field.NewString(table, "note_orgid")
 
 	f.fillFieldMap()
 
@@ -121,7 +121,7 @@ func (f *fsrsInfo) fillFieldMap() {
 	f.fieldMap["lapses"] = f.Lapses
 	f.fieldMap["state"] = f.State
 	f.fieldMap["last_review"] = f.LastReview
-	f.fieldMap["note_id"] = f.NoteID
+	f.fieldMap["note_orgid"] = f.NoteOrgid
 }
 
 func (f fsrsInfo) clone(db *gorm.DB) fsrsInfo {

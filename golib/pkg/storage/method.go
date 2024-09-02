@@ -3,10 +3,10 @@ package storage
 import "gorm.io/gen"
 
 type NoteMethod interface {
-	// sql(select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<@today
+	// sql(select * from notes inner join fsrs_infos on notes.orgid=fsrs_infos.note_orgid where fsrs_infos.due<@today
 	// order by fsrs_infos.due)
 	GetNoteOrderByDueTime(today string) ([]*gen.T, error)
-	// sql(select * from notes inner join fsrs_infos on notes.id=fsrs_infos.note_id where fsrs_infos.due<@today)
+	// sql(select * from notes inner join fsrs_infos on notes.orgid=fsrs_infos.note_orgid where fsrs_infos.due<@today)
 	FindDueCard(today string) ([]*gen.T, error)
 }
 
