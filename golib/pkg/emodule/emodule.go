@@ -167,13 +167,21 @@ func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
-		logger.Errorf("Pass arg orgid from emacs in create note failed: %v", err)
+		logger.Errorf("Pass arg orgid from emacs in review note failed: %v", err)
 	}
 	if orgid == "" {
 		return env.Bool(false), nil
 	}
 
-	noteReq := pb.ReviewNoteRequest{Orgid: orgid}
+	rate, err := ectx.GoStringArg(1)
+	if err != nil {
+		logger.Errorf("Pass arg rate from emacs in review note failed: %v", err)
+	}
+	if rate == "" {
+		return env.Bool(false), nil
+	}
+
+	noteReq := pb.ReviewNoteRequest{Orgid: orgid, Rate: rate}
 	r, err := noteClient.ReviewNote(e.ctx, &noteReq)
 	if err != nil {
 		logger.Errorf("Delete note failed: %v", err)

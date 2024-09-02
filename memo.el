@@ -53,7 +53,7 @@ If heading without an `ID' property create it."
 	   (note-id (org-id-get-create)))
       (if (not note-type)
 	  (user-error "Missing note type")
-	(if (memo--create-or-update-note note-id note-type note-content)
+	(if (memo-api--create-or-update-note note-id note-type note-content)
 	    (message "Create note to memo successful.")
 	  (message "Create note to memo failed."))))))
 
@@ -99,13 +99,38 @@ If heading without an `ID' property create it."
 	  )))
   )
 
+(defun memo-review-easy()
+  "Review note with score: Easy."
+  (interactive)
+  (memo-api--review-note (memo-note-id memo--review-note) "Easy")
+  )
+
+(defun memo-review-good()
+  "Review note with score: Good."
+  (interactive)
+  (memo-api--review-note (memo-note-id memo--review-note) "Good")
+  )
+
+(defun memo-review-hard()
+  "Review note with score: Hard."
+  (interactive)
+  (memo-api--review-note (memo-note-id memo--review-note) "Hard")
+  )
+
+(defun memo-review-again()
+  "Review note with score: Again."
+  (interactive)
+  (memo-api--review-note (memo-note-id memo--review-note) "Again")
+  )
+
+
 (defun memo-goto-org ()
   (interactive)
   (org-id-goto (memo-note-id memo--review-note)))
 
 (defun memo--get-review-note-object-from-server ()
   "Return memo-note object which need review from server."
-  (let* ((memo-note-object (memo--get-next-review-note))
+  (let* ((memo-note-object (memo-api--get-next-review-note))
 	 (note-id (car memo-note-object))
 	 (note-type (cadr memo-note-object))
 	 (note-content (caddr memo-note-object)))
