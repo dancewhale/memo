@@ -6,7 +6,9 @@ For supermemo in emacs.
 ** DONE 只有当card 为easy 的时候,卡片才真正review 完毕,进行删除,否则只调整duetime 和卡片状态.
 ** DONE 简化当前golang 的后端数据结构
 ** DONE 没有更新note 的elisp 代码和接口
-** TODO contents-current-heading 代码对目前格式识别有问题
+** DONE contents-current-heading 代码对目前格式识别有问题
 原因在于memo--note-contents-current-heading 其本身的解析并没有考虑
 ----隔离后的问题, 所以这个解析是不兼容我的格式.
+** TODO 增加review 函数
+** TODO 自动识别server 是否开启, 支持报错
 

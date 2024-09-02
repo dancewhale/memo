@@ -14,7 +14,7 @@
 ;; This file is not part of GNU Emacs.
 ;;
 ;;; Commentary:
-;;  Thanks  Author of anki-editor, many code borrow from his package.
+;;  Thanks  Author of anki-editor, org-fc, org-anki, many code borrow from those package.
 ;;  Use for memo (interactive "P")
 ;;
 ;;; Code:
@@ -66,7 +66,7 @@ If heading without an `ID' property create it."
 
 (defun memo--review-show (mnote)
   "Show note in review buffer, MNOTE is memo-note object."
-  (if (not mnote)
+  (if (not (memo-note-id mnote))
       (user-error "Review memo-note object is nil"))
   (let* ((buf (get-buffer-create memo--review-buffer-name))
 	 answer-start answer-end)
@@ -103,24 +103,28 @@ If heading without an `ID' property create it."
   "Review note with score: Easy."
   (interactive)
   (memo-api--review-note (memo-note-id memo--review-note) "Easy")
+  (memo-review-note)
   )
 
 (defun memo-review-good()
   "Review note with score: Good."
   (interactive)
   (memo-api--review-note (memo-note-id memo--review-note) "Good")
+  (memo-review-note)
   )
 
 (defun memo-review-hard()
   "Review note with score: Hard."
   (interactive)
   (memo-api--review-note (memo-note-id memo--review-note) "Hard")
+  (memo-review-note)
   )
 
 (defun memo-review-again()
   "Review note with score: Again."
   (interactive)
   (memo-api--review-note (memo-note-id memo--review-note) "Again")
+  (memo-review-note)
   )
 
 
