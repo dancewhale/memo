@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: memo space repetition
 ;; Homepage: https://github.com/dancewhale/memo
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "24.3") (cl-lib "0.6.1") (org "9.6.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -24,10 +24,21 @@
 
 (require 'memo-core)
 
-(setq load-path (append load-path (list (file-truename default-directory))))
-(load-file (concat default-directory "memo.so"))
-
 ;;; Core primitives
+
+(defvar memo--lib-loaded nil
+  "If dynamic module is loaded.")
+
+(defvar memo--root (file-name-directory (or load-file-name buffer-file-name))
+  "The path to the root of memo package.")
+
+(defvar memo--go-root (concat memo--root  "golib")
+  "The path to the root of memo go src file.")
+
+(defvar memo--module-path
+  (concat memo--root "libmemo" module-file-suffix)
+  "The path to the dynamic module.")
+
 
 (defconst memo-prop-note-type "MEMO_NOTE_TYPE")
 (defconst memo-prop-note-id   "ID")
@@ -171,5 +182,59 @@ If heading without an `ID' property create it."
           (to (progn (outline-next-heading) (point))))
       (buffer-substring-no-properties from to))))
   
+(defun memo-compile-module ()
+  "Compile dynamic module."
+  (interactive)
+  (let ((default-directory (concat memo--root "golib") ))
+    (if (zerop (shell-command "make so"))
+        (message "Compile module succeed!")
+      (error "Compile Memo dynamic module failed"))))
+
+(defun memo-compile-server ()
+  "Compile memo server."
+  (interactive)
+  (let ((default-directory  memo--go-root))
+    (if (zerop (shell-command "make build"))
+        (message "Compile server succeed!")
+      (error "Compile Memo server failed"))))
+
+(defun memo--load-dynamic-module ()
+  "Load dynamic module."
+  (if (not (file-exists-p memo--module-path))
+      (error "Dynamic module not exist")
+    (load-file memo--module-path)
+    (setq memo--lib-loaded t)))
+
+(defun memo--start-server ()
+  "Start memo server in daemon."
+  (let ((default-directory memo--go-root)
+	(memo--server-path (concat memo--go-root "/memo")))
+    (start-process-shell-command "memo" "*memo-server*" memo--server-path)))
+;; wait for debug
+(memo--start-server)
+
+
+;;;###autoload
+(defun memo-activate ()
+  "Activate memo."
+  (unless memo--lib-loaded
+    (unless (file-exists-p memo--module-path)
+      (memo-compile-module))
+    (memo--load-dynamic-module))
+
+;  如何处理版本不一致问题
+;  (unless (string-equal memo-version (memo-lib-version))
+;    (memo-compile-module)
+;    (error "Dynamic module recompiled, please restart Emacs"))
+
+
+; 启动后台进程
+  (when memo--lib-loaded
+    (dolist (binding memo-translate-keybindings)
+          (define-key memo-active-mode-map (kbd binding) 'memo-send-keybinding))
+))
+
+
+
 (provide 'memo)
 ;;; memo.el ends here
