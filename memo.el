@@ -29,8 +29,14 @@
 (defvar memo--lib-loaded nil
   "If dynamic module is loaded.")
 
+(defvar memo--server-process nil
+  "The object store memo server process.")
+
 (defvar memo--root (file-name-directory (or load-file-name buffer-file-name))
   "The path to the root of memo package.")
+
+(defvar memo--server-buffer "*memo-server*"
+  "The buffer name of memo sever.")
 
 (defvar memo--go-root (concat memo--root  "golib")
   "The path to the root of memo go src file.")
@@ -186,6 +192,7 @@ If heading without an `ID' property create it."
   "Compile dynamic module."
   (interactive)
   (let ((default-directory (concat memo--root "golib") ))
+    (message "Start to compile memo library, Please wait...")
     (if (zerop (shell-command "make so"))
         (message "Compile module succeed!")
       (error "Compile Memo dynamic module failed"))))
@@ -193,6 +200,7 @@ If heading without an `ID' property create it."
 (defun memo-compile-server ()
   "Compile memo server."
   (interactive)
+  (message "Start to compile memo server, Please wait...")
   (let ((default-directory  memo--go-root))
     (if (zerop (shell-command "make build"))
         (message "Compile server succeed!")
@@ -208,10 +216,24 @@ If heading without an `ID' property create it."
 (defun memo--start-server ()
   "Start memo server in daemon."
   (let ((default-directory memo--go-root)
-	(memo--server-path (concat memo--go-root "/memo")))
-    (start-process-shell-command "memo" "*memo-server*" memo--server-path)))
+	(memo--server-path (concat memo--go-root "/memo"))
+	(memo-server-buffer (get-buffer-create memo--server-buffer)))
+    (with-current-buffer memo-server-buffer
+      (ansi-color-for-comint-mode-on)
+      (comint-mode))
+    (unless memo--lib-loaded
+      (unless (file-exists-p memo--module-path)
+	(memo-compile-module)))
+    (unless (file-exists-p memo--server-path)
+      (memo-compile-server))
+    (setq memo--server-process (start-process "memo-server" memo--server-buffer memo--server-path))
+    ;; for ansi-color filter
+    (set-process-filter memo--server-process 'comint-output-filter)))
+
 ;; wait for debug
 (memo--start-server)
+
+(require 'ansi-color)
 
 
 ;;;###autoload
