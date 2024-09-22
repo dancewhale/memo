@@ -6,7 +6,6 @@
 ;; Maintainer: whale <whale@MacBook-Pro-4.local>
 ;; Created: 6月 17, 2024
 ;; Modified: 6月 17, 2024
-;; Version: 0.0.1
 ;; Keywords: memo space repetition
 ;; Homepage: https://github.com/dancewhale/memo
 ;; Package-Requires: ((emacs "24.3") (cl-lib "0.6.1") (org "9.6.0"))
@@ -21,8 +20,10 @@
 
 (require 'cl-lib)
 (require 'org-element)
+(require 'ansi-color)
 
 (require 'memo-core)
+(require 'memo-fsrs)
 
 ;;; Core primitives
 
@@ -45,148 +46,19 @@
   (concat memo--root "libmemo" module-file-suffix)
   "The path to the dynamic module.")
 
+(defvar memo--server-port "50051"
+  "Memo server port setting, default is 50051.")
 
-(defconst memo-prop-note-type "MEMO_NOTE_TYPE")
-(defconst memo-prop-note-id   "ID")
-(defconst memo--review-buffer-name "*memo-review*"
-  "The memo buffer for review note show and flip."
-  )
-
-(cl-defstruct memo-note
-  id type content finish)
-
-(defvar memo--review-note nil
-  "The memo-note object which store note info wait for review.")
+(defvar memo--server-host "127.0.0.1"
+  "Memo server host setting, default is 127.0.0.1.")
 
 
-(defun memo-push-note-at-point ()
-  "Push note at point to memo db.
-If heading without an `MEMO_NOTE_TYPE' property push failed.
-If heading without an `ID' property create it."
-  (interactive)
-  (save-excursion
-    (let* ((note-type  (org-entry-get nil memo-prop-note-type))
-	   (note-content  (memo--note-contents-current-heading))
-	   (note-id (org-id-get-create)))
-      (if (not note-type)
-	  (user-error "Missing note type")
-	(if (memo-api--create-or-update-note note-id note-type note-content)
-	    (message "Create note to memo successful.")
-	  (message "Create note to memo failed."))))))
+(defvar memo--server-db-path  (concat  memo--root ".memo.db")
+  "Memo server db path, default is under package dir.")
 
-(defun memo-review-note()
-  "Review note."
-  (interactive)
-  (setq memo--review-note (memo--get-review-note-object-from-server))
-  (memo--review-show memo--review-note)
-)
+(defvar memo--server-log-level  0
+  "Memo server log level, -1 is debug, 0 is info, 1 is warn, 2 is error.")
 
-(defun memo--review-show (mnote)
-  "Show note in review buffer, MNOTE is memo-note object."
-  (if (not (memo-note-id mnote))
-      (user-error "Review memo-note object is nil"))
-  (let* ((buf (get-buffer-create memo--review-buffer-name))
-	 answer-start answer-end)
-    (with-current-buffer buf
-	(memo-remove-overlays)
-	(erase-buffer)
-	(insert (memo-note-content mnote))
-	(goto-char (point-min))
-	(if (re-search-forward "^-+$" nil t)
-	    (progn
-	       (forward-line)
-	       (beginning-of-line)
-	       (setq answer-start (point))
-	       (goto-char (point-max))
-	       (setq answer-end (point))
-	       (memo-hide-region answer-start answer-end)))
-	(switch-to-buffer buf)
-	(org-mode)
-      )
-   )
- )
-
-(defun memo-flip-note()
-  "Flip review note."
-  (interactive)
-  (let* ((buf (get-buffer  memo--review-buffer-name)))
-    (if buf
-	(with-current-buffer buf
-	  (memo-remove-overlays)
-	  )))
-  )
-
-(defun memo-review-easy()
-  "Review note with score: Easy."
-  (interactive)
-  (memo-api--review-note (memo-note-id memo--review-note) "Easy")
-  (memo-review-note)
-  )
-
-(defun memo-review-good()
-  "Review note with score: Good."
-  (interactive)
-  (memo-api--review-note (memo-note-id memo--review-note) "Good")
-  (memo-review-note)
-  )
-
-(defun memo-review-hard()
-  "Review note with score: Hard."
-  (interactive)
-  (memo-api--review-note (memo-note-id memo--review-note) "Hard")
-  (memo-review-note)
-  )
-
-(defun memo-review-again()
-  "Review note with score: Again."
-  (interactive)
-  (memo-api--review-note (memo-note-id memo--review-note) "Again")
-  (memo-review-note)
-  )
-
-
-(defun memo-goto-org ()
-  (interactive)
-  (org-id-goto (memo-note-id memo--review-note)))
-
-(defun memo--get-review-note-object-from-server ()
-  "Return memo-note object which need review from server."
-  (let* ((memo-note-object (memo-api--get-next-review-note))
-	 (note-id (car memo-note-object))
-	 (note-type (cadr memo-note-object))
-	 (note-content (caddr memo-note-object)))
-    (make-memo-note :id note-id
-		    :type note-type
-		    :content note-content
-		    :finish nil)))
-
-(defun memo--get-note-object-from-point ()
-  "Make and return memo-note object from current note."
-  (let* ((note-id (org-id-get-create))
-	 (note-content  (memo--note-contents-current-heading))
-	 (note-type (org-entry-get nil memo-prop-note-type))
-    (unless note-type (user-error "Missing note type"))
-    (make-memo-note :id note-id
-		    :type note-type
-		    :content note-content
-		    :finish nil)))
-  )
-
-
-(defun memo--note-contents-current-heading ()
-   "Get entry content until any subentry."
-  ;; We move around with regexes, so restore original position
-  (save-excursion
-    ;; Jump to beginning of entry
-    (goto-char (org-entry-beginning-position)) ;; was: (re-search-backward "^\\*+ .*\n")
-    ;; Skip heading
-    (re-search-forward ".*\n")
-    ;; Possibly skip property block until end of entry
-    (re-search-forward ":properties:\\(.*\n\\)*:end:" (org-entry-end-position) t)
-    ;; Get entry content
-    (let ((from (point))
-          (to (progn (outline-next-heading) (point))))
-      (buffer-substring-no-properties from to))))
   
 (defun memo-compile-module ()
   "Compile dynamic module."
@@ -213,6 +85,13 @@ If heading without an `ID' property create it."
     (load-file memo--module-path)
     (setq memo--lib-loaded t)))
 
+(defun memo--set-server-env ()
+  "Set memo server env, For example port,host,dbpath,loglevel."
+  (setenv "port"     memo--server-port)
+  (setenv "host"     memo--server-host)
+  (setenv "dbpath"   memo--server-db-path)
+  (setenv "loglevel" memo--server-log-level))
+
 (defun memo--start-server ()
   "Start memo server in daemon."
   (let ((default-directory memo--go-root)
@@ -226,35 +105,35 @@ If heading without an `ID' property create it."
 	(memo-compile-module)))
     (unless (file-exists-p memo--server-path)
       (memo-compile-server))
-    (setq memo--server-process (start-process "memo-server" memo--server-buffer memo--server-path))
+    (memo--set-server-env)
+    (setq memo--server-process (start-process "memo-server" memo--server-buffer memo--server-path "daemon"))
     ;; for ansi-color filter
     (set-process-filter memo--server-process 'comint-output-filter)))
 
-;; wait for debug
-(memo--start-server)
-
-(require 'ansi-color)
 
 
 ;;;###autoload
 (defun memo-activate ()
   "Activate memo."
+  (interactive)
   (unless memo--lib-loaded
     (unless (file-exists-p memo--module-path)
       (memo-compile-module))
     (memo--load-dynamic-module))
 
-;  如何处理版本不一致问题
+;  TODO: 如何处理版本不一致问题
 ;  (unless (string-equal memo-version (memo-lib-version))
 ;    (memo-compile-module)
 ;    (error "Dynamic module recompiled, please restart Emacs"))
 
+;  TODO: 判断程序状态
+;
 
 ; 启动后台进程
   (when memo--lib-loaded
-    (dolist (binding memo-translate-keybindings)
-          (define-key memo-active-mode-map (kbd binding) 'memo-send-keybinding))
-))
+    (memo--start-server))
+)
+
 
 
 
