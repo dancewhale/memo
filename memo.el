@@ -56,7 +56,7 @@
 (defvar memo--server-db-path  (concat  memo--root ".memo.db")
   "Memo server db path, default is under package dir.")
 
-(defvar memo--server-log-level  0
+(defvar memo--server-log-level  "0"
   "Memo server log level, -1 is debug, 0 is info, 1 is warn, 2 is error.")
 
   
@@ -121,18 +121,18 @@
       (memo-compile-module))
     (memo--load-dynamic-module))
 
+  (if memo--server-process
+    (if (not (process-live-p memo--server-process))
+      (memo--start-server)))
+  (if (not memo--server-process)
+      (memo-start-server))
+
 ;  TODO: 如何处理版本不一致问题
 ;  (unless (string-equal memo-version (memo-lib-version))
-;    (memo-compile-module)
-;    (error "Dynamic module recompiled, please restart Emacs"))
-
-;  TODO: 判断程序状态
-;
-
-; 启动后台进程
-  (when memo--lib-loaded
-    (memo--start-server))
+;  (memo-compile-module)
+;  (error "Dynamic module recompiled, please restart Emacs"))
 )
+
 
 
 
