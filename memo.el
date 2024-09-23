@@ -125,17 +125,13 @@
     (if (not (process-live-p memo--server-process))
       (memo--start-server)))
   (if (not memo--server-process)
-      (memo-start-server))
+      (memo--start-server))
+  (message "memo server 启动成功.")
 
 ;  TODO: 如何处理版本不一致问题
 ;  (unless (string-equal memo-version (memo-lib-version))
 ;  (memo-compile-module)
 ;  (error "Dynamic module recompiled, please restart Emacs"))
-)
-
-
-
-
-
+  )
 (provide 'memo)
 ;;; memo.el ends here
