@@ -18,15 +18,112 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'thunk)
 (require 'org-element)
 (require 'ansi-color)
 
+;; custom var
+(defcustom memo-inherit-tags t
+  "Inherit tags, set to nil to turn off."
+  :type 'boolen
+  :group 'memo)
 
-(defconst memo-prop-note-type "MEMO_NOTE_TYPE")
-(defconst memo-prop-note-id   "ID")
+(defcustom memo-default-tags nil
+  "Default tags.
+
+This variable will be used if none is set on the org item nor as
+a global property."
+  :type '(repeat string)
+  :group 'memo)
+
+(defcustom memo-default-note-type "default"
+  "Default note type.
+
+This variable will be used if none is set on the org item nor as
+a global property."
+  :type 'string
+  :group 'memo)
+
+
+(defcustom memo-fields-get-alist
+  '(("Basic" . memo-fields-get-default)
+    ("Cloze" . memo-fields-get-cloze))
+  "Alist of (NOTE-TYPE . FUNCTION) pairs.
+
+Used by `memo--entry-get-fields'.
+
+FUNCTION should return a list of string, where each string
+corresponds to a field in NOTE-TYPE."
+  :type 'alist
+  :group 'memo)
+
+
+;; review releat var and function
 (defconst memo--review-buffer-name "*memo-review*"
-  "The memo buffer for review note show and flip."
-  )
+  "The memo buffer for review note show and flip.")
+
+
+
+;;; Org Tags / Properties
+
+(defconst memo-prop-note-type  "MEMO_NOTE_TYPE"
+  "Property used to store the cards type.")
+
+(defconst memo-prop-note-hash  "MEMO_NOTE_HASH"
+"Used to determine whether the note has been modified.")
+
+(defconst memo-prop-global-tags "MEMO_TAGS"
+  "Specify Memo note tags.")
+
+
+
+(defun memo--get-global-keyword (keyword)
+  "Get global property by KEYWORD."
+  (cadar (org-collect-keywords (list keyword))))
+
+
+(defun memo--find-prop (name default)
+  "Find property with NAME from:
+1. item,
+2. inherited from parents
+3. in-buffer setting
+4. otherwise use DEFAULT"
+  (thunk-let
+      ((prop-item (org-entry-get nil name t))
+       (keyword-global (memo--get-global-keyword name)))
+    (cond
+     ((stringp prop-item) prop-item)
+     ((stringp keyword-global) keyword-global)
+     ((stringp default) default)
+     (t (error "No property '%s' in item nor file nor set as default!"
+               name)))))
+
+(defun memo--get-tags ()
+  "Get all tags for the current note include inherited from parents."
+  (append
+   (delete-dups
+    (split-string
+     (let ((global-tags (memo--get-global-keyword memo-prop-global-tags)))
+       (concat
+        (if memo-inherit-tags
+            (substring-no-properties (or (org-entry-get nil "ALLTAGS") ""))
+          (org-entry-get nil "TAGS"))
+        global-tags))
+     ":" t))
+   memo-default-tags))
+
+(defun memo--get-note-hash ()
+  "Get note hash."
+  (let* ((note-content  (memo--note-contents-current-heading))
+         (tags (memo--get-tags)))
+    (md5 (mapconcat #'identity (push note-content tags) ""))))
+
+(defun memo-entry-set-hash ()
+  "Set note hash."
+  (org-set-property memo-prop-note-hash
+                    (memo--get-note-hash)))
+
+
 
 (cl-defstruct memo-note
   id type content finish)
@@ -122,6 +219,7 @@ If heading without an `ID' property create it."
 
 
 (defun memo-goto-org ()
+  "Jump to source point from review buffer."
   (interactive)
   (org-id-goto (memo-note-id memo--review-note)))
 
@@ -164,6 +262,32 @@ If heading without an `ID' property create it."
           (to (progn (outline-next-heading) (point))))
       (buffer-substring-no-properties from to))))
 
+;;; Card Initialization
+(defun org-memo-entry-p ()
+  "Check if the current heading is a flashcard."
+  (member org-memo-flashcard-tag (org-get-tags nil 'local)))
+
+(defun org-memo--init-card (type)
+  "Initialize the current card as a flashcard.
+Should only be used by the init functions of card TYPEs."
+  (when (org-memo-entry-p)
+    (error "Headline is already a flashcard"))
+  (let ((algo
+         (if (= 1 (length org-memo-algorithms))
+             (car org-memo-algorithms)
+           (completing-read "Algorithm: " org-memo-algorithms))))
+    (when (null algo)
+        (error "No algorithm selected"))
+    (org-back-to-heading)
+    (org-set-property
+     org-memo-created-property
+     (org-memo-timestamp-in 0))
+    (org-set-property org-memo-type-property type)
+    (when algo
+      (org-set-property org-memo-algo-property algo))
+    (org-id-get-create)
+    (org-memo--add-tag org-memo-flashcard-tag)
+    (run-hooks 'org-memo-after-init-card-hook)))
 
 
 (provide 'memo-fsrs)
