@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"memo/cmd/options"
+	"memo/cmd/server/options"
 )
 
 var once sync.Once

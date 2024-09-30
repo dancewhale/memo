@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"memo/cmd/options"
+	"memo/cmd/server/options"
 	"memo/pkg/api"
 	"memo/pkg/logger"
 	"memo/pkg/emodule"

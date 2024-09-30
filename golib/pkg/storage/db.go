@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"memo/cmd/options"
+	"memo/cmd/server/options"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

@@ -1,14 +1,14 @@
 GO ?= go
 EMACS ?= emacs
 
-libmemo.so: cmd/main.go
-	$(GO) build -buildmode=c-shared -ldflags -s -o ../$@ $<
+libmemo.so: cmd/libmemo/main.go
+	$(GO) build -buildmode=c-shared -ldflags -s -o ../../$@ $<
 
 clean:
 	rm -f  ../memo.so
 
 debug:
-	$(GO) build -o memo cmd/main.go || exit
+	$(GO) build -o memo cmd/server/main.go || exit
 	chmod +x memo
 	./memo --loglevel -1 daemon
 
@@ -16,7 +16,7 @@ run:
 	./memo daemon
 
 build:
-	$(GO) build -o memo cmd/main.go || exit
+	$(GO) build -o memo cmd/server/main.go || exit
 
 so: clean libmemo.so
 
