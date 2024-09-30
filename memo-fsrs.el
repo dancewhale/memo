@@ -82,7 +82,7 @@ corresponds to a field in NOTE-TYPE."
   (cadar (org-collect-keywords (list keyword))))
 
 
-(defun memo--find-prop (name default)
+(defun memo--find-note-prop (name default)
   "Find property with NAME from:
 1. item,
 2. inherited from parents
@@ -112,21 +112,19 @@ corresponds to a field in NOTE-TYPE."
      ":" t))
    memo-default-tags))
 
-(defun memo--get-note-hash ()
-  "Get note hash."
+
+;; hash relative code.
+(defun memo--compute-note-hash ()
+  "Compute hash from note content and tag."
   (let* ((note-content  (memo--note-contents-current-heading))
          (tags (memo--get-tags)))
     (md5 (mapconcat #'identity (push note-content tags) ""))))
 
-(defun memo-entry-set-hash ()
-  "Set note hash."
-  (org-set-property memo-prop-note-hash
-                    (memo--get-note-hash)))
 
 
-
+;; note push
 (cl-defstruct memo-note
-  id type content finish)
+  id type content hash)
 
 (defvar memo--review-note nil
   "The memo-note object which store note info wait for review.")
@@ -140,10 +138,11 @@ If heading without an `ID' property create it."
   (save-excursion
     (let* ((note-type  (org-entry-get nil memo-prop-note-type))
 	   (note-content  (memo--note-contents-current-heading))
-	   (note-id (org-id-get-create)))
+	   (note-id (org-id-get-create))
+	   (note-hash (memo--compute-note-hash))))
       (if (not note-type)
 	  (user-error "Missing note type")
-	(if (memo-api--create-or-update-note note-id note-type note-content)
+	(if (memo-api--create-or-update-note note-id note-type note-content note-hash)
 	    (message "Create note to memo successful.")
 	  (message "Create note to memo failed."))))))
 
@@ -232,7 +231,7 @@ If heading without an `ID' property create it."
     (make-memo-note :id note-id
 		    :type note-type
 		    :content note-content
-		    :finish nil)))
+		    :hash nil)))
 
 (defun memo--get-note-object-from-point ()
   "Make and return memo-note object from current note."
@@ -243,7 +242,7 @@ If heading without an `ID' property create it."
     (make-memo-note :id note-id
 		    :type note-type
 		    :content note-content
-		    :finish nil)))
+		    :hash nil)))
   )
 
 
