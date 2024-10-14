@@ -1,4 +1,4 @@
-package fsrs
+package note
 
 import (
 	"errors"

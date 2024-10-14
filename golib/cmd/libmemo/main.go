@@ -2,6 +2,7 @@ package main
 
 import (
 	"memo/pkg/emodule"
+	"memo/pkg/logger"
 
 	emacs "github.com/sigma/go-emacs"
         _ "github.com/sigma/go-emacs/gpl-compatible"
@@ -9,6 +10,9 @@ import (
 
 func init() {
 	emacs.Register(initModule)
+	logger.Init()
+        //参数处理
+	//options.DBinit()
 }
 
 func initModule(env emacs.Environment) {
