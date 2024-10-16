@@ -9,9 +9,6 @@ import (
 
 	emacs "github.com/sigma/go-emacs"
 	_ "github.com/sigma/go-emacs/gpl-compatible"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type EModule struct {
