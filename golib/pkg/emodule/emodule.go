@@ -1,18 +1,16 @@
 package emodule
 
 import (
-	"errors"
-	"context"
-	"time"
-
 	"memo/pkg/note"
+	"memo/pkg/logger"
+	"memo/pkg/storage"
 
 	emacs "github.com/sigma/go-emacs"
 	_ "github.com/sigma/go-emacs/gpl-compatible"
 )
 
 type EModule struct {
-	api  note.NoteApi
+	api  *note.NoteApi
 }
 
 func (e *EModule) Init() {
@@ -47,9 +45,9 @@ func (e *EModule) CreateOrUpdateNote(ectx emacs.FunctionCallContext) (emacs.Valu
 	}
         note := storage.Note{Orgid: orgid, Type: ntype, Content: ncontent}
 
-	n := e.api.CreateOrUpdateNote{&note}
+	n := e.api.CreateOrUpdateNote(&note)
 	
-	logger.Infof("Create note success: %s", n.ID )
+	logger.Infof("Create note success: %s", n.Orgid)
 
 	return env.Bool(true), nil
 }
@@ -66,7 +64,7 @@ func (e *EModule) DeleteNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 		return env.Bool(false), nil
 	}
 
-	err := e.api.RemoveNote(orgid)
+	err = e.api.RemoveNote(orgid)
 	if err != nil {
 		logger.Errorf("Delete note failed: %v", err)
 		return env.Bool(false), nil
@@ -126,10 +124,10 @@ func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	if rate == "" {
 		return env.Bool(false), nil
 	}
-	rate := storage.StringToRate(rate)
+	fsrsRate := storage.StringToRate(rate)
 
-	r := e.api.ReviewNote(orgid, rate)
-	logger.Infof("Review note success: %s", orgid)
+	r := e.api.ReviewNote(orgid, fsrsRate)
+	logger.Infof("Review note success: %s", r.Orgid)
 
 
 	return env.Bool(false), nil

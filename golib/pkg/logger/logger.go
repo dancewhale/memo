@@ -5,6 +5,8 @@ import (
 	"os"
 	"sync"
 
+	"memo/cmd/libmemo/options"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -34,12 +36,14 @@ func NewLogger() {
 }
 
 func getStdCore() zapcore.Core {
+	var config options.Config
+	c := config.ConfigInit()
 	stdEncoder := getEncoder()
 	consoleWriter := zapcore.Lock(os.Stdout)
 	logList := [7]int64{-1, 0, 1, 2, 3, 4, 5}
 	for _, logLevel := range logList {
-		if logLevel == options.Config.Log.Level {
-			LogLevel := zapcore.Level(options.Config.Log.Level)
+		if logLevel == int64(c.LogLevel) {
+			LogLevel := zapcore.Level(c.LogLevel)
 			return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
 		}
 	}

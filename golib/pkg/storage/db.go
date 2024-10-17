@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"memo/cmd/options"
+	"memo/cmd/libmemo/options"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -19,26 +19,22 @@ func NewDBEngine() *DBEngine {
 
 func InitDBEngine() *gorm.DB {
 	var err error
-	DBConfig := options.Config.DB
-	if DBConfig.DBPath == "" {
-		DBConfig.DBPath = "./memo.sqlite"
-	} else {
-		DBConfig.DBPath = DBConfig.DBPath + "/memo.sqlite"
-	}
-	Engine, err := gorm.Open(sqlite.Open(DBConfig.DBPath), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+	var config options.Config
+	c := config.ConfigInit()
+	Engine, err := gorm.Open(sqlite.Open(c.DBPath), &gorm.Config{
+		Logger: logger.Default.LogMode(c.GetLogLevel()),
 	})
 	// TODO retry
 	if err != nil {
 		panic(err)
 	}
 
-        Engine.AutoMigrate(&Note{}, FsrsInfo{}, &ReviewLog{})
+        Engine.AutoMigrate(&Note{}, &FsrsInfo{}, &ReviewLog{})
 
         sqlDB, err := Engine.DB()
-	sqlDB.SetMaxIdleConns(DBConfig.MaxIdleConn)
-	sqlDB.SetMaxOpenConns(DBConfig.MaxOpenConn)
-	sqlDB.SetConnMaxLifetime(DBConfig.ConnMaxLifetime)
+	sqlDB.SetMaxIdleConns(c.DBMaxIdleConn)
+	sqlDB.SetMaxOpenConns(c.DBMaxOpenConn)
+	sqlDB.SetConnMaxLifetime(c.DBConnMaxLifetime)
 
 
 	return Engine
