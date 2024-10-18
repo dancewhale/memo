@@ -14,34 +14,46 @@ type EModule struct {
 }
 
 func (e *EModule) Init() {
-
+	e.api = note.NewNoteApi()
 	// use for test function
 }
 
-func (e *EModule) common() {
-	e.api = note.NewNoteApi()
+// return (ErrMessage (value1 value2 value3 ...))
+// errMessage 为nil 或者string
+// evalue 代表(value1 value2 value3) 
+func (e *EModule) EmacsReturn(ectx emacs.FunctionCallContext, err error, result ...emacs.Value) (emacs.List, error) {
+	env := ectx.Environment()
+	stdl :=	env.StdLib()
+	var evalue emacs.List
+	if err != nil {
+		eerr := env.String(err.Error())
+		evalue = stdl.List(eerr, stdl.Nil())
+		return evalue, err
+	} else {
+		evalue = stdl.List(result...)
+		return stdl.List(stdl.Nil(), evalue), err
+	}
 }
 
 func (e *EModule) CreateOrUpdateNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
-	e.common()
 
 	orgid, err := ectx.GoStringArg(0) 
 	if err != nil || orgid == "" {
 		logger.Errorf("Pass arg orgid from emacs in create note failed: %v", err)
-		return env.Bool(false), err
+		return e.EmacsReturn(ectx, err)
 	}
 
 	ntype, err := ectx.GoStringArg(1)
 	if err != nil {
 		logger.Errorf("Pass arg type from emacs create note failed: %v", err)
-		return env.Bool(false), err
+		return e.EmacsReturn(ectx, err)
 	}
 
 	ncontent, err := ectx.GoStringArg(2)
 	if err != nil {
 		logger.Errorf("Pass arg content from emacs create note failed: %v", err)
-		return env.Bool(false), err
+		return e.EmacsReturn(ectx, err)
 	}
         note := storage.Note{Orgid: orgid, Type: ntype, Content: ncontent}
 
@@ -49,80 +61,83 @@ func (e *EModule) CreateOrUpdateNote(ectx emacs.FunctionCallContext) (emacs.Valu
 	
 	logger.Infof("Create note success: %s", n.Orgid)
 
-	return env.Bool(true), nil
+	return e.EmacsReturn(ectx, nil, env.StdLib().T())
 }
 
 func (e *EModule) DeleteNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
-	e.common()
 
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
 		logger.Errorf("Pass arg orgid from emacs in create note failed: %v", err)
+		return e.EmacsReturn(ectx, err)
 	}
 	if orgid == "" {
-		return env.Bool(false), nil
+		error := logger.Errorf("Orgid in args from emacs call  is empty.")
+		return e.EmacsReturn(ectx, error)
 	}
 
 	err = e.api.RemoveNote(orgid)
 	if err != nil {
 		logger.Errorf("Delete note failed: %v", err)
-		return env.Bool(false), nil
+		return e.EmacsReturn(ectx, err)
 	}
 	logger.Infof("Delete note success: %s", orgid)
 
 
-	return env.Bool(false), nil
+	return e.EmacsReturn(ectx, nil, env.StdLib().T())
 }
 
 func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
-	e.common()
 
 	fnote := e.api.GetReviewNoteByDueTime()
-	reviewNote := env.StdLib().List(env.String(fnote.Orgid), env.String(fnote.Type), env.String(fnote.Content))
 
 
-	return reviewNote, nil
+	return e.EmacsReturn(ectx, nil, env.String(fnote.Orgid), env.String(fnote.Type), env.String(fnote.Content))
 }
 
 func (e *EModule) GetNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
-	e.common()
 
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
-		logger.Errorf("Pass arg orgid from emacs in create note failed: %v", err)
+		logger.Errorf("Pass arg orgid from emacs in GetNote failed: %v", err)
+		return e.EmacsReturn(ectx, err)
 	}
 	if orgid == "" {
-		return env.Bool(false), nil
+		error := logger.Errorf("Orgid in args from emacs call  is empty.")
+		return e.EmacsReturn(ectx, error)
 	}
 
 	fnote := e.api.GetNoteByOrgID(orgid)
 	logger.Infof("Get note success: %s", fnote.Orgid)
 
 
-	return env.Bool(false), nil
+	return e.EmacsReturn(ectx, nil, env.String(fnote.Orgid), env.String(fnote.Type), env.String(fnote.Content))
 }
 
 func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
-	e.common()
 
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
 		logger.Errorf("Pass arg orgid from emacs in review note failed: %v", err)
+		return e.EmacsReturn(ectx, err)
 	}
 	if orgid == "" {
-		return env.Bool(false), nil
+		error := logger.Errorf("Orgid in args from emacs call  is empty.")
+		return e.EmacsReturn(ectx, error)
 	}
 
 	rate, err := ectx.GoStringArg(1)
 	if err != nil {
 		logger.Errorf("Pass arg rate from emacs in review note failed: %v", err)
+		return e.EmacsReturn(ectx, err)
 	}
 	if rate == "" {
-		return env.Bool(false), nil
+		err := logger.Errorf("Rate arg from emacs in review note is empty.: %v", err)
+		return e.EmacsReturn(ectx, err)
 	}
 	fsrsRate := storage.StringToRate(rate)
 
@@ -130,5 +145,5 @@ func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	logger.Infof("Review note success: %s", r.Orgid)
 
 
-	return env.Bool(false), nil
+	return e.EmacsReturn(ectx, nil, env.StdLib().T())
 }

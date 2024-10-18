@@ -139,10 +139,10 @@ If heading without an `ID' property create it."
     (let* ((note-type  (org-entry-get nil memo-prop-note-type))
 	   (note-content  (memo--note-contents-current-heading))
 	   (note-id (org-id-get-create))
-	   (note-hash (memo--compute-note-hash))))
+	   (note-hash (memo--compute-note-hash)))
       (if (not note-type)
 	  (user-error "Missing note type")
-	(if (memo-api--create-or-update-note note-id note-type note-content note-hash)
+	(if (memo-api--create-or-update-note note-id note-type note-content)
 	    (message "Create note to memo successful.")
 	  (message "Create note to memo failed."))))))
 

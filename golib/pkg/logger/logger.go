@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"errors"
 
 	"memo/cmd/libmemo/options"
 
@@ -69,12 +70,14 @@ func Infof(msg string, a ...any) {
 	logger.Info(fmt.Sprintf(msg, a...))
 }
 
-func Error(msg string) {
+func Error(msg string) error {
 	logger.Error(msg)
+	return errors.New(msg)
 }
 
-func Errorf(msg string, a ...any) {
+func Errorf(msg string, a ...any) error {
 	logger.Error(fmt.Sprintf(msg, a...))
+	return errors.New(fmt.Sprintf(msg, a...))
 }
 
 func Fatal(msg string) {
