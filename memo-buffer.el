@@ -1,4 +1,4 @@
-;;; memo-fsrs.el --- Use for memo (interactive "P") -*- lexical-binding: t; -*-
+;;; memo-buffer.el --- Use for memo (interactive "P") -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2024 whale
 ;;
@@ -20,7 +20,6 @@
 (require 'cl-lib)
 (require 'thunk)
 (require 'org-element)
-(require 'ansi-color)
 
 ;; custom var
 (defcustom memo-inherit-tags t
@@ -149,7 +148,7 @@ If heading without an `ID' property create it."
 (defun memo-review-note()
   "Review note."
   (interactive)
-  (setq memo--review-note (memo--get-review-note-object-from-server))
+  (setq memo--review-note (memo--get-review-note-object))
   (memo--review-show memo--review-note)
 )
 
@@ -222,9 +221,15 @@ If heading without an `ID' property create it."
   (interactive)
   (org-id-goto (memo-note-id memo--review-note)))
 
-(defun memo--get-review-note-object-from-server ()
+(defun memo--parse-result (result)
+  (if  (car result)
+    (user-error (car result))
+    (cadr result)
+  ))
+
+(defun memo--get-review-note-object ()
   "Return memo-note object which need review from server."
-  (let* ((memo-note-object (memo-api--get-next-review-note))
+  (let* ((memo-note-object (memo--parse-result (memo-api--get-next-review-note)))
 	 (note-id (car memo-note-object))
 	 (note-type (cadr memo-note-object))
 	 (note-content (caddr memo-note-object)))
@@ -245,7 +250,6 @@ If heading without an `ID' property create it."
 		    :hash nil)))
   )
 
-
 (defun memo--note-contents-current-heading ()
    "Get entry content until any subentry."
   ;; We move around with regexes, so restore original position
@@ -262,32 +266,10 @@ If heading without an `ID' property create it."
       (buffer-substring-no-properties from to))))
 
 ;;; Card Initialization
-(defun org-memo-entry-p ()
+(defun memo--note-entry-p ()
   "Check if the current heading is a flashcard."
-  (member org-memo-flashcard-tag (org-get-tags nil 'local)))
-
-(defun org-memo--init-card (type)
-  "Initialize the current card as a flashcard.
-Should only be used by the init functions of card TYPEs."
-  (when (org-memo-entry-p)
-    (error "Headline is already a flashcard"))
-  (let ((algo
-         (if (= 1 (length org-memo-algorithms))
-             (car org-memo-algorithms)
-           (completing-read "Algorithm: " org-memo-algorithms))))
-    (when (null algo)
-        (error "No algorithm selected"))
-    (org-back-to-heading)
-    (org-set-property
-     org-memo-created-property
-     (org-memo-timestamp-in 0))
-    (org-set-property org-memo-type-property type)
-    (when algo
-      (org-set-property org-memo-algo-property algo))
-    (org-id-get-create)
-    (org-memo--add-tag org-memo-flashcard-tag)
-    (run-hooks 'org-memo-after-init-card-hook)))
+  (member memo--note-flashcard-tag (org-get-tags nil 'local)))
 
 
-(provide 'memo-fsrs)
-;;; memo-fsrs.el ends here
+(provide 'memo-buffer)
+;;; memo-buffer.el ends here

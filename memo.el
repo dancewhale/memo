@@ -20,10 +20,10 @@
 
 (require 'cl-lib)
 (require 'org-element)
-(require 'ansi-color)
 
 (require 'memo-core)
-(require 'memo-fsrs)
+(require 'memo-buffer)
+(require 'memo-fast)
 
 ;;; Core primitives
 
