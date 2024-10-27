@@ -18,6 +18,7 @@ import (
 var (
 	Q         = new(Query)
 	FsrsInfo  *fsrsInfo
+	Headline  *headline
 	Note      *note
 	ReviewLog *reviewLog
 )
@@ -25,6 +26,7 @@ var (
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	*Q = *Use(db, opts...)
 	FsrsInfo = &Q.FsrsInfo
+	Headline = &Q.Headline
 	Note = &Q.Note
 	ReviewLog = &Q.ReviewLog
 }
@@ -33,6 +35,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
 		db:        db,
 		FsrsInfo:  newFsrsInfo(db, opts...),
+		Headline:  newHeadline(db, opts...),
 		Note:      newNote(db, opts...),
 		ReviewLog: newReviewLog(db, opts...),
 	}
@@ -42,6 +45,7 @@ type Query struct {
 	db *gorm.DB
 
 	FsrsInfo  fsrsInfo
+	Headline  headline
 	Note      note
 	ReviewLog reviewLog
 }
@@ -52,6 +56,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
 		db:        db,
 		FsrsInfo:  q.FsrsInfo.clone(db),
+		Headline:  q.Headline.clone(db),
 		Note:      q.Note.clone(db),
 		ReviewLog: q.ReviewLog.clone(db),
 	}
@@ -69,6 +74,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
 		db:        db,
 		FsrsInfo:  q.FsrsInfo.replaceDB(db),
+		Headline:  q.Headline.replaceDB(db),
 		Note:      q.Note.replaceDB(db),
 		ReviewLog: q.ReviewLog.replaceDB(db),
 	}
@@ -76,6 +82,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 
 type queryCtx struct {
 	FsrsInfo  *fsrsInfoDo
+	Headline  *headlineDo
 	Note      *noteDo
 	ReviewLog *reviewLogDo
 }
@@ -83,6 +90,7 @@ type queryCtx struct {
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
 		FsrsInfo:  q.FsrsInfo.WithContext(ctx),
+		Headline:  q.Headline.WithContext(ctx),
 		Note:      q.Note.WithContext(ctx),
 		ReviewLog: q.ReviewLog.WithContext(ctx),
 	}

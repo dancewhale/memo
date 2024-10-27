@@ -4,3 +4,4 @@ golib/memo
 *.db
 *.sqlite
 *.so
+*.idea

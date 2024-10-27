@@ -16,7 +16,6 @@ func NewDBEngine() *DBEngine {
 	return &DBEngine{InitDBEngine()}
 }
 
-
 func InitDBEngine() *gorm.DB {
 	var err error
 	var config options.Config
@@ -29,13 +28,12 @@ func InitDBEngine() *gorm.DB {
 		panic(err)
 	}
 
-        Engine.AutoMigrate(&Note{}, &FsrsInfo{}, &ReviewLog{})
+	Engine.AutoMigrate(&Note{}, &FsrsInfo{}, &ReviewLog{}, &Headline{})
 
-        sqlDB, err := Engine.DB()
+	sqlDB, err := Engine.DB()
 	sqlDB.SetMaxIdleConns(c.DBMaxIdleConn)
 	sqlDB.SetMaxOpenConns(c.DBMaxOpenConn)
 	sqlDB.SetConnMaxLifetime(c.DBConnMaxLifetime)
-
 
 	return Engine
 }

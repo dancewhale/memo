@@ -12,7 +12,7 @@ func main() {
 		Mode:    gen.WithoutContext|gen.WithDefaultQuery,
 	})
 
-	g.ApplyBasic(storage.Note{}, storage.FsrsInfo{}, storage.ReviewLog{})
+	g.ApplyBasic(storage.Note{}, storage.FsrsInfo{}, storage.ReviewLog{}, storage.Headline{})
 
 	g.ApplyInterface(func(storage.NoteMethod) {}, storage.Note{})
 
