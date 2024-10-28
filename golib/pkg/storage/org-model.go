@@ -10,7 +10,7 @@ import (
 type Headline struct {
 	gorm.Model
 	// org的id
-	OrgID string `gorm:"unique" json:"org_id"`
+	OrgID *string `gorm:"unique" json:"org_id"`
 	// 标题
 	Title string `json:"title"`
 	// 内容
@@ -24,7 +24,9 @@ type Headline struct {
 	// 任务状态
 	Status string `json:"status"`
 	// 优先级
-	Priority string     `json:"priority"`
+	Priority string `json:"priority"`
+	// memo 类型
+	Type     string     `json:"type"`
 	Children []Headline `gorm:"foreignKey:ParentID" json:"children"`
 }
 

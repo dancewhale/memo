@@ -19,11 +19,23 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 	return result
 }
 
-func getID(pd *org.PropertyDrawer) string {
+func getID(pd *org.PropertyDrawer) *string {
 	if pd != nil {
 		for _, kvPair := range pd.Properties {
 			k, v := kvPair[0], kvPair[1]
 			if k == "ID" && v != "" {
+				return &v
+			}
+		}
+	}
+	return nil
+}
+
+func getType(pd *org.PropertyDrawer) string {
+	if pd != nil {
+		for _, kvPair := range pd.Properties {
+			k, v := kvPair[0], kvPair[1]
+			if k == "MEMO_TYPE" && v != "" {
 				return v
 			}
 		}

@@ -31,12 +31,15 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.CreatedAt = field.NewTime(tableName, "created_at")
 	_headline.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_headline.DeletedAt = field.NewField(tableName, "deleted_at")
+	_headline.OrgID = field.NewString(tableName, "org_id")
 	_headline.Title = field.NewString(tableName, "title")
 	_headline.Content = field.NewString(tableName, "content")
 	_headline.ParentID = field.NewInt(tableName, "parent_id")
 	_headline.Level = field.NewInt(tableName, "level")
 	_headline.Order_ = field.NewInt(tableName, "order")
 	_headline.Status = field.NewString(tableName, "status")
+	_headline.Priority = field.NewString(tableName, "priority")
+	_headline.Type = field.NewString(tableName, "type")
 	_headline.Children = headlineHasManyChildren{
 		db: db.Session(&gorm.Session{}),
 
@@ -61,12 +64,15 @@ type headline struct {
 	CreatedAt field.Time
 	UpdatedAt field.Time
 	DeletedAt field.Field
+	OrgID     field.String
 	Title     field.String
 	Content   field.String
 	ParentID  field.Int
 	Level     field.Int
 	Order_    field.Int
 	Status    field.String
+	Priority  field.String
+	Type      field.String
 	Children  headlineHasManyChildren
 
 	fieldMap map[string]field.Expr
@@ -88,12 +94,15 @@ func (h *headline) updateTableName(table string) *headline {
 	h.CreatedAt = field.NewTime(table, "created_at")
 	h.UpdatedAt = field.NewTime(table, "updated_at")
 	h.DeletedAt = field.NewField(table, "deleted_at")
+	h.OrgID = field.NewString(table, "org_id")
 	h.Title = field.NewString(table, "title")
 	h.Content = field.NewString(table, "content")
 	h.ParentID = field.NewInt(table, "parent_id")
 	h.Level = field.NewInt(table, "level")
 	h.Order_ = field.NewInt(table, "order")
 	h.Status = field.NewString(table, "status")
+	h.Priority = field.NewString(table, "priority")
+	h.Type = field.NewString(table, "type")
 
 	h.fillFieldMap()
 
@@ -110,17 +119,20 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 11)
+	h.fieldMap = make(map[string]field.Expr, 14)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
 	h.fieldMap["deleted_at"] = h.DeletedAt
+	h.fieldMap["org_id"] = h.OrgID
 	h.fieldMap["title"] = h.Title
 	h.fieldMap["content"] = h.Content
 	h.fieldMap["parent_id"] = h.ParentID
 	h.fieldMap["level"] = h.Level
 	h.fieldMap["order"] = h.Order_
 	h.fieldMap["status"] = h.Status
+	h.fieldMap["priority"] = h.Priority
+	h.fieldMap["type"] = h.Type
 
 }
 

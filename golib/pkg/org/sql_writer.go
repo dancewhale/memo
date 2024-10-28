@@ -1,17 +1,14 @@
 package org
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
-	"memo/pkg/storage"
-	"memo/pkg/storage/dal"
-
 	"github.com/niklasfasching/go-org/org"
+	"memo/pkg/storage"
 )
 
 var exampleBlockUnescapeRegexp = regexp.MustCompile(`(^|\n)([ \t]*)(\*|,\*|#\+|,#\+)`)
@@ -50,11 +47,7 @@ func (w *SqlWriter) WriterWithExtensions() org.Writer {
 }
 
 func (w *SqlWriter) Before(d *org.Document) {}
-func (w *SqlWriter) After(d *org.Document) {
-	var DB = storage.InitDBEngine()
-	h := dal.Use(DB).Headline
-	_ = h.WithContext(context.Background()).Create(w.Headline...)
-}
+func (w *SqlWriter) After(d *org.Document)  {}
 
 func (w *SqlWriter) WriteNodesAsString(nodes ...org.Node) string {
 	builder := w.Builder
@@ -68,7 +61,11 @@ func (w *SqlWriter) WriteNodesAsString(nodes ...org.Node) string {
 func (w *SqlWriter) WriteHeadlineContentAsString(nodes ...org.Node) string {
 	builder := w.Builder
 	w.Builder = strings.Builder{}
-	org.WriteNodes(w, nodes...)
+	contentNode := Filter(nodes, func(n org.Node) bool {
+		_, ok := n.(org.Headline)
+		return !ok
+	})
+	org.WriteNodes(w, contentNode...)
 	out := w.String()
 	w.Builder = builder
 	return out
@@ -78,14 +75,11 @@ func (w *SqlWriter) WriteHeadlineContentAsString(nodes ...org.Node) string {
 func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	org.WriteNodes(w, h.Children...)
 	title := w.WriteNodesAsString(h.Title...)
-	contentNode := Filter(h.Children, func(n org.Node) bool {
-		_, ok := n.(org.Headline)
-		return !ok
-	})
-	content := w.WriteNodesAsString(contentNode...)
+	content := w.WriteHeadlineContentAsString(h.Children...)
 	headline := storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 		Content: content, Priority: h.Priority,
-		OrgID: getID(h.Properties)}
+		OrgID: getID(h.Properties),
+		Type:  getType(h.Properties)}
 	// 深度优先遍历
 	for {
 		preHeadline, _ := w.s.Pop()

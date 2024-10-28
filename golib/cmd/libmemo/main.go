@@ -2,14 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/niklasfasching/go-org/org"
 	emacs "github.com/sigma/go-emacs"
 	_ "github.com/sigma/go-emacs/gpl-compatible"
-	"memo/pkg/emodule"
-	"memo/pkg/logger"
 	memorg "memo/pkg/org"
 
-	"os"
+	"memo/pkg/emodule"
+	"memo/pkg/logger"
 )
 
 func init() {
@@ -31,10 +29,10 @@ func initModule(env emacs.Environment) {
 }
 
 func main() {
-	f, _ := os.Open("/Users/whale/Seafile/Dropbox/code/go-org/test.org")
-
-	doc := org.New().Parse(f, "/Users/whale/Seafile/Dropbox/code/go-org/test.org")
-	sql := memorg.NewSqlWriter()
-	test, _ := doc.Write(sql)
-	fmt.Println(test)
+	api := memorg.NewOrg()
+	result, err := api.UploadFile("/Users/whale/Dropbox/code/go-org/test.org")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(result)
 }
