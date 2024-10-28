@@ -1,6 +1,7 @@
 package org
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"memo/pkg/storage"
+	"memo/pkg/storage/dal"
 
 	"github.com/niklasfasching/go-org/org"
 )
@@ -32,7 +34,7 @@ type SqlWriter struct {
 	indent          string
 	// 用于存储headline 结构体的堆栈
 	s        storage.Stack
-	Headline []storage.Headline
+	Headline []*storage.Headline
 	// 用于内部参数传递,兼容org.Writer接口,不新增函数参数和返回值.
 	strings.Builder
 }
@@ -48,7 +50,11 @@ func (w *SqlWriter) WriterWithExtensions() org.Writer {
 }
 
 func (w *SqlWriter) Before(d *org.Document) {}
-func (w *SqlWriter) After(d *org.Document)  {}
+func (w *SqlWriter) After(d *org.Document) {
+	var DB = storage.InitDBEngine()
+	h := dal.Use(DB).Headline
+	_ = h.WithContext(context.Background()).Create(w.Headline...)
+}
 
 func (w *SqlWriter) WriteNodesAsString(nodes ...org.Node) string {
 	builder := w.Builder
@@ -68,6 +74,7 @@ func (w *SqlWriter) WriteHeadlineContentAsString(nodes ...org.Node) string {
 	return out
 }
 
+// WriteHeadline 构建headline 结构体用于后续数据库存储。
 func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	org.WriteNodes(w, h.Children...)
 	title := w.WriteNodesAsString(h.Title...)
@@ -76,10 +83,12 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 		return !ok
 	})
 	content := w.WriteNodesAsString(contentNode...)
-	headline := storage.Headline{Level: h.Lvl, Title: title, Status: h.Status, Content: content}
+	headline := storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
+		Content: content, Priority: h.Priority,
+		OrgID: getID(h.Properties)}
+	// 深度优先遍历
 	for {
 		preHeadline, _ := w.s.Pop()
-
 		if preHeadline != nil {
 			if preHeadline.Level == headline.Level+1 {
 				headline.Children = append(headline.Children, *preHeadline)
@@ -95,7 +104,7 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	w.s.Push(&headline)
 	if h.Lvl == 1 {
 		w.s.Pop()
-		w.Headline = append(w.Headline, headline)
+		w.Headline = append(w.Headline, &headline)
 	}
 }
 
@@ -158,16 +167,9 @@ func (w *SqlWriter) WriteDrawer(d org.Drawer) {
 	w.WriteString(w.indent + ":END:\n")
 }
 
+// WritePropertyDrawer 用于处理headline 的相关参数。
 func (w *SqlWriter) WritePropertyDrawer(d org.PropertyDrawer) {
-	w.WriteString(":PROPERTIES:\n")
-	for _, kvPair := range d.Properties {
-		k, v := kvPair[0], kvPair[1]
-		if v != "" {
-			v = " " + v
-		}
-		w.WriteString(fmt.Sprintf(":%s:%s\n", k, v))
-	}
-	w.WriteString(":END:\n")
+	return
 }
 
 func (w *SqlWriter) WriteFootnoteDefinition(f org.FootnoteDefinition) {

@@ -1,5 +1,7 @@
 package org
 
+import "github.com/niklasfasching/go-org/org"
+
 var datestampFormat = "2006-01-02 Mon"
 var timestampFormat = "2006-01-02 Mon 15:04"
 
@@ -15,4 +17,16 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 		}
 	}
 	return result
+}
+
+func getID(pd *org.PropertyDrawer) string {
+	if pd != nil {
+		for _, kvPair := range pd.Properties {
+			k, v := kvPair[0], kvPair[1]
+			if k == "ID" && v != "" {
+				return v
+			}
+		}
+	}
+	return ""
 }

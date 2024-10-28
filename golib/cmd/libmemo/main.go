@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/niklasfasching/go-org/org"
 	emacs "github.com/sigma/go-emacs"
@@ -9,8 +8,7 @@ import (
 	"memo/pkg/emodule"
 	"memo/pkg/logger"
 	memorg "memo/pkg/org"
-	"memo/pkg/storage"
-	"memo/pkg/storage/dal"
+
 	"os"
 )
 
@@ -36,14 +34,7 @@ func main() {
 	f, _ := os.Open("/Users/whale/Seafile/Dropbox/code/go-org/test.org")
 
 	doc := org.New().Parse(f, "/Users/whale/Seafile/Dropbox/code/go-org/test.org")
-	doc.Write(org.NewOrgWriter())
 	sql := memorg.NewSqlWriter()
 	test, _ := doc.Write(sql)
 	fmt.Println(test)
-	var DB = storage.InitDBEngine()
-	h := dal.Use(DB).Headline
-	err := h.WithContext(context.Background()).Create(&sql.Headline[0])
-	if err != nil {
-		fmt.Println(err)
-	}
 }

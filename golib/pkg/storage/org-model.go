@@ -9,6 +9,8 @@ import (
 
 type Headline struct {
 	gorm.Model
+	// org的id
+	OrgID string `gorm:"unique" json:"org_id"`
 	// 标题
 	Title string `json:"title"`
 	// 内容
@@ -20,7 +22,9 @@ type Headline struct {
 	// 同一层级下的排序
 	Order int `json:"order"`
 	// 任务状态
-	Status   string     `json:"status"`
+	Status string `json:"status"`
+	// 优先级
+	Priority string     `json:"priority"`
 	Children []Headline `gorm:"foreignKey:ParentID" json:"children"`
 }
 
