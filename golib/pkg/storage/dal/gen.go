@@ -17,6 +17,7 @@ import (
 
 var (
 	Q         = new(Query)
+	File      *file
 	FsrsInfo  *fsrsInfo
 	Headline  *headline
 	Note      *note
@@ -25,6 +26,7 @@ var (
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	*Q = *Use(db, opts...)
+	File = &Q.File
 	FsrsInfo = &Q.FsrsInfo
 	Headline = &Q.Headline
 	Note = &Q.Note
@@ -34,6 +36,7 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
 		db:        db,
+		File:      newFile(db, opts...),
 		FsrsInfo:  newFsrsInfo(db, opts...),
 		Headline:  newHeadline(db, opts...),
 		Note:      newNote(db, opts...),
@@ -44,6 +47,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 type Query struct {
 	db *gorm.DB
 
+	File      file
 	FsrsInfo  fsrsInfo
 	Headline  headline
 	Note      note
@@ -55,6 +59,7 @@ func (q *Query) Available() bool { return q.db != nil }
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
 		db:        db,
+		File:      q.File.clone(db),
 		FsrsInfo:  q.FsrsInfo.clone(db),
 		Headline:  q.Headline.clone(db),
 		Note:      q.Note.clone(db),
@@ -73,6 +78,7 @@ func (q *Query) WriteDB() *Query {
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
 		db:        db,
+		File:      q.File.replaceDB(db),
 		FsrsInfo:  q.FsrsInfo.replaceDB(db),
 		Headline:  q.Headline.replaceDB(db),
 		Note:      q.Note.replaceDB(db),
@@ -81,6 +87,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 }
 
 type queryCtx struct {
+	File      *fileDo
 	FsrsInfo  *fsrsInfoDo
 	Headline  *headlineDo
 	Note      *noteDo
@@ -89,6 +96,7 @@ type queryCtx struct {
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
+		File:      q.File.WithContext(ctx),
 		FsrsInfo:  q.FsrsInfo.WithContext(ctx),
 		Headline:  q.Headline.WithContext(ctx),
 		Note:      q.Note.WithContext(ctx),

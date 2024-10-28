@@ -40,15 +40,27 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.Status = field.NewString(tableName, "status")
 	_headline.Priority = field.NewString(tableName, "priority")
 	_headline.Type = field.NewString(tableName, "type")
+	_headline.FileRefer = field.NewString(tableName, "file_refer")
 	_headline.Children = headlineHasManyChildren{
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("Children", "storage.Headline"),
+		File: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Children.File", "storage.File"),
+		},
 		Children: struct {
 			field.RelationField
 		}{
 			RelationField: field.NewRelation("Children.Children", "storage.Headline"),
 		},
+	}
+
+	_headline.File = headlineBelongsToFile{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("File", "storage.File"),
 	}
 
 	_headline.fillFieldMap()
@@ -73,7 +85,10 @@ type headline struct {
 	Status    field.String
 	Priority  field.String
 	Type      field.String
+	FileRefer field.String
 	Children  headlineHasManyChildren
+
+	File headlineBelongsToFile
 
 	fieldMap map[string]field.Expr
 }
@@ -103,6 +118,7 @@ func (h *headline) updateTableName(table string) *headline {
 	h.Status = field.NewString(table, "status")
 	h.Priority = field.NewString(table, "priority")
 	h.Type = field.NewString(table, "type")
+	h.FileRefer = field.NewString(table, "file_refer")
 
 	h.fillFieldMap()
 
@@ -119,7 +135,7 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 14)
+	h.fieldMap = make(map[string]field.Expr, 16)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
@@ -133,6 +149,7 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["status"] = h.Status
 	h.fieldMap["priority"] = h.Priority
 	h.fieldMap["type"] = h.Type
+	h.fieldMap["file_refer"] = h.FileRefer
 
 }
 
@@ -151,6 +168,9 @@ type headlineHasManyChildren struct {
 
 	field.RelationField
 
+	File struct {
+		field.RelationField
+	}
 	Children struct {
 		field.RelationField
 	}
@@ -218,6 +238,77 @@ func (a headlineHasManyChildrenTx) Clear() error {
 }
 
 func (a headlineHasManyChildrenTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type headlineBelongsToFile struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a headlineBelongsToFile) Where(conds ...field.Expr) *headlineBelongsToFile {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineBelongsToFile) WithContext(ctx context.Context) *headlineBelongsToFile {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineBelongsToFile) Session(session *gorm.Session) *headlineBelongsToFile {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineBelongsToFile) Model(m *storage.Headline) *headlineBelongsToFileTx {
+	return &headlineBelongsToFileTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineBelongsToFileTx struct{ tx *gorm.Association }
+
+func (a headlineBelongsToFileTx) Find() (result *storage.File, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineBelongsToFileTx) Append(values ...*storage.File) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineBelongsToFileTx) Replace(values ...*storage.File) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineBelongsToFileTx) Delete(values ...*storage.File) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineBelongsToFileTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineBelongsToFileTx) Count() int64 {
 	return a.tx.Count()
 }
 
