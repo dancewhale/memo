@@ -34,10 +34,22 @@
   (org-id-get-create))
 
 
+(defun memo-goto-org ()
+  "Jump to source point from review buffer."
+  (interactive)
+  (org-id-goto (memo-note-id memo--review-note)))
+
+(defun memo-push-file ()
+  "Push current org-file to database."
+  (interactive)
+  (memo-api--upload-file (buffer-file-name)))
+
+
 (general-define-key
     "s-e l RET"    'memo-create-head
     "s-e l n"      'memo-create-subhead
-    "s-e l p"      'memo-push-note-at-point
+    "s-e l p"      'memo-push-file
+    "s-e l b"      'memo-goto-org
 )
 
 

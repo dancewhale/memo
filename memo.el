@@ -37,7 +37,7 @@
   "The path to the root of memo go src file.")
 
 (defvar memo--module-path
-  (concat memo--root "libmemo" module-file-suffix)
+  (concat memo--root "libmemo.so")
   "The path to the dynamic module.")
 
 (defvar memo--db-path  (concat  memo--root ".memo.db")
