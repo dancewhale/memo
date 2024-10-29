@@ -12,8 +12,15 @@ type DBEngine struct {
 	DB *gorm.DB
 }
 
+var db *DBEngine
+
 func NewDBEngine() *DBEngine {
-	return &DBEngine{InitDBEngine()}
+	if db == nil {
+		db = &DBEngine{DB: InitDBEngine()}
+		return db
+	} else {
+		return db
+	}
 }
 
 func InitDBEngine() *gorm.DB {

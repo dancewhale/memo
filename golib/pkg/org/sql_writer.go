@@ -81,8 +81,7 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	content := w.WriteHeadlineContentAsString(h.Children...)
 	headline := storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 		Content: content, Priority: h.Priority,
-		OrgID:     getID(h.Properties),
-		Type:      getType(h.Properties),
+		Note:      getIdType(h.Properties),
 		FileRefer: w.filePath}
 	// 深度优先遍历
 	for {

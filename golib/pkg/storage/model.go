@@ -1,15 +1,14 @@
 package storage
 
 import (
+	"gorm.io/gorm"
 	"time"
 
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 )
 
-
 var QuestionType string = "Question"
-var ClozeType    string = "Cloze"
-
+var ClozeType string = "Cloze"
 
 // change string to fsrs.rate
 func StringToRate(rate string) gfsrs.Rating {
@@ -59,30 +58,28 @@ func IntToRate(rate int8) gfsrs.Rating {
 	}
 }
 
-
 const (
-	WaitCardInit  int8 = iota    // review cards of note are init already 0.
-	WaitReview                   // wait for card init can't review  1.
+	WaitCardInit int8 = iota // review cards of note are init already 0.
+	WaitReview               // wait for card init can't review  1.
 )
 
 type Note struct {
-	Orgid         string `gorm:"primaryKey;index"`
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	Content       string `json:"Content"`
-	Type          string `json:"Type"`
-	Hash          string `json:"Hash"`
-	Fsrs          FsrsInfo
-	ReviewLogs    []ReviewLog
+	Orgid      string `gorm:"primaryKey;index"`
+	Type       *string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  gorm.DeletedAt `gorm:"index"`
+	Headline   []Headline     `gorm:"foreignKey:OrgID"`
+	Fsrs       FsrsInfo
+	ReviewLogs []ReviewLog
 }
-
 
 type FsrsInfo struct {
 	ID         uint `gorm:"primarykey"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	gfsrs.Card `gorm:"embedded"`
-	NoteOrgid     string
+	NoteOrgid  string
 }
 
 type ReviewLog struct {
@@ -90,7 +87,7 @@ type ReviewLog struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	gfsrs.ReviewLog `gorm:"embedded",json:"Flog"`
-	NoteOrgid     string
+	NoteOrgid       string
 }
 
 func (fs *FsrsInfo) IsEmpty() bool {

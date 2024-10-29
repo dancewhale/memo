@@ -29,15 +29,59 @@ func newNote(db *gorm.DB, opts ...gen.DOOption) note {
 	tableName := _note.noteDo.TableName()
 	_note.ALL = field.NewAsterisk(tableName)
 	_note.Orgid = field.NewString(tableName, "orgid")
+	_note.Type = field.NewString(tableName, "type")
 	_note.CreatedAt = field.NewTime(tableName, "created_at")
 	_note.UpdatedAt = field.NewTime(tableName, "updated_at")
-	_note.Content = field.NewString(tableName, "content")
-	_note.Type = field.NewString(tableName, "type")
-	_note.Hash = field.NewString(tableName, "hash")
+	_note.DeletedAt = field.NewField(tableName, "deleted_at")
 	_note.Fsrs = noteHasOneFsrs{
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("Fsrs", "storage.FsrsInfo"),
+	}
+
+	_note.Headline = noteHasManyHeadline{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Headline", "storage.Headline"),
+		File: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headline.File", "storage.File"),
+		},
+		Note: struct {
+			field.RelationField
+			Fsrs struct {
+				field.RelationField
+			}
+			Headline struct {
+				field.RelationField
+			}
+			ReviewLogs struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headline.Note", "storage.Note"),
+			Fsrs: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.Note.Fsrs", "storage.FsrsInfo"),
+			},
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.Note.Headline", "storage.Headline"),
+			},
+			ReviewLogs: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.Note.ReviewLogs", "storage.ReviewLog"),
+			},
+		},
+		Children: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headline.Children", "storage.Headline"),
+		},
 	}
 
 	_note.ReviewLogs = noteHasManyReviewLogs{
@@ -56,12 +100,13 @@ type note struct {
 
 	ALL       field.Asterisk
 	Orgid     field.String
+	Type      field.String
 	CreatedAt field.Time
 	UpdatedAt field.Time
-	Content   field.String
-	Type      field.String
-	Hash      field.String
+	DeletedAt field.Field
 	Fsrs      noteHasOneFsrs
+
+	Headline noteHasManyHeadline
 
 	ReviewLogs noteHasManyReviewLogs
 
@@ -81,11 +126,10 @@ func (n note) As(alias string) *note {
 func (n *note) updateTableName(table string) *note {
 	n.ALL = field.NewAsterisk(table)
 	n.Orgid = field.NewString(table, "orgid")
+	n.Type = field.NewString(table, "type")
 	n.CreatedAt = field.NewTime(table, "created_at")
 	n.UpdatedAt = field.NewTime(table, "updated_at")
-	n.Content = field.NewString(table, "content")
-	n.Type = field.NewString(table, "type")
-	n.Hash = field.NewString(table, "hash")
+	n.DeletedAt = field.NewField(table, "deleted_at")
 
 	n.fillFieldMap()
 
@@ -104,11 +148,10 @@ func (n *note) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 func (n *note) fillFieldMap() {
 	n.fieldMap = make(map[string]field.Expr, 8)
 	n.fieldMap["orgid"] = n.Orgid
+	n.fieldMap["type"] = n.Type
 	n.fieldMap["created_at"] = n.CreatedAt
 	n.fieldMap["updated_at"] = n.UpdatedAt
-	n.fieldMap["content"] = n.Content
-	n.fieldMap["type"] = n.Type
-	n.fieldMap["hash"] = n.Hash
+	n.fieldMap["deleted_at"] = n.DeletedAt
 
 }
 
@@ -190,6 +233,96 @@ func (a noteHasOneFsrsTx) Clear() error {
 }
 
 func (a noteHasOneFsrsTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type noteHasManyHeadline struct {
+	db *gorm.DB
+
+	field.RelationField
+
+	File struct {
+		field.RelationField
+	}
+	Note struct {
+		field.RelationField
+		Fsrs struct {
+			field.RelationField
+		}
+		Headline struct {
+			field.RelationField
+		}
+		ReviewLogs struct {
+			field.RelationField
+		}
+	}
+	Children struct {
+		field.RelationField
+	}
+}
+
+func (a noteHasManyHeadline) Where(conds ...field.Expr) *noteHasManyHeadline {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a noteHasManyHeadline) WithContext(ctx context.Context) *noteHasManyHeadline {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a noteHasManyHeadline) Session(session *gorm.Session) *noteHasManyHeadline {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a noteHasManyHeadline) Model(m *storage.Note) *noteHasManyHeadlineTx {
+	return &noteHasManyHeadlineTx{a.db.Model(m).Association(a.Name())}
+}
+
+type noteHasManyHeadlineTx struct{ tx *gorm.Association }
+
+func (a noteHasManyHeadlineTx) Find() (result []*storage.Headline, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a noteHasManyHeadlineTx) Append(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a noteHasManyHeadlineTx) Replace(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a noteHasManyHeadlineTx) Delete(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a noteHasManyHeadlineTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a noteHasManyHeadlineTx) Count() int64 {
 	return a.tx.Count()
 }
 
@@ -292,6 +425,18 @@ func (n noteDo) FindDueCard(today string) (result []*storage.Note, err error) {
 
 	var executeSQL *gorm.DB
 	executeSQL = n.UnderlyingDB().Raw(generateSQL.String(), params...).Find(&result) // ignore_security_alert
+	err = executeSQL.Error
+
+	return
+}
+
+// sql(select * from notes LEFT JOIN  fsrs_infos WHERE type IS NOT NULL AND id IS NULL;)
+func (n noteDo) FindInitCard() (result []*storage.Note, err error) {
+	var generateSQL strings.Builder
+	generateSQL.WriteString("select * from notes LEFT JOIN fsrs_infos WHERE type IS NOT NULL AND id IS NULL; ")
+
+	var executeSQL *gorm.DB
+	executeSQL = n.UnderlyingDB().Raw(generateSQL.String()).Find(&result) // ignore_security_alert
 	err = executeSQL.Error
 
 	return

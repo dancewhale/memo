@@ -1,6 +1,9 @@
 package org
 
-import "github.com/niklasfasching/go-org/org"
+import (
+	"github.com/niklasfasching/go-org/org"
+	"memo/pkg/storage"
+)
 
 var datestampFormat = "2006-01-02 Mon"
 var timestampFormat = "2006-01-02 Mon 15:04"
@@ -19,26 +22,21 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 	return result
 }
 
-func getID(pd *org.PropertyDrawer) *string {
+func getIdType(pd *org.PropertyDrawer) storage.Note {
 	if pd != nil {
+		note := storage.Note{}
 		for _, kvPair := range pd.Properties {
 			k, v := kvPair[0], kvPair[1]
 			if k == "ID" && v != "" {
-				return &v
+				note.Orgid = v
 			}
-		}
-	}
-	return nil
-}
-
-func getType(pd *org.PropertyDrawer) string {
-	if pd != nil {
-		for _, kvPair := range pd.Properties {
-			k, v := kvPair[0], kvPair[1]
 			if k == "MEMO_TYPE" && v != "" {
-				return v
+				note.Type = &v
 			}
 		}
+		if note.Orgid != "" {
+			return note
+		}
 	}
-	return ""
+	return storage.Note{}
 }

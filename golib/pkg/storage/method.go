@@ -8,6 +8,8 @@ type NoteMethod interface {
 	GetNoteOrderByDueTime(today string) ([]*gen.T, error)
 	// sql(select * from notes inner join fsrs_infos on notes.orgid=fsrs_infos.note_orgid where fsrs_infos.due<@today)
 	FindDueCard(today string) ([]*gen.T, error)
+	// sql(select * from notes LEFT JOIN  fsrs_infos WHERE type IS NOT NULL AND id IS NULL;)
+	FindInitCard() ([]*gen.T, error)
 }
 
 //type Method interface {
