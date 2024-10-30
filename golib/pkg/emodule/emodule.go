@@ -111,5 +111,6 @@ func (e *EModule) UploadFile(ectx emacs.FunctionCallContext) (emacs.Value, error
 	if err != nil {
 		return e.EmacsReturn(ectx, err)
 	}
-	return e.EmacsReturn(ectx, nil)
+	_, err = e.napi.ScanOrgForNoteInit()
+	return e.EmacsReturn(ectx, err)
 }

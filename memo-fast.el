@@ -42,7 +42,10 @@
 (defun memo-push-file ()
   "Push current org-file to database."
   (interactive)
-  (memo-api--upload-file (buffer-file-name)))
+  (memo--parse-result (memo-api--upload-file (buffer-file-name)))
+  (if (not  (memo-api-return-err memo-api--return) )
+      (message "Push file is success complete."))
+)
 
 
 (general-define-key
