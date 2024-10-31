@@ -1,8 +1,15 @@
 package org
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"io"
+	"os"
+
 	"github.com/niklasfasching/go-org/org"
+
 	"memo/cmd/libmemo/options"
+	"memo/pkg/logger"
 	"memo/pkg/storage"
 )
 
@@ -15,6 +22,7 @@ func isRawTextBlock(name string) bool {
 	return name == "SRC" || name == "EXAMPLE" || name == "EXPORT"
 }
 
+// 用于对[]org.Nodes 过滤
 func Filter[T any](slice []T, predicate func(T) bool) []T {
 	result := []T{}
 	for _, v := range slice {
@@ -42,4 +50,23 @@ func getIdType(pd *org.PropertyDrawer) storage.Note {
 		}
 	}
 	return storage.Note{}
+}
+
+func hash(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	defer f.Close()
+
+	if err != nil {
+		logger.Errorf(err.Error())
+		return "", err
+	}
+
+	hash := md5.New()
+
+	_, err = io.Copy(hash, f)
+	if err != nil {
+		logger.Errorf(err.Error())
+		return "", err
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

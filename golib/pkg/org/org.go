@@ -2,10 +2,7 @@ package org
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"errors"
-	"io"
 	"os"
 
 	"memo/pkg/logger"
@@ -28,25 +25,13 @@ func (o *OrgApi) UploadFile(filePath string) (bool, error) {
 	h := dal.Use(o.db).Headline
 	fd := dal.Use(o.db).File
 
-	file := storage.File{FilePath: filePath}
 	// 创建file model包括地址和hash值。
-	f, err := os.Open(file.FilePath)
+	hash, err := hash(filePath)
 	if err != nil {
-		logger.Errorf(err.Error())
 		return false, err
 	}
-
-	hash := md5.New()
-
-	_, err = io.Copy(hash, f)
-	if err != nil {
-		logger.Errorf(err.Error())
-		return false, err
-	}
-	file.Hash = hex.EncodeToString(hash.Sum(nil))
-	f.Close()
 	// 判断是否存在file记录，且是否hash 一致。
-	existFileList, err := fd.WithContext(context.Background()).Where(fd.FilePath.Eq(file.FilePath)).Find()
+	existFileList, err := fd.WithContext(context.Background()).Where(fd.FilePath.Eq(filePath)).Find()
 	if err != nil {
 		logger.Errorf(err.Error())
 		return false, err
@@ -55,7 +40,7 @@ func (o *OrgApi) UploadFile(filePath string) (bool, error) {
 		existFile := existFileList[0]
 		if existFile.Hash != file.Hash {
 			// file 记录存在，更新md5值，并删除相关的headline 记录, 后续file相关head记录全部重新创建。
-			_, err = h.WithContext(context.Background()).Where(h.FileRefer.Eq(file.FilePath)).Unscoped().Delete()
+			_, err = h.WithContext(context.Background()).Where(h.FileRefer.Eq(filePath)).Unscoped().Delete()
 			if err != nil {
 				logger.Errorf(err.Error())
 				return false, err
@@ -65,6 +50,7 @@ func (o *OrgApi) UploadFile(filePath string) (bool, error) {
 			return true, nil
 		}
 	} else { // file记录不存在，创建新的。
+		file := storage.File{FilePath: filePath, Hash: hash}
 		err = fd.WithContext(context.Background()).Create(&file)
 		if err != nil {
 			logger.Errorf(err.Error())
