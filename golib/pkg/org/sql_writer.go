@@ -32,7 +32,7 @@ type SqlWriter struct {
 	// 用于存储headline 结构体的堆栈
 	s        storage.Stack
 	Headline []*storage.Headline
-	filePath string
+	fileId   string
 	// 用于内部参数传递,兼容org.Writer接口,不新增函数参数和返回值.
 	strings.Builder
 }
@@ -47,10 +47,8 @@ func (w *SqlWriter) WriterWithExtensions() org.Writer {
 	return w
 }
 
-func (w *SqlWriter) Before(d *org.Document) {
-	w.filePath = d.Path
-}
-func (w *SqlWriter) After(d *org.Document) {}
+func (w *SqlWriter) Before(d *org.Document) {}
+func (w *SqlWriter) After(d *org.Document)  {}
 
 func (w *SqlWriter) WriteNodesAsString(nodes ...org.Node) string {
 	builder := w.Builder
@@ -81,8 +79,8 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	content := w.WriteHeadlineContentAsString(h.Children...)
 	headline := storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 		Content: content, Priority: h.Priority,
-		Note:      getIdType(h.Properties),
-		FileRefer: w.filePath}
+		Note:      getNoteIdType(h.Properties),
+		FileRefer: w.fileId}
 	// 深度优先遍历
 	for {
 		preHeadline, _ := w.s.Pop()

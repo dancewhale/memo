@@ -31,10 +31,10 @@ func (e *EModule) EmacsReturn(ectx emacs.FunctionCallContext, err error, result 
 	if err != nil {
 		eerr := env.String(err.Error())
 		evalue = stdl.List(eerr, stdl.Nil())
-		return evalue, err
+		return evalue, nil
 	} else {
 		evalue = stdl.List(result...)
-		return stdl.List(stdl.Nil(), evalue), err
+		return stdl.List(stdl.Nil(), evalue), nil
 	}
 }
 
@@ -109,6 +109,7 @@ func (e *EModule) UploadFile(ectx emacs.FunctionCallContext) (emacs.Value, error
 	}
 	_, err = e.hapi.UploadFile(filePath)
 	if err != nil {
+		logger.Errorf("Upload file %s failed: %v", filePath, err)
 		return e.EmacsReturn(ectx, err)
 	}
 	_, err = e.napi.ScanOrgForNoteInit()

@@ -14,75 +14,113 @@ import (
 )
 
 type OrgApi struct {
-	db *gorm.DB
+	db   *gorm.DB
+	hash string
 }
 
 func NewOrg() *OrgApi {
-	return &OrgApi{storage.InitDBEngine()}
+	return &OrgApi{db: storage.InitDBEngine(), hash: ""}
+}
+
+// 确保id 的file记录存在，如果文件更新了则，删除file的hash记录和相关headline，直到创建headline后变更hash。
+func (o *OrgApi) initFile(fileId string, filePath string) (file storage.File, err error) {
+	fd := dal.Use(o.db).File
+	h := dal.Use(o.db).Headline
+	// 创建file model包括地址和hash值,如果不存在
+	o.hash, err = hash(filePath)
+	if err != nil {
+		logger.Errorf("hash error: %v", err)
+		return storage.File{}, err
+	}
+	file = storage.File{ID: fileId, FilePath: filePath}
+	// 判断是否存在id 的file记录，且是否hash 一致。
+	existFileList, err := fd.WithContext(context.Background()).Where(fd.ID.Eq(fileId)).Find()
+	if err != nil {
+		logger.Errorf(err.Error())
+		return storage.File{}, err
+	}
+	// 不存fileId 创建相应的记录
+	if len(existFileList) == 0 {
+		err = fd.WithContext(context.Background()).Create(&file)
+		if err != nil {
+			logger.Errorf("Create file record %s failed: %s", fileId, err.Error())
+			return storage.File{}, err
+		}
+		return file, nil
+	} else {
+		// 存在fileId 记录，判断hash值。
+		existFile := existFileList[0]
+		if existFile.Hash != o.hash {
+			//file 记录存在且文件有更新，并删除相关的headline 和file 的hash记录, 后续file相关head记录需要重新创建。
+			_, err = h.WithContext(context.Background()).Where(h.FileRefer.Eq(fileId)).Unscoped().Delete()
+			if err != nil {
+				logger.Errorf("Remove head record for file %s failed: %s", fileId, err.Error())
+				return storage.File{}, err
+			}
+			_, err := fd.WithContext(context.Background()).Where(fd.ID.Eq(fileId)).UpdateSimple(fd.FilePath.Value(filePath), fd.Hash.Zero())
+			if err != nil {
+				logger.Errorf("Update file hash to zore failed: %s", err.Error())
+				return storage.File{}, err
+			}
+			return file, nil
+		} else if existFile.FilePath != filePath {
+			_, err := fd.WithContext(context.Background()).Where(fd.ID.Eq(fileId)).UpdateSimple(fd.FilePath.Value(filePath))
+			if err != nil {
+				logger.Errorf("Update file path to %s failed: %s", filePath, err.Error())
+				return storage.File{}, err
+			}
+			return file, nil
+		} else {
+			// file 记录存在，且md5相等，直接返回，不做变动。
+			file.Hash = o.hash
+			return file, nil
+		}
+	}
 }
 
 func (o *OrgApi) UploadFile(filePath string) (bool, error) {
 	h := dal.Use(o.db).Headline
 	fd := dal.Use(o.db).File
 
-	// 创建file model包括地址和hash值。
-	hash, err := hash(filePath)
-	if err != nil {
-		return false, err
-	}
-	// 判断是否存在file记录，且是否hash 一致。
-	existFileList, err := fd.WithContext(context.Background()).Where(fd.FilePath.Eq(filePath)).Find()
-	if err != nil {
-		logger.Errorf(err.Error())
-		return false, err
-	}
-	if len(existFileList) != 0 {
-		existFile := existFileList[0]
-		if existFile.Hash != file.Hash {
-			// file 记录存在，更新md5值，并删除相关的headline 记录, 后续file相关head记录全部重新创建。
-			_, err = h.WithContext(context.Background()).Where(h.FileRefer.Eq(filePath)).Unscoped().Delete()
-			if err != nil {
-				logger.Errorf(err.Error())
-				return false, err
-			}
-		} else {
-			// file 记录存在，且md5相等，直接返回，不做变动。
-			return true, nil
-		}
-	} else { // file记录不存在，创建新的。
-		file := storage.File{FilePath: filePath, Hash: hash}
-		err = fd.WithContext(context.Background()).Create(&file)
-		if err != nil {
-			logger.Errorf(err.Error())
-			return false, err
-		}
-	}
-	f, err = os.Open(file.FilePath)
+	f, err := os.Open(filePath)
 	defer f.Close()
 	if err != nil {
 		logger.Errorf(err.Error())
 		return false, err
 	}
-	doc := org.New().Parse(f, file.FilePath)
+	doc := org.New().Parse(f, filePath)
 	if doc.Error != nil {
-		logger.Errorf(err.Error())
 		return false, doc.Error
 	}
+	fileID := getFileID(doc)
+	if fileID == "" {
+		return false, errors.New("File id not found.")
+	}
+	// 初始化file记录, 无记录则创建，有记录如果有变动则去掉hash记录。
+	file, err := o.initFile(fileID, filePath)
+	if err != nil {
+		logger.Errorf("Upload file %s failed: %s", fileID, err.Error())
+		return false, err
+	}
 	sql := NewSqlWriter()
+	sql.fileId = fileID
 	_, err = doc.Write(sql)
 	if err != nil {
 		logger.Errorf(err.Error())
 		return false, err
 	}
-	err = h.WithContext(context.Background()).Create(sql.Headline...)
-	if err != nil {
-		return false, err
-	}
-	// 更新headline后再更新file的hash
-	_, err = fd.WithContext(context.Background()).Where(fd.FilePath.Eq(file.FilePath)).Updates(file)
-	if err != nil {
-		logger.Errorf(err.Error())
-		return false, err
+	if file.Hash == "" {
+		err = h.WithContext(context.Background()).Create(sql.Headline...)
+		if err != nil {
+			logger.Errorf("Upload file %s failed: %s, when create headline.", fileID, err.Error())
+			return false, err
+		}
+		_, err = fd.WithContext(context.Background()).Where(fd.ID.Eq(file.ID)).UpdateSimple(fd.Hash.Value(o.hash))
+		if err != nil {
+			logger.Errorf("Upload file %s failed: %s, when update file hash in database.", fileID, err.Error())
+			return false, err
+		}
+		return true, nil
 	}
 	return true, nil
 }
@@ -100,7 +138,7 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	if len(notes) == 0 {
 		return nil, nil
 	} else {
-		headlines, err := h.WithContext(context.Background()).Order(h.UpdatedAt.Desc()).Where(h.OrgID.Eq(notes[0].Orgid)).Find()
+		headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.OrgID.Eq(notes[0].Orgid)).Find()
 		if err != nil {
 			logger.Errorf("Get headline by orgid failed: %v", err)
 			return nil, err
@@ -112,7 +150,7 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 		} else if len(headlines) > 1 {
 			// 多个headline引用了一个orgid，尝试修复。
 			for _, headline := range headlines {
-				_, err := o.UploadFile(headline.FileRefer)
+				_, err := o.UploadFile(headline.File.FilePath)
 				if err != nil {
 					logger.Errorf(err.Error())
 					return nil, err

@@ -27,6 +27,7 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 
 	tableName := _file.fileDo.TableName()
 	_file.ALL = field.NewAsterisk(tableName)
+	_file.ID = field.NewString(tableName, "id")
 	_file.FilePath = field.NewString(tableName, "file_path")
 	_file.Hash = field.NewString(tableName, "hash")
 
@@ -39,6 +40,7 @@ type file struct {
 	fileDo
 
 	ALL      field.Asterisk
+	ID       field.String
 	FilePath field.String
 	Hash     field.String
 
@@ -57,6 +59,7 @@ func (f file) As(alias string) *file {
 
 func (f *file) updateTableName(table string) *file {
 	f.ALL = field.NewAsterisk(table)
+	f.ID = field.NewString(table, "id")
 	f.FilePath = field.NewString(table, "file_path")
 	f.Hash = field.NewString(table, "hash")
 
@@ -75,7 +78,8 @@ func (f *file) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (f *file) fillFieldMap() {
-	f.fieldMap = make(map[string]field.Expr, 2)
+	f.fieldMap = make(map[string]field.Expr, 3)
+	f.fieldMap["id"] = f.ID
 	f.fieldMap["file_path"] = f.FilePath
 	f.fieldMap["hash"] = f.Hash
 }

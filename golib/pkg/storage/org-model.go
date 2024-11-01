@@ -8,8 +8,9 @@ import (
 )
 
 type File struct {
-	FilePath string `gorm:"primaryKey;unique;not null"`
-	Hash     string `gorm:"unique;not null"`
+	ID       string `gorm:"primaryKey;unique;not null"`
+	FilePath string `gorm:"not null"`
+	Hash     string
 }
 
 type Headline struct {
@@ -31,7 +32,7 @@ type Headline struct {
 	Priority  string     `json:"priority"`
 	Children  []Headline `gorm:"foreignKey:ParentID" json:"children"`
 	FileRefer string
-	File      File `gorm:"foreignKey:FileRefer;references:FilePath" json:"file"`
+	File      File `gorm:"foreignKey:FileRefer;references:ID" json:"file"`
 	// note 引用包含orgid和type
 	OrgID *string
 	Note  Note `gorm:"foreignKey:OrgID;references:Orgid" json:"-"`

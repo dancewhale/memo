@@ -33,16 +33,16 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 	return result
 }
 
-func getIdType(pd *org.PropertyDrawer) storage.Note {
+func getNoteIdType(pd *org.PropertyDrawer) storage.Note {
 	if pd != nil {
 		note := storage.Note{}
 		for _, kvPair := range pd.Properties {
 			k, v := kvPair[0], kvPair[1]
 			if k == emacsVar.MemoTypeProverty && v != "" {
-				note.Orgid = v
+				note.Type = &v
 			}
 			if k == emacsVar.MemoIdProverty && v != "" {
-				note.Type = &v
+				note.Orgid = v
 			}
 		}
 		if note.Orgid != "" {
@@ -50,6 +50,25 @@ func getIdType(pd *org.PropertyDrawer) storage.Note {
 		}
 	}
 	return storage.Note{}
+}
+
+func getFileID(d *org.Document) string {
+	if len(d.Nodes) != 0 {
+		for _, node := range d.Nodes {
+			switch n := node.(type) {
+			case org.Headline:
+				break
+			case org.PropertyDrawer:
+				for _, kvPair := range n.Properties {
+					k, v := kvPair[0], kvPair[1]
+					if k == emacsVar.MemoIdProverty && v != "" {
+						return v
+					}
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func hash(filePath string) (string, error) {
