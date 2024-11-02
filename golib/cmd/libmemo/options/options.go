@@ -48,7 +48,7 @@ func (c *Config) initLogLevel() int {
 	// -1 是debug; 0 是info, 1 是warn, 2 是error
 	// 转变环境变量为数字
 	var loglevel int
-	level, exist := os.LookupEnv("MEMO_LOG_LEVEl")
+	level, exist := os.LookupEnv("MEMO_LOG_LEVEL")
 	if !exist {
 		loglevel = 0
 	} else {
