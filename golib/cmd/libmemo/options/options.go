@@ -98,7 +98,7 @@ func EmacsEnvInit() *EmacsEnv {
 func (e *EmacsEnv) initMemoTypeProverty() {
 	e.MemoTypeProverty, _ = os.LookupEnv("MEMO_TYPE_PROVERTY")
 	if e.MemoTypeProverty == "" {
-		e.MemoTypeProverty = "MEMO_TYPE"
+		e.MemoTypeProverty = "MEMO_NOTE_TYPE"
 	}
 }
 

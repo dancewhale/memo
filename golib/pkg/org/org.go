@@ -115,6 +115,9 @@ func (o *OrgApi) UploadFile(filePath string) (bool, error) {
 			logger.Errorf("Upload file %s failed: %s, when create headline.", fileID, err.Error())
 			return false, err
 		}
+		for _, headline := range sql.Headline {
+			o.db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(headline)
+		}
 		_, err = fd.WithContext(context.Background()).Where(fd.ID.Eq(file.ID)).UpdateSimple(fd.Hash.Value(o.hash))
 		if err != nil {
 			logger.Errorf("Upload file %s failed: %s, when update file hash in database.", fileID, err.Error())
