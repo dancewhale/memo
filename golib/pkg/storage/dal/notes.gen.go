@@ -430,18 +430,6 @@ func (n noteDo) FindDueCard(today string) (result []*storage.Note, err error) {
 	return
 }
 
-// sql(select * from notes LEFT JOIN  fsrs_infos WHERE type IS NOT NULL AND id IS NULL;)
-func (n noteDo) FindInitCard() (result []*storage.Note, err error) {
-	var generateSQL strings.Builder
-	generateSQL.WriteString("select * from notes LEFT JOIN fsrs_infos WHERE type IS NOT NULL AND id IS NULL; ")
-
-	var executeSQL *gorm.DB
-	executeSQL = n.UnderlyingDB().Raw(generateSQL.String()).Find(&result) // ignore_security_alert
-	err = executeSQL.Error
-
-	return
-}
-
 func (n noteDo) Debug() *noteDo {
 	return n.withDO(n.DO.Debug())
 }
