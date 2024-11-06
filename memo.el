@@ -21,10 +21,6 @@
 (require 'cl-lib)
 (require 'org-element)
 
-(require 'memo-core)
-(require 'memo-buffer)
-(require 'memo-fast)
-
 ;;; Core primitives
 
 (defvar memo--lib-loaded nil
@@ -82,6 +78,10 @@
 ;  (unless (string-equal memo-version (memo-lib-version))
 ;  (memo-compile-module)
 ;  (error "Dynamic module recompiled, please restart Emacs"))
+
+(require 'memo-core)
+(require 'memo-buffer)
+(require 'memo-fast)
 
 (provide 'memo)
 ;;; memo.el ends here

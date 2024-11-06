@@ -216,10 +216,13 @@ func (api *NoteApi) NeedReview(note *storage.Note) (bool, error) {
 }
 
 func (api *NoteApi) ScanOrgForNoteInit() ([]*storage.Note, error) {
+	logger.Infof("Start to scan org for note init.")
 	note := dal.Use(api.db).Note
-	notes, err := note.FindInitCard()
+	fsrsInfo := dal.Use(api.db).FsrsInfo
+	//	notes, err := note.FindInitCard()
+	notes, err := note.WithContext(context.Background()).LeftJoin(fsrsInfo, fsrsInfo.NoteOrgid.EqCol(note.Orgid)).Where(note.Type.IsNotNull()).Where(fsrsInfo.ID.IsNull()).Find()
 	if err != nil {
-		logger.Errorf(err.Error())
+		logger.Errorf("Search for note to init failed in ScanOrgForNoteInit %s.", err.Error())
 		return nil, err
 	}
 

@@ -8,6 +8,7 @@ import (
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+	"memo/pkg/util"
 
 	"github.com/niklasfasching/go-org/org"
 	"gorm.io/gorm"
@@ -94,7 +95,7 @@ func (o *OrgApi) UploadFile(filePath string) (bool, error) {
 	}
 	fileID := getFileID(doc)
 	if fileID == "" {
-		return false, errors.New("File id not found.")
+		return false, util.NoFileIdFoundError
 	}
 	// 初始化file记录, 无记录则创建，有记录如果有变动则去掉hash记录。
 	file, err := o.initFile(fileID, filePath)
@@ -174,3 +175,8 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	}
 	return nil, nil
 }
+
+//// Use Upload File to recursion  upload all files under dir.
+//func (o *OrgApi) UploadDireFiles(dir string) (bool, error) {
+//
+//}

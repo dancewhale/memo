@@ -1,13 +1,16 @@
 package emodule
 
 import (
+	"errors"
+	"github.com/karrick/godirwalk"
+	emacs "github.com/sigma/go-emacs"
+	_ "github.com/sigma/go-emacs/gpl-compatible"
 	"memo/pkg/logger"
 	"memo/pkg/note"
 	"memo/pkg/org"
 	"memo/pkg/storage"
-
-	emacs "github.com/sigma/go-emacs"
-	_ "github.com/sigma/go-emacs/gpl-compatible"
+	"memo/pkg/util"
+	"strings"
 )
 
 type EModule struct {
@@ -113,5 +116,76 @@ func (e *EModule) UploadFile(ectx emacs.FunctionCallContext) (emacs.Value, error
 		return e.EmacsReturn(ectx, err)
 	}
 	_, err = e.napi.ScanOrgForNoteInit()
+	if err != nil {
+		logger.Errorf("Scan for init card after upload file %s failed: %v", filePath, err)
+		return e.EmacsReturn(ectx, err)
+	}
 	return e.EmacsReturn(ectx, err)
+}
+
+func (e *EModule) UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	env := ectx.Environment()
+	stdl := env.StdLib()
+
+	dirPath, err := ectx.GoStringArg(0)
+	if err != nil {
+		logger.Errorf("Pass arg dirPath %s from emacs in upload file in dir failed: %v", dirPath, err)
+		return e.EmacsReturn(ectx, err)
+	}
+	count, err := GetOrgFileCountInDir(dirPath)
+	logger.Infof("Get org file count %d in dirPath %s", count, dirPath)
+	if err != nil {
+		logger.Errorf("Get org file count in dirPath %s failed: %v", dirPath, err)
+		return e.EmacsReturn(ectx, err)
+	}
+	makeProgressReporter := stdl.Intern("make-progress-reporter")
+	progressMess := "Start to upload org file under dir " + dirPath
+	progressReporter, err := stdl.Funcall(makeProgressReporter, env.String(progressMess), env.Int(-1), env.Int(int64(count)))
+	if err != nil {
+		logger.Errorf("Progress report create failed: %v", err)
+		return e.EmacsReturn(ectx, err)
+	}
+	updateProgressReporter := stdl.Intern("progress-reporter-update")
+	doneProgressReporter := stdl.Intern("progress-reporter-done")
+
+	progressCount := 0
+	err = godirwalk.Walk(dirPath, &godirwalk.Options{
+		Callback: func(osPathname string, de *godirwalk.Dirent) error {
+			// Following string operation is not most performant way
+			// of doing this, but common enough to warrant a simple
+			// example here:
+			if strings.Contains(osPathname, ".org") && !de.IsDir() {
+				_, err = e.hapi.UploadFile(osPathname)
+				if err != nil && !errors.Is(err, util.NoFileIdFoundError) {
+					logger.Errorf("Upload file %s failed in upload file in dir: %v", osPathname, err)
+					return err
+				}
+				progressCount++
+				_, err := stdl.Funcall(updateProgressReporter, progressReporter, env.Int(int64(progressCount)))
+				if err != nil {
+					logger.Errorf("Progress report update failed: %v", err)
+					return err
+				}
+				return godirwalk.SkipThis
+			}
+			return nil
+		},
+		Unsorted: true,
+	})
+	if err != nil {
+		logger.Errorf("Error while walking directory  for org file: %s", err)
+		return e.EmacsReturn(ectx, err)
+	}
+	_, err = stdl.Funcall(doneProgressReporter, progressReporter)
+	if err != nil {
+		logger.Errorf("Progress report done failed: %v", err)
+		return e.EmacsReturn(ectx, err)
+	}
+
+	_, err = e.napi.ScanOrgForNoteInit()
+	if err != nil {
+		logger.Errorf("Scan for init card after upload file %s failed: %v", dirPath, err)
+		return e.EmacsReturn(ectx, err)
+	}
+	return e.EmacsReturn(ectx, nil)
 }

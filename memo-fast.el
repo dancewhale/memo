@@ -47,15 +47,20 @@
       (message "Push file is success complete."))
 )
 
+(defun memo-update-dir ()
+"Update file under dir."
+ (interactive)
+ (memo-api--progress "/Users/whale/Seafile/Dropbox/roam"))
+
+
 
 (general-define-key
     "s-e l RET"    'memo-create-head
     "s-e l n"      'memo-create-subhead
     "s-e l p"      'memo-push-file
+    "s-e l P"      'memo-update-dir
     "s-e l b"      'memo-goto-org
 )
-
-
 
 (provide 'memo-fast)
 ;;; memo-fast.el ends here
