@@ -43,7 +43,7 @@
   "Push current org-file to database."
   (interactive)
   (memo--parse-result (memo-api--upload-file (buffer-file-name)))
-  (if (not  (memo-api-return-err memo-api--return) )
+  (if (not  (memo-api--return-err memo-api-result) )
       (message "Push file is success complete."))
 )
 

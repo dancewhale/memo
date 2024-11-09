@@ -80,6 +80,7 @@
 ;  (error "Dynamic module recompiled, please restart Emacs"))
 
 (require 'memo-core)
+(require 'memo-api)
 (require 'memo-buffer)
 (require 'memo-fast)
 

@@ -28,7 +28,6 @@
 
 (defun memo-remove-overlays ()
   "Remove all memo overlays in the current buffer."
-  (interactive)
   (remove-overlays (point-min) (point-max) 'category 'memo))
 
 ;; Based on `outline-flag-region'
