@@ -2,7 +2,6 @@ package note
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -94,8 +93,7 @@ func (store *NoteApi) RemoveNote(orgid string) error {
 	n := dal.Use(store.db).Note
 	note, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(orgid)).First()
 	if err != nil {
-		logger.Errorf("Remove note in db failed: %v", err)
-		return err
+		return logger.Errorf("Remove note in db failed: %v", err)
 	}
 	_, error := n.Select(field.AssociationFields).Delete(note)
 	return error
@@ -109,8 +107,7 @@ func (store *NoteApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
 	n := dal.Use(store.db).Note
 	note, err := n.WithContext(context.Background()).Preload(n.ReviewLogs).Where(n.Orgid.Eq(orgid)).First()
 	if err != nil {
-		logger.Errorf("Add review log in db failed: %v", err)
-		return err
+		return logger.Errorf("Add review log in db failed: %v", err)
 	}
 
 	return n.ReviewLogs.Model(note).Append(log)
@@ -126,7 +123,7 @@ func (store *NoteApi) DueNotes(day int64) []*storage.Note {
 	n := dal.Use(store.db).Note
 	notes, err := n.WithContext(context.Background()).Preload(n.Fsrs).Find()
 	if err != nil {
-		logger.Errorf("Get all notes failed: %v", err)
+		_ = logger.Errorf("Get all notes failed: %v", err)
 		return nil
 	}
 	ret := []*storage.Note{}
@@ -168,7 +165,7 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 	now := time.Now()
 	fnote := api.getNoteByOrgID(orgID)
 	if fnote == nil {
-		logger.Errorf("not found card [orgid=%s] to review", orgID)
+		_ = logger.Errorf("not found card [orgid=%s] to review", orgID)
 		return nil
 	}
 
@@ -194,8 +191,7 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 
 func (api *NoteApi) NeedReview(note *storage.Note) (bool, error) {
 	if note.Fsrs.IsEmpty() {
-		logger.Errorf("Note %d has no fsrs", note.Orgid)
-		return false, errors.New("Note has no fsrs info")
+		return false, logger.Errorf("Note %d has no fsrs", note.Orgid)
 	}
 	cardDueYear := note.Fsrs.Due.Year()
 	cardDueMonth := note.Fsrs.Due.Month()
