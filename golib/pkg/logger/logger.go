@@ -1,10 +1,10 @@
 package logger
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
-	"errors"
 
 	"memo/cmd/libmemo/options"
 
@@ -37,18 +37,10 @@ func NewLogger() {
 }
 
 func getStdCore() zapcore.Core {
-	var config options.Config
-	c := config.ConfigInit()
+	emacsv := options.EmacsEnvInit()
 	stdEncoder := getEncoder()
 	consoleWriter := zapcore.Lock(os.Stdout)
-	logList := [7]int64{-1, 0, 1, 2, 3, 4, 5}
-	for _, logLevel := range logList {
-		if logLevel == int64(c.LogLevel) {
-			LogLevel := zapcore.Level(c.LogLevel)
-			return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
-		}
-	}
-	LogLevel := zapcore.InfoLevel
+	LogLevel := zapcore.Level(emacsv.GetMemoLogLevel())
 	return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
 }
 

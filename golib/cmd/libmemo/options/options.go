@@ -8,81 +8,16 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var ConfigVar *Config
-
-type Config struct {
-	DBPath            string
-	DBMaxIdleConn     int
-	DBMaxOpenConn     int
-	DBConnMaxLifetime time.Duration
-	LogLevel          int
-}
-
-func (c *Config) ConfigInit() *Config {
-	if ConfigVar != nil {
-		return ConfigVar
-	}
-	ConfigVar = &Config{
-		DBPath:            c.initDbPath(),
-		DBMaxIdleConn:     10,
-		DBMaxOpenConn:     100,
-		DBConnMaxLifetime: 1 * time.Hour,
-		LogLevel:          c.initLogLevel(),
-	}
-	return ConfigVar
-}
-
-func (c *Config) initDbPath() string {
-	dbpath, exist := os.LookupEnv("MEMO_DB_PATH")
-	if !exist {
-		dirname, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-		dbpath = dirname + "/.memo.db"
-	}
-	return dbpath
-}
-
-func (c *Config) initLogLevel() int {
-	// -1 是debug; 0 是info, 1 是warn, 2 是error
-	// 转变环境变量为数字
-	var loglevel int
-	level, exist := os.LookupEnv("MEMO_LOG_LEVEL")
-	if !exist {
-		loglevel = 0
-	} else {
-		loglevel, err := strconv.Atoi(level)
-		if err != nil {
-			panic(err)
-		}
-		return loglevel
-	}
-	return loglevel
-}
-
-func (c *Config) GetLogLevel() logger.LogLevel {
-	var loglevel logger.LogLevel
-	switch c.LogLevel {
-	case -1:
-		loglevel = logger.Info
-	case 0:
-		loglevel = logger.Warn
-	case 1:
-		loglevel = logger.Error
-	case 2:
-		loglevel = logger.Silent
-	default:
-		loglevel = logger.Warn
-	}
-	return loglevel
-}
-
 var EmacsVar *EmacsEnv
 
 type EmacsEnv struct {
-	MemoTypeProverty string
-	MemoIdProverty   string
+	MemoTypeProverty      string
+	MemoIdProverty        string
+	MemoDBPath            string
+	MemoDBMaxIdleConn     int
+	MemoDBMaxOpenConn     int
+	MemoDBConnMaxLifetime time.Duration
+	MemoLogLevel          int
 }
 
 func EmacsEnvInit() *EmacsEnv {
@@ -90,21 +25,84 @@ func EmacsEnvInit() *EmacsEnv {
 		return EmacsVar
 	}
 	EmacsVar = &EmacsEnv{}
-	EmacsVar.initMemoTypeProverty()
-	EmacsVar.initMemoIdProverty()
+	EmacsVar.GetMemoTypeProverty()
+	EmacsVar.GetMemoIdProverty()
+	EmacsVar.GetMemoDBPath()
+	EmacsVar.GetMemoDBMaxIdleConn()
+	EmacsVar.GetMemoDBMaxOpenConn()
+	EmacsVar.GetMemoDBConnMaxLifetime()
+	EmacsVar.GetMemoLogLevel()
 	return EmacsVar
 }
 
-func (e *EmacsEnv) initMemoTypeProverty() {
+func (e *EmacsEnv) GetMemoTypeProverty() string {
 	e.MemoTypeProverty, _ = os.LookupEnv("MEMO_TYPE_PROVERTY")
 	if e.MemoTypeProverty == "" {
 		e.MemoTypeProverty = "MEMO_NOTE_TYPE"
 	}
+	return e.MemoTypeProverty
 }
 
-func (e *EmacsEnv) initMemoIdProverty() {
+func (e *EmacsEnv) GetMemoIdProverty() string {
 	e.MemoIdProverty, _ = os.LookupEnv("MEMO_ID_PROVERTY")
 	if e.MemoIdProverty == "" {
 		e.MemoIdProverty = "ID"
+	}
+	return e.MemoIdProverty
+}
+
+func (e *EmacsEnv) GetMemoDBPath() string {
+	e.MemoDBPath, _ = os.LookupEnv("MEMO_DB_PATH")
+	if e.MemoDBPath == "" {
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			panic(err)
+		}
+		e.MemoDBPath = dirname + "/.memo.db"
+	}
+	return e.MemoDBPath
+}
+
+func (e *EmacsEnv) GetMemoDBMaxIdleConn() int {
+	e.MemoDBMaxIdleConn, _ = strconv.Atoi(os.Getenv("MEMO_DB_MAX_IDLE_CONN"))
+	if e.MemoDBMaxIdleConn == 0 {
+		e.MemoDBMaxIdleConn = 10
+	}
+	return e.MemoDBMaxIdleConn
+}
+
+func (e *EmacsEnv) GetMemoDBMaxOpenConn() int {
+	e.MemoDBMaxOpenConn, _ = strconv.Atoi(os.Getenv("MEMO_DB_MAX_OPEN_CONN"))
+	if e.MemoDBMaxOpenConn == 0 {
+		e.MemoDBMaxOpenConn = 100
+	}
+	return e.MemoDBMaxOpenConn
+}
+
+func (e *EmacsEnv) GetMemoDBConnMaxLifetime() time.Duration {
+	e.MemoDBConnMaxLifetime, _ = time.ParseDuration(os.Getenv("MEMO_DB_CONN_MAX_LIFETIME"))
+	if e.MemoDBConnMaxLifetime == 0 {
+		e.MemoDBConnMaxLifetime = 1 * time.Hour
+	}
+	return e.MemoDBConnMaxLifetime
+}
+
+func (e *EmacsEnv) GetMemoLogLevel() int {
+	e.MemoLogLevel, _ = strconv.Atoi(os.Getenv("MEMO_LOG_LEVEL"))
+	return e.MemoLogLevel
+}
+
+func (e *EmacsEnv) GetMemoDbLogLevel() logger.LogLevel {
+	switch e.MemoLogLevel {
+	case -1:
+		return logger.Info
+	case 0:
+		return logger.Warn
+	case 1:
+		return logger.Error
+	case 2:
+		return logger.Silent
+	default:
+		return logger.Warn
 	}
 }

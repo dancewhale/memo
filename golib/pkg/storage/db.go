@@ -2,6 +2,7 @@ package storage
 
 import (
 	"memo/cmd/libmemo/options"
+	mlog "memo/pkg/logger"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -10,25 +11,31 @@ import (
 
 var Engine *gorm.DB
 
-func InitDBEngine() *gorm.DB {
+func InitDBEngine() (*gorm.DB, error) {
 	var err error
-	var config options.Config
-	c := config.ConfigInit()
+	emacsv := options.EmacsEnvInit()
+	mlog.Infof("Current memo log level is %d, db log level is %d", emacsv.GetMemoLogLevel(), emacsv.GetMemoDbLogLevel())
 	if Engine == nil {
-		Engine, err = gorm.Open(sqlite.Open(c.DBPath), &gorm.Config{
-			Logger: logger.Default.LogMode(c.GetLogLevel()),
+		Engine, err = gorm.Open(sqlite.Open(emacsv.GetMemoDBPath()), &gorm.Config{
+			Logger: logger.Default.LogMode(emacsv.GetMemoDbLogLevel()),
 		})
 		// TODO retry
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
-	Engine.AutoMigrate(&Note{}, &FsrsInfo{}, &ReviewLog{}, &Headline{}, &File{})
+	err = Engine.AutoMigrate(&Note{}, &FsrsInfo{}, &ReviewLog{}, &Headline{}, &File{})
+	if err != nil {
+		return nil, err
+	}
 
 	sqlDB, err := Engine.DB()
-	sqlDB.SetMaxIdleConns(c.DBMaxIdleConn)
-	sqlDB.SetMaxOpenConns(c.DBMaxOpenConn)
-	sqlDB.SetConnMaxLifetime(c.DBConnMaxLifetime)
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxIdleConns(emacsv.GetMemoDBMaxIdleConn())
+	sqlDB.SetMaxOpenConns(emacsv.GetMemoDBMaxOpenConn())
+	sqlDB.SetConnMaxLifetime(emacsv.GetMemoDBConnMaxLifetime())
 
-	return Engine
+	return Engine, err
 }

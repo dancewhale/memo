@@ -34,26 +34,8 @@
   (org-id-get-create))
 
 
-(defun memo-goto-org ()
-  "Jump to source point from review buffer."
-  (interactive)
-  (org-id-goto (memo-note-id memo--review-note)))
 
-(defun memo-push-file ()
-  "Push current org-file to database."
-  (interactive)
-  (memo--parse-result (memo-api--upload-file (buffer-file-name)))
-  (if (not  (memo-api--return-err memo-api-result) )
-      (message "Push file is success complete."))
-)
-
-(defun memo-update-dir ()
-"Update file under dir."
- (interactive)
- (memo-api--progress "/Users/whale/Seafile/Dropbox/roam"))
-
-
-
+;; setting config for memo.
 (general-define-key
     "s-e l RET"    'memo-create-head
     "s-e l n"      'memo-create-subhead
@@ -61,6 +43,10 @@
     "s-e l P"      'memo-update-dir
     "s-e l b"      'memo-goto-org
 )
+
+
+(setq memo-org-directory "/Users/whale/Seafile/Dropbox/roam")
+(setq memo-log-level "-1")
 
 (provide 'memo-fast)
 ;;; memo-fast.el ends here

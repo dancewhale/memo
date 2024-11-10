@@ -20,7 +20,7 @@
 (require 'cl-lib)
 (require 'org-element)
 
-;;; Properties
+;;; Properties and Env setting
 (defconst memo-prop-note-type  "MEMO_NOTE_TYPE"
   "Property used to store the cards type;
 and used for backend to indentify memo head.")
@@ -29,6 +29,9 @@ and used for backend to indentify memo head.")
   "Property used to store the cards id; 
 and used for backend to indentify memo head.")
 
+(defvar  memo-log-level "0"
+  "Setting dynamic module log level, -1 debug, 0 info, 1 warn, 2 error.")
+
 
 ;;; hook for memo-api call.
 ;;; Setting env before call go module api.
@@ -36,7 +39,8 @@ and used for backend to indentify memo head.")
   "Use to prepare some action like env setting before call backend api."
   (setenv "MEMO_TYPE_PROVERTY" memo-prop-note-type)
   (setenv "MEMO_ID_PROVERTY" memo-prop-note-id)
-)
+  (setenv "MEMO_LOG_LEVEL" memo-log-level))
+
 
 
 ;;; parse api call result; store value and throught err.
@@ -76,6 +80,30 @@ memo-note is (orgid  type  content)."
 					     :content note-content
 					     :hash nil))))
 
+;; setting memo scan dir and function.
+(defvar  memo-org-directory nil
+"Setting memo dir to scan org file.")
+
+
+(defun memo-sync-db ()
+"Synchronize the db state with the current Org files on-disk."
+  (interactive)
+  (memo--parse-result (memo-api--sync-dir memo-org-directory))
+  (if (not  (memo-api--return-err memo-api-result) )
+      (message "Sync dir is success complete.")))
+
+
+(defun memo-sync-file ()
+"Synchronize current org-file to db."
+  (interactive)
+  (memo--parse-result (memo-api--sync-file (buffer-file-name)))
+  (if (not  (memo-api--return-err memo-api-result) )
+      (message "Push file is success complete.")))
+
+
+;;  TODO: go api需要新增强制清空 headline 和 file 的接口。
+;;  TODO: 更新daily 一个文件存在问题，headline 缺失
+;;  TODO: log无法根据env 进行调整
 
 
 (provide 'memo-api)

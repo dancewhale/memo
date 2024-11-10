@@ -20,8 +20,8 @@ type EModule struct {
 }
 
 func (e *EModule) Init() {
-	e.napi = note.NewNoteApi()
-	e.hapi = org.NewOrg()
+	e.napi, _ = note.NewNoteApi()
+	e.hapi, _ = org.NewOrgApi()
 }
 
 // return (ErrMessage (value1 value2 value3 ...))

@@ -103,5 +103,13 @@
   )
 
 
+;; jump to org and enable editor.
+(defun memo-goto-org ()
+  "Jump to source point from review buffer."
+  (interactive)
+  (org-id-goto (memo-note-id memo--review-note)))
+
+
+
 (provide 'memo-buffer)
 ;;; memo-buffer.el ends here

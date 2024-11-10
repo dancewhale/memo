@@ -18,8 +18,10 @@ type OrgApi struct {
 	hash string
 }
 
-func NewOrg() *OrgApi {
-	return &OrgApi{db: storage.InitDBEngine(), hash: ""}
+func NewOrgApi() (*OrgApi, error) {
+	DB, err := storage.InitDBEngine()
+
+	return &OrgApi{db: DB, hash: ""}, err
 }
 
 // 确保id 的file记录存在，如果文件更新了则，删除file的hash记录和相关headline，直到创建headline后变更hash。
