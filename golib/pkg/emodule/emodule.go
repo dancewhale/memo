@@ -69,11 +69,23 @@ func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value
 	env := ectx.Environment()
 	stdl := env.StdLib()
 	fnote := e.napi.GetReviewNoteByDueTime()
+	if fnote == nil {
+		err := logger.Errorf("There is no card wait for review tody.")
+		return e.EmacsReturn(ectx, err)
+	}
 	head, err := e.hapi.GetHeadlineByOrgID(fnote.Orgid)
 	if err != nil {
 		return e.EmacsReturn(ectx, err, stdl.Nil())
 	}
-	return e.EmacsReturn(ectx, err, env.String(*head.OrgID), env.String(*fnote.Type), env.String(head.Content))
+	if head == nil {
+		if fnote.Type == nil {
+			return e.EmacsReturn(ectx, err, env.String(fnote.Orgid), env.String(""), env.String(""))
+		} else {
+			return e.EmacsReturn(ectx, err, env.String(fnote.Orgid), env.String(*(fnote.Type)), env.String(""))
+		}
+	}
+	logger.Errorf("Get next review note success: %s", fnote.Orgid)
+	return e.EmacsReturn(ectx, err, env.String(fnote.Orgid), env.String(*fnote.Type), env.String(head.Content))
 }
 
 func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
@@ -107,10 +119,19 @@ func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 func (e *EModule) UploadFile(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	filePath, err := ectx.GoStringArg(0)
 	if err != nil {
-		logger.Errorf("Pass arg filePath from emacs in upload file failed: %v", err)
+		err = logger.Errorf("Pass arg filePath from emacs in UploadFile failed: %v", err)
 		return e.EmacsReturn(ectx, err)
 	}
-	_, err = e.hapi.UploadFile(filePath)
+	force, err := ectx.GoStringArg(1)
+	if err != nil {
+		err = logger.Errorf("Pass arg force from emacs in UploadFile failed: %v", err)
+		return e.EmacsReturn(ectx, err)
+	}
+	if force == "true" {
+		_, err = e.hapi.UploadFile(filePath, true)
+	} else {
+		_, err = e.hapi.UploadFile(filePath, false)
+	}
 	if err != nil {
 		logger.Errorf("Upload file %s failed: %v", filePath, err)
 		return e.EmacsReturn(ectx, err)
@@ -132,6 +153,18 @@ func (e *EModule) UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Val
 		logger.Errorf("Pass arg dirPath %s from emacs in upload file in dir failed: %v", dirPath, err)
 		return e.EmacsReturn(ectx, err)
 	}
+	force, err := ectx.GoStringArg(1)
+	if err != nil {
+		err = logger.Errorf("Pass arg force from emacs in UploadFile failed: %v", err)
+		return e.EmacsReturn(ectx, err)
+	}
+	var needForce bool
+	if force == "true" {
+		needForce = true
+	} else {
+		needForce = false
+	}
+
 	count, err := GetOrgFileCountInDir(dirPath)
 	logger.Infof("Get org file count %d in dirPath %s", count, dirPath)
 	if err != nil {
@@ -155,7 +188,7 @@ func (e *EModule) UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Val
 			// of doing this, but common enough to warrant a simple
 			// example here:
 			if strings.Contains(osPathname, ".org") && !de.IsDir() {
-				_, err = e.hapi.UploadFile(osPathname)
+				_, err = e.hapi.UploadFile(osPathname, needForce)
 				if err != nil && !errors.Is(err, util.NoFileIdFoundError) {
 					logger.Errorf("Upload file %s failed in upload file in dir: %v", osPathname, err)
 					return err

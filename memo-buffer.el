@@ -26,7 +26,7 @@
 
 
 ;; review note.
-(defun memo-review-show ()
+(defun memo--review-show ()
   "Show note in review buffer, MNOTE is memo-note object."
   (if (not (memo-note-id memo--review-note))
       (user-error "Review memo-note object is nil"))
@@ -57,7 +57,7 @@
   "Review note."
   (interactive)
   (setq memo--review-note (memo--get-review-note-object))
-  (memo--review-show memo--review-note))
+  (memo--review-show ))
 
 
 (defun memo-review-easy()

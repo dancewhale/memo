@@ -88,7 +88,14 @@ memo-note is (orgid  type  content)."
 (defun memo-sync-db ()
 "Synchronize the db state with the current Org files on-disk."
   (interactive)
-  (memo--parse-result (memo-api--sync-dir memo-org-directory))
+  (memo--parse-result (memo-api--sync-dir memo-org-directory "false"))
+  (if (not  (memo-api--return-err memo-api-result) )
+      (message "Sync dir is success complete.")))
+
+(defun memo-sync-db-force ()
+"Synchronize the db state with the current Org files on-disk."
+  (interactive)
+  (memo--parse-result (memo-api--sync-dir memo-org-directory "true"))
   (if (not  (memo-api--return-err memo-api-result) )
       (message "Sync dir is success complete.")))
 
@@ -96,14 +103,14 @@ memo-note is (orgid  type  content)."
 (defun memo-sync-file ()
 "Synchronize current org-file to db."
   (interactive)
-  (memo--parse-result (memo-api--sync-file (buffer-file-name)))
+  (save-buffer)
+  (memo--parse-result (memo-api--sync-file (buffer-file-name) "false"))
   (if (not  (memo-api--return-err memo-api-result) )
       (message "Push file is success complete.")))
 
 
 ;;  TODO: go api需要新增强制清空 headline 和 file 的接口。
 ;;  TODO: 更新daily 一个文件存在问题，headline 缺失
-;;  TODO: log无法根据env 进行调整
 
 
 (provide 'memo-api)

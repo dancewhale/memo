@@ -77,10 +77,18 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	org.WriteNodes(w, h.Children...)
 	title := w.WriteNodesAsString(h.Title...)
 	content := w.WriteHeadlineContentAsString(h.Children...)
+	note := getNoteIdType(h.Properties)
+	var noteID *string
+	if note.Orgid != "" {
+		noteID = &note.Orgid
+	} else {
+		noteID = nil
+	}
 	headline := storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 		Content: content, Priority: h.Priority,
-		Note:      getNoteIdType(h.Properties),
-		FileRefer: w.fileId}
+		Note:      note,
+		FileRefer: w.fileId,
+		OrgID:     noteID}
 	// 深度优先遍历
 	for {
 		preHeadline, _ := w.s.Pop()

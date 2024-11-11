@@ -25,7 +25,7 @@ func NewOrgApi() (*OrgApi, error) {
 }
 
 // 确保id 的file记录存在，如果文件更新了则，删除file的hash记录和相关headline，直到创建headline后变更hash。
-func (o *OrgApi) initFile(fileId string, filePath string) (file storage.File, err error) {
+func (o *OrgApi) initFile(fileId string, filePath string, force bool) (file storage.File, err error) {
 	fd := dal.Use(o.db).File
 	h := dal.Use(o.db).Headline
 	// 创建file model包括地址和hash值,如果不存在
@@ -49,8 +49,8 @@ func (o *OrgApi) initFile(fileId string, filePath string) (file storage.File, er
 	} else {
 		// 存在fileId 记录，判断hash值。
 		existFile := existFileList[0]
-		if existFile.Hash != o.hash {
-			//file 记录存在且文件有更新，并删除相关的headline 和file 的hash记录, 后续file相关head记录需要重新创建。
+		if existFile.Hash != o.hash || force {
+			//file 记录存在且文件有更新或者force 为true，删除相关的headline 和file 的hash记录, 后续file相关head记录需要重新创建。
 			_, err = h.WithContext(context.Background()).Where(h.FileRefer.Eq(fileId)).Unscoped().Delete()
 			if err != nil {
 				return storage.File{}, logger.Errorf("Remove head record for file %s failed: %s", fileId, err.Error())
@@ -74,7 +74,7 @@ func (o *OrgApi) initFile(fileId string, filePath string) (file storage.File, er
 	}
 }
 
-func (o *OrgApi) UploadFile(filePath string) (bool, error) {
+func (o *OrgApi) UploadFile(filePath string, force bool) (bool, error) {
 	h := dal.Use(o.db).Headline
 	fd := dal.Use(o.db).File
 
@@ -92,7 +92,7 @@ func (o *OrgApi) UploadFile(filePath string) (bool, error) {
 		return false, util.NoFileIdFoundError
 	}
 	// 初始化file记录, 无记录则创建，有记录如果有变动则去掉hash记录。
-	file, err := o.initFile(fileID, filePath)
+	file, err := o.initFile(fileID, filePath, force)
 	if err != nil {
 		return false, logger.Errorf("Upload file %s failed: %s", fileID, err.Error())
 	}
@@ -129,7 +129,7 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 		return nil, logger.Errorf("Get headline by orgid failed: %v", err)
 	}
 	if len(notes) == 0 {
-		return nil, nil
+		return nil, logger.Errorf("The orgid your request has no memo card")
 	} else {
 		headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.OrgID.Eq(notes[0].Orgid)).Find()
 		if err != nil {
@@ -142,7 +142,7 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 		} else if len(headlines) > 1 {
 			// 多个headline引用了一个orgid，尝试修复。
 			for _, headline := range headlines {
-				_, err := o.UploadFile(headline.File.FilePath)
+				_, err := o.UploadFile(headline.File.FilePath, true)
 				if err != nil {
 					return nil, logger.Errorf("GetHeadlineByOrgID %s failed because upload failed: %v", orgid, err.Error())
 				}

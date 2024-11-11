@@ -39,8 +39,8 @@
 (general-define-key
     "s-e l RET"    'memo-create-head
     "s-e l n"      'memo-create-subhead
-    "s-e l p"      'memo-push-file
-    "s-e l P"      'memo-update-dir
+    "s-e l p"      'memo-sync-file
+    "s-e l P"      'memo-sync-db
     "s-e l b"      'memo-goto-org
 )
 
