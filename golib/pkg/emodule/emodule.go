@@ -79,13 +79,14 @@ func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value
 	}
 	if head == nil {
 		if fnote.Type == nil {
+			err = logger.Errorf("Get headline by orgid %s failed: %v", fnote.Orgid, err)
 			return e.EmacsReturn(ectx, err, env.String(fnote.Orgid), env.String(""), env.String(""))
 		} else {
+			err = logger.Errorf("Get headline by orgid %s failed: %v", fnote.Orgid, err)
 			return e.EmacsReturn(ectx, err, env.String(fnote.Orgid), env.String(*(fnote.Type)), env.String(""))
 		}
 	}
-	logger.Errorf("Get next review note success: %s", fnote.Orgid)
-	return e.EmacsReturn(ectx, err, env.String(fnote.Orgid), env.String(*fnote.Type), env.String(head.Content))
+	return e.EmacsReturn(ectx, nil, env.String(fnote.Orgid), env.String(*fnote.Type), env.String(head.Content))
 }
 
 func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {

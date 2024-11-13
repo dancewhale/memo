@@ -50,12 +50,19 @@ and used for backend to indentify memo head.")
 (defvar  memo-api-result  nil
 "Store result return from memo-api call.")
 
+(defvar  memo-api-result-err  nil
+"Store err message of result return from memo-api call.")
+
+(defvar  memo-api-result-value  nil
+"Store value of result return from memo-api call.")
 
 (defun memo--parse-result (result)
 "To parse value return from backend memo-api call;
 pare value like (err (value value))"
   (setq memo-api-result  (make-memo-api--return  :err (car result) 
                                                  :value (cadr result)))
+  (setq memo-api-result-err (memo-api--return-err memo-api-result))
+  (setq memo-api-result-value (memo-api--return-value  memo-api-result))
   (if  (car result)
     (user-error (car result))))
 
@@ -71,10 +78,10 @@ pare value like (err (value value))"
   "Return memo-note object which need review from server;
 memo-note is (orgid  type  content)."
   (memo--before-api-call)
-  (let* ((memo-note-object (memo--parse-result (memo-api--get-next-review-note)))
-	 (note-id (car memo-note-object))
-	 (note-type (cadr memo-note-object))
-	 (note-content (caddr memo-note-object)))
+  (memo--parse-result (memo-api--get-next-review-note))
+  (let* ((note-id (car memo-api-result-value))
+	 (note-type (cadr memo-api-result-value))
+	 (note-content (caddr memo-api-result-value)))
     (setq memo--review-note (make-memo-note :id note-id
 					     :type note-type
 					     :content note-content

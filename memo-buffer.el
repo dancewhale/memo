@@ -36,7 +36,7 @@
 	(read-only-mode -1)
 	(memo-remove-overlays)
 	(erase-buffer)
-	(insert (memo-note-content mnote))
+	(insert (memo-note-content memo--review-note))
 	(goto-char (point-min))
 	(if (re-search-forward "^-+$" nil t)
 	    (progn
@@ -56,7 +56,7 @@
 (defun memo-review-note()
   "Review note."
   (interactive)
-  (setq memo--review-note (memo--get-review-note-object))
+  (memo--get-review-note-object)
   (memo--review-show ))
 
 
