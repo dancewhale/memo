@@ -69,7 +69,7 @@ pare value like (err (value value))"
 
 ;; get note for review.
 (cl-defstruct memo-note
-  id type content hash)
+  id type content file)
 
 (defvar memo--review-note nil
   "The memo-note object which store note info wait for review.")
@@ -81,11 +81,12 @@ memo-note is (orgid  type  content)."
   (memo--parse-result (memo-api--get-next-review-note))
   (let* ((note-id (car memo-api-result-value))
 	 (note-type (cadr memo-api-result-value))
-	 (note-content (caddr memo-api-result-value)))
+	 (note-content (caddr memo-api-result-value))
+	 (note-file (cadddr memo-api-result-value)))
     (setq memo--review-note (make-memo-note :id note-id
 					     :type note-type
 					     :content note-content
-					     :hash nil))))
+					     :file note-file))))
 
 ;; setting memo scan dir and function.
 (defvar  memo-org-directory nil

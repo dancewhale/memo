@@ -107,7 +107,14 @@
 (defun memo-goto-org ()
   "Jump to source point from review buffer."
   (interactive)
-  (org-id-goto (memo-note-id memo--review-note)))
+  (let* ((file (memo-note-file memo--review-note))
+        (id  (memo-note-id memo--review-note))
+	(position (org-id-find-id-in-file id file 'markerp)))
+      (pop-to-buffer-same-window (marker-buffer  position))
+      (goto-char position)
+      (move-marker position nil)
+      (org-fold-show-context)))
+
 
 
 

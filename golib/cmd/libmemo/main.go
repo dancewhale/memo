@@ -23,7 +23,7 @@ func initModule(env emacs.Environment) {
 	env.RegisterFunction("memo-api--sync-dir", em.UploadFilesUnderDir, 2, "Upload file under diretory to database, ARG1 is dirPath string, ARG2 is  true/false if need force upload files.", nil)
 	env.RegisterFunction("memo-api--hang-note", em.HangNote, 1, "Hang note, ARG1 is card orgid string.", nil)
 	env.RegisterFunction("memo-api--review-note", em.ReviewNote, 2, "Review note, ARG1 is card orgid string, ARG2 is review options in Good, Easy, Hard, Again.", nil)
-	env.RegisterFunction("memo-api--get-next-review-note", em.GetNextReviewNote, 0, "Get next review note, return (err (orgid, type, content)).", nil)
+	env.RegisterFunction("memo-api--get-next-review-note", em.GetNextReviewNote, 0, "Get next review note, return (err (orgid, type, content, file)).", nil)
 	env.RegisterFunction("memo-api--progress", em.UploadFilesUnderDir, 1, "Upload org file under dir, ARG1 is dir path.", nil)
 
 	env.ProvideFeature("memo")
