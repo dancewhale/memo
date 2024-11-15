@@ -18,7 +18,9 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'org-tidy)
 (require 'org-element)
+(require 'f)
 
 ;; review releat var and function
 (defconst memo--review-buffer-name "*memo-review*"
@@ -113,8 +115,17 @@
       (pop-to-buffer-same-window (marker-buffer  position))
       (goto-char position)
       (move-marker position nil)
-      (org-fold-show-context)))
+      (org-fold-show-context)
+      (org-narrow-to-subtree)
+      (org-tidy-mode 1)))
 
+
+;; auto sync file after save buffer.
+(defun memo-sync-file-after-save ()
+  "Sync file to database after save file."
+  (let ((path (buffer-file-name)))
+    (if (and  (f-ext-p path "org") (f-ancestor-of-p memo-org-directory path))
+	(memo-api--sync-file path "false"))))
 
 
 

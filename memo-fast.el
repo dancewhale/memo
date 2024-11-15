@@ -39,7 +39,7 @@
 (general-define-key
     "s-e l RET"    'memo-create-head
     "s-e l n"      'memo-create-subhead
-    "s-e l p"      'memo-sync-file
+    "s-e l p"      'memo-sync-current-file
     "s-e l P"      'memo-sync-db
     "s-e l b"      'memo-goto-org
 )
@@ -47,6 +47,8 @@
 
 (setq memo-org-directory "/Users/whale/Seafile/Dropbox/roam")
 (setq memo-log-level "-1")
+
+(add-hook 'after-save-hook 'memo-sync-file-after-save)
 
 (provide 'memo-fast)
 ;;; memo-fast.el ends here
