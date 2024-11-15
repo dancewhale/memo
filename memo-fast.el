@@ -42,6 +42,7 @@
     "s-e l p"      'memo-sync-current-file
     "s-e l P"      'memo-sync-db
     "s-e l b"      'memo-goto-org
+    "s-e l r"      'memo-review-note
 )
 
 

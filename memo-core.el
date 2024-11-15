@@ -21,6 +21,7 @@
 ;;
 ;;; Code:
 
+(require 'org-element)
 (require 'cl)
 
 ;;; Working with Overlays / Hiding Text
@@ -60,6 +61,23 @@ make it bold."
   (overlay-put o 'before-string (propertize before 'face face))
   (overlay-put o 'after-string (propertize after 'face face))
   o)
+
+
+;;; Working with org-mode buffer Text
+(defun memo-narrow-to-org-subtree-content (&optional element)
+  "Narrow buffer to the current subtree."
+  (interactive)
+  (save-excursion
+    (save-match-data
+      (org-with-limited-levels
+        (narrow-to-region
+	   (progn (org-back-to-heading t)
+	     (let ((elem (org-element-at-point)))
+	       (+ 1 (org-element-property :robust-begin elem))))
+	   (progn (org-next-visible-heading 1)
+		  (when (and (org-at-heading-p) (not (eobp))) (backward-char 1))
+		  (point)))))))
+
 
 
 

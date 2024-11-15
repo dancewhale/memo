@@ -115,8 +115,9 @@
       (pop-to-buffer-same-window (marker-buffer  position))
       (goto-char position)
       (move-marker position nil)
+      (widen)
       (org-fold-show-context)
-      (org-narrow-to-subtree)
+      (memo-narrow-to-org-subtree-content)
       (org-tidy-mode 1)))
 
 
