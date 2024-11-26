@@ -11,6 +11,7 @@ import (
 	"memo/pkg/storage/dal"
 
 	"github.com/jinzhu/copier"
+	"github.com/maniartech/gotime"
 	gfsrs "github.com/open-spaced-repetition/go-fsrs"
 	"gorm.io/gen/field"
 	//	"github.com/spewerspew/spew"
@@ -34,17 +35,22 @@ var defaultFsrsWeights = "0.5701, 1.4436, 4.1386, 10.9355, 5.1443, 1.2006, 0.862
 
 func NewNoteApi() (*NoteApi, error) {
 	DB, err := storage.InitDBEngine()
-	return &NoteApi{db: DB, params: NewParams(0.9, 365, defaultFsrsWeights)}, err
+	return &NoteApi{
+		Query:  *dal.Use(DB),
+		db:     DB,
+		params: NewParams(0.9, 365, defaultFsrsWeights),
+	}, err
 }
 
 type NoteApi struct {
+	dal.Query
 	db     *gorm.DB
 	params gfsrs.Parameters
 }
 
 // GetNote 获取一张卡片。
-func (store *NoteApi) getNoteByOrgID(orgid string) *storage.Note {
-	n := dal.Use(store.db).Note
+func (api *NoteApi) getNoteByOrgID(orgid string) *storage.Note {
+	n := api.Note
 	note, err := n.WithContext(context.Background()).Preload(n.Fsrs).Where(n.Orgid.Eq(orgid)).First()
 	if err != nil {
 		logger.Errorf("Get note by orgid failed: %v", err)
@@ -53,26 +59,9 @@ func (store *NoteApi) getNoteByOrgID(orgid string) *storage.Note {
 	return note
 }
 
-// GetDueNote by due time order
-func (store *NoteApi) GetDueNoteOrderByDueTime() []*storage.Note {
-	torrow := time.Now().AddDate(0, 0, 1)
-	dueTimeYear := torrow.Year()
-	dueTimeMonth := torrow.Month()
-	dueTimeDay := torrow.Day()
-	dueTime := time.Date(dueTimeYear, dueTimeMonth, dueTimeDay, 0, 0, 0, 0, time.UTC)
-
-	n := dal.Use(store.db).Note
-	notes, err := n.WithContext(context.Background()).GetNoteOrderByDueTime(dueTime.String())
-	if err != nil {
-		logger.Errorf("Get due note order by duetime failed: %v", err)
-		return nil
-	}
-	return notes
-}
-
 // UpdateNote 设置一张卡片。
-func (store *NoteApi) UpdateNote(fnote *storage.Note) *storage.Note {
-	n := dal.Use(store.db).Note
+func (api *NoteApi) UpdateNote(fnote *storage.Note) *storage.Note {
+	n := api.Note
 	_, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(fnote.Orgid)).Updates(fnote)
 	if err != nil {
 		logger.Errorf("Update note in database failed: %v", err)
@@ -82,15 +71,15 @@ func (store *NoteApi) UpdateNote(fnote *storage.Note) *storage.Note {
 }
 
 // UpdateCardOfNote 更新一张卡片中的学习记录。
-func (store *NoteApi) UpdateCardOfNote(fnote *storage.Note) *storage.Note {
-	store.db.Unscoped().Model(fnote).Association("Fsrs").Unscoped().Replace(&fnote.Fsrs)
-	store.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fnote)
+func (api *NoteApi) UpdateCardOfNote(fnote *storage.Note) *storage.Note {
+	api.db.Unscoped().Model(fnote).Association("Fsrs").Unscoped().Replace(&fnote.Fsrs)
+	api.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fnote)
 	return fnote
 }
 
 // RemoveNote 移除一张卡片,包括所有学习记录。
-func (store *NoteApi) RemoveNote(orgid string) error {
-	n := dal.Use(store.db).Note
+func (api *NoteApi) RemoveNote(orgid string) error {
+	n := api.Note
 	note, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(orgid)).First()
 	if err != nil {
 		return logger.Errorf("Remove note in db failed: %v", err)
@@ -100,11 +89,11 @@ func (store *NoteApi) RemoveNote(orgid string) error {
 }
 
 // 增加复习记录
-func (store *NoteApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
+func (api *NoteApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
 	note := &storage.Note{}
 	log := &storage.ReviewLog{}
 	copier.Copy(log, rlog)
-	n := dal.Use(store.db).Note
+	n := api.Note
 	note, err := n.WithContext(context.Background()).Preload(n.ReviewLogs).Where(n.Orgid.Eq(orgid)).First()
 	if err != nil {
 		return logger.Errorf("Add review log in db failed: %v", err)
@@ -114,43 +103,44 @@ func (store *NoteApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
 }
 
 // CountNotes 获取卡包中的闪卡数量。
-func (store *NoteApi) CountNotes() int {
+func (api *NoteApi) CountNotes() int {
 	return 0
 }
 
-// Dues 获取在day 天之后以前到期的所有闪卡。
-func (store *NoteApi) DueNotes(day int64) []*storage.Note {
-	n := dal.Use(store.db).Note
-	notes, err := n.WithContext(context.Background()).Preload(n.Fsrs).Find()
+// 获取在之后第day天当天到期，当天应该复习的所有闪卡，+1表示明天，-1表示昨天
+func (api *NoteApi) DueNotesInDay(day int64) []*storage.Note {
+	n := api.Note
+	f := api.FsrsInfo
+	china, _ := time.LoadLocation("Asia/Shanghai")
+	dueDay := time.Now().In(china).AddDate(0, 0, int(day))
+	dueDayStart := gotime.SoD(dueDay)
+	dueDayEnd := gotime.EoD(dueDay)
+	notes, err := n.WithContext(context.Background()).Join(f, n.Orgid.EqCol(f.NoteOrgid)).Where(f.Due.Gte(dueDayStart)).Where(f.Due.Lte(dueDayEnd)).Find()
 	if err != nil {
-		_ = logger.Errorf("Get all notes failed: %v", err)
+		_ = logger.Errorf("Get due notes in %d day failed: %v", day, err)
 		return nil
 	}
-	ret := []*storage.Note{}
-
-	for _, note := range notes {
-		cardDueYear := note.Fsrs.Due.Year()
-		cardDueMonth := note.Fsrs.Due.Month()
-		cardDueDay := note.Fsrs.Due.Day()
-		cardDue := time.Date(cardDueYear, cardDueMonth, cardDueDay, 0, 0, 0, 0, time.UTC)
-
-		torrow := time.Now().AddDate(0, 0, int(day))
-		dueTimeYear := torrow.Year()
-		dueTimeMonth := torrow.Month()
-		dueTimeDay := torrow.Day()
-		dueTime := time.Date(dueTimeYear, dueTimeMonth, dueTimeDay, 0, 0, 0, 0, time.UTC)
-
-		//check  cardDue before tody 24:00
-		if cardDue.Before(dueTime) || cardDue.Equal(dueTime) {
-			ret = append(ret, note)
-		}
-	}
-	return ret
+	return notes
 }
 
-// get nodes need to review
+// 获取已经到期且已经延期的卡片
+func (api *NoteApi) DueNotesDeferred() []*storage.Note {
+	n := api.Note
+	f := api.FsrsInfo
+	china, _ := time.LoadLocation("Asia/Shanghai")
+	today := time.Now().In(china)
+	todayStart := gotime.SoD(today)
+	notes, err := n.WithContext(context.Background()).Join(f, n.Orgid.EqCol(f.NoteOrgid)).Where(f.Due.Lte(todayStart)).Find()
+	if err != nil {
+		logger.Errorf("Get due note order by duetime failed: %v", err)
+		return nil
+	}
+	return notes
+}
+
+// TODO: 获取过期卡片的逻辑需要修正，优先当天的卡片，之后是延期的卡片
 func (api *NoteApi) GetReviewNoteByDueTime() *storage.Note {
-	notes := api.GetDueNoteOrderByDueTime()
+	notes := api.DueNotesDeferred()
 	if len(notes) == 0 {
 		logger.Infof("No note need to review.")
 		return nil
@@ -158,7 +148,7 @@ func (api *NoteApi) GetReviewNoteByDueTime() *storage.Note {
 	return notes[0]
 }
 
-// Review 闪卡复习,返回复习后的闪卡,如果状态为WaitReviewInit,则返回未修改的note.
+// 给指定过期的闪卡打分进行review,返回复习后的闪卡
 func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note {
 
 	logger.Debugf("Start Review Note with orgID: %s, rating: %d", orgID, rating)
@@ -170,7 +160,7 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 	}
 
 	// review 状态为waitReview 的note, 如果评价为easy,则设置为WaitCardInit
-	needReview, error := api.NeedReview(fnote)
+	needReview, error := api.IfNoteIsDue(orgID)
 
 	if needReview && error == nil {
 		schedulingInfo := api.params.Repeat(fnote.Fsrs.Card, now)
@@ -189,32 +179,27 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 	return nil
 }
 
-func (api *NoteApi) NeedReview(note *storage.Note) (bool, error) {
-	if note.Fsrs.IsEmpty() {
-		return false, logger.Errorf("Note %d has no fsrs", note.Orgid)
-	}
-	cardDueYear := note.Fsrs.Due.Year()
-	cardDueMonth := note.Fsrs.Due.Month()
-	cardDueDay := note.Fsrs.Due.Day()
-	cardDue := time.Date(cardDueYear, cardDueMonth, cardDueDay, 0, 0, 0, 0, time.UTC)
-
-	torrow := time.Now().AddDate(0, 0, 1)
-	tomorrowYear := torrow.Year()
-	tomorrowMonth := torrow.Month()
-	tomorrowDay := torrow.Day()
-	tomorrowTime := time.Date(tomorrowYear, tomorrowMonth, tomorrowDay, 0, 0, 0, 0, time.UTC)
-
-	//check  cardDue before tody 24:00
-	if cardDue.Before(tomorrowTime) || cardDue.Equal(tomorrowTime) {
+// 传入参数orgid,当对应的note 卡片已经到期则返回true,否则返回false
+func (api *NoteApi) IfNoteIsDue(orgid string) (bool, error) {
+	n := api.Note
+	f := api.FsrsInfo
+	china, _ := time.LoadLocation("Asia/Shanghai")
+	today := time.Now().In(china)
+	todayEnd := gotime.EoD(today)
+	notes, err := n.WithContext(context.Background()).Join(f, n.Orgid.EqCol(f.NoteOrgid)).Where(n.Orgid.Eq(orgid)).Where(f.Due.Lte(todayEnd)).Find()
+	if err != nil {
+		return false, logger.Errorf("Get due note order by duetime failed: %v", err)
+	} else if len(notes) == 0 {
+		return false, nil
+	} else {
 		return true, nil
 	}
-	return false, nil
 }
 
 func (api *NoteApi) ScanOrgForNoteInit() ([]*storage.Note, error) {
 	logger.Infof("Start to scan org for note init.")
-	note := dal.Use(api.db).Note
-	fsrsInfo := dal.Use(api.db).FsrsInfo
+	note := api.Note
+	fsrsInfo := api.FsrsInfo
 	//	notes, err := note.FindInitCard()
 	notes, err := note.WithContext(context.Background()).LeftJoin(fsrsInfo, fsrsInfo.NoteOrgid.EqCol(note.Orgid)).Where(note.Type.IsNotNull()).Where(fsrsInfo.ID.IsNull()).Find()
 	if err != nil {

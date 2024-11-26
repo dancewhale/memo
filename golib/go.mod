@@ -7,6 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/jinzhu/copier v0.4.0
 	github.com/karrick/godirwalk v1.17.0
+	github.com/maniartech/gotime v1.1.0
 	github.com/niklasfasching/go-org v1.7.0
 	github.com/open-spaced-repetition/go-fsrs v1.2.1
 	github.com/sigma/go-emacs v0.0.1
