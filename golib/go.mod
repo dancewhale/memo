@@ -25,6 +25,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
+	github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	go.uber.org/goleak v1.3.0 // indirect

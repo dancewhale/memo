@@ -10,10 +10,7 @@
 ----隔离后的问题, 所以这个解析是不兼容我的格式.
 ** DONE 增加review 函数
 ** DONE 支持straight 包安装后的启动模式,build 目录下目录问题.
-** TODO 自动识别server 是否开启, 支持报错
-** TODO 快捷键快速创建卡牌
+** DONE 快捷键快速创建卡牌
 函数支持创建ID 和MEMO_NOTE_TYPE
 进行快捷键绑定
-** TODO 开始尝试使用, 把已有的anki 卡牌进行转换.
-** TODO 在review 的时候快捷同步修改原始文件和数据库数据
 

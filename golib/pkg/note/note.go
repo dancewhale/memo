@@ -2,8 +2,6 @@ package note
 
 import (
 	"context"
-	"strconv"
-	"strings"
 	"time"
 
 	"memo/pkg/logger"
@@ -12,40 +10,26 @@ import (
 
 	"github.com/jinzhu/copier"
 	"github.com/maniartech/gotime"
-	gfsrs "github.com/open-spaced-repetition/go-fsrs"
+	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 	"gorm.io/gen/field"
 	//	"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 )
 
-func NewParams(requestRetention float64, maximumInterval int, weights string) gfsrs.Parameters {
-	params := gfsrs.DefaultParam()
-	params.RequestRetention = requestRetention
-	params.MaximumInterval = float64(maximumInterval)
-	params.W = [17]float64{}
-	for i, w := range strings.Split(weights, ",") {
-		w = strings.TrimSpace(w)
-		params.W[i], _ = strconv.ParseFloat(w, 64)
-	}
-
-	return params
-}
-
-var defaultFsrsWeights = "0.5701, 1.4436, 4.1386, 10.9355, 5.1443, 1.2006, 0.8627, 0.0362, 1.629, 0.1342, 1.0166, 2.1174, 0.0839, 0.3204, 1.4676, 0.219, 2.8237"
-
 func NewNoteApi() (*NoteApi, error) {
 	DB, err := storage.InitDBEngine()
+	scheduler := *gfsrs.NewFSRS(gfsrs.DefaultParam())
 	return &NoteApi{
-		Query:  *dal.Use(DB),
-		db:     DB,
-		params: NewParams(0.9, 365, defaultFsrsWeights),
+		Query:     *dal.Use(DB),
+		db:        DB,
+		scheduler: scheduler,
 	}, err
 }
 
 type NoteApi struct {
 	dal.Query
-	db     *gorm.DB
-	params gfsrs.Parameters
+	db        *gorm.DB
+	scheduler gfsrs.FSRS
 }
 
 // GetNote 获取一张卡片。
@@ -163,7 +147,7 @@ func (api *NoteApi) ReviewNote(orgID string, rating gfsrs.Rating) *storage.Note 
 	needReview, error := api.IfNoteIsDue(orgID)
 
 	if needReview && error == nil {
-		schedulingInfo := api.params.Repeat(fnote.Fsrs.Card, now)
+		schedulingInfo := api.scheduler.Repeat(fnote.Fsrs.Card, now)
 		updatedCard := schedulingInfo[rating].Card
 
 		rLog := schedulingInfo[rating].ReviewLog
@@ -210,7 +194,7 @@ func (api *NoteApi) ScanOrgForNoteInit() ([]*storage.Note, error) {
 	var fcard gfsrs.Card
 	var scard storage.FsrsInfo
 	for _, fnote := range notes {
-		fcard = gfsrs.Card{Due: time.Now(), Stability: 0.0, Difficulty: 0.0, ElapsedDays: 0, ScheduledDays: 0, Reps: 0, Lapses: 0, LastReview: time.Now(), State: gfsrs.New}
+		fcard = gfsrs.NewCard()
 		scard = storage.FsrsInfo{}
 		scard.Card = fcard
 		fnote.Fsrs = scard

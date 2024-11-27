@@ -37,6 +37,8 @@ github.com/niklasfasching/go-org v1.7.0 h1:vyMdcMWWTe/XmANk19F4k8XGBYg0GQ/gJGMim
 github.com/niklasfasching/go-org v1.7.0/go.mod h1:WuVm4d45oePiE0eX25GqTDQIt/qPW1T9DGkRscqLW5o=
 github.com/open-spaced-repetition/go-fsrs v1.2.1 h1:vY1hSQ3gvHtfnw8ahylcZyyqusKWDkWCd1+ca4lZoSc=
 github.com/open-spaced-repetition/go-fsrs v1.2.1/go.mod h1:WpbNs4TTKZChOHFO+ME0B9femUVZsepFT5mhAioszRg=
+github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0 h1:lDY1dURLg5xYGbCcz9bxB7c+1v36+wZRYnSHOdQloPA=
+github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0/go.mod h1:zTtQIk3kOO9kweg5zJAgbdwBXR2HBPsDN0k6AxmTpzY=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sigma/go-emacs v0.0.1 h1:jwltXza8HXohkXN6eiVrWaJ/cOfeT0piQGhMl15+N1Q=

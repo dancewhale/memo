@@ -117,9 +117,6 @@ memo-note is (orgid  type  content)."
       (message "Push file is success complete.")))
 
 
-;;  TODO: go api需要新增强制清空 headline 和 file 的接口。
-;;  TODO: 更新daily 一个文件存在问题，headline 缺失
-
 
 (provide 'memo-api)
 ;;; memo-api.el ends here

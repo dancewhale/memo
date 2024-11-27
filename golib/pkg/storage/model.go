@@ -4,7 +4,7 @@ import (
 	"gorm.io/gorm"
 	"time"
 
-	gfsrs "github.com/open-spaced-repetition/go-fsrs"
+	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 )
 
 var QuestionType string = "Question"
