@@ -9,12 +9,10 @@ func main() {
 
 	g := gen.NewGenerator(gen.Config{
 		OutPath: "../pkg/storage/dal",
-		Mode:    gen.WithoutContext|gen.WithDefaultQuery,
+		Mode:    gen.WithoutContext | gen.WithDefaultQuery,
 	})
 
-	g.ApplyBasic(storage.Note{}, storage.FsrsInfo{}, storage.ReviewLog{}, storage.Headline{}, storage.File{})
-
-	g.ApplyInterface(func(storage.NoteMethod) {}, storage.Note{})
+	g.ApplyBasic(storage.Card{}, storage.FsrsInfo{}, storage.ReviewLog{}, storage.Headline{}, storage.File{})
 
 	g.Execute()
 }

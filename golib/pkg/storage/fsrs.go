@@ -58,14 +58,8 @@ func IntToRate(rate int8) gfsrs.Rating {
 	}
 }
 
-const (
-	WaitCardInit int8 = iota // review cards of note are init already 0.
-	WaitReview               // wait for card init can't review  1.
-)
-
-type Note struct {
+type Card struct {
 	Orgid      string `gorm:"primaryKey;index"`
-	Type       *string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	DeletedAt  gorm.DeletedAt `gorm:"index"`
@@ -79,7 +73,7 @@ type FsrsInfo struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	gfsrs.Card `gorm:"embedded"`
-	NoteOrgid  string
+	CardOrgid  string
 }
 
 type ReviewLog struct {
@@ -87,9 +81,5 @@ type ReviewLog struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	gfsrs.ReviewLog `gorm:"embedded",json:"Flog"`
-	NoteOrgid       string
-}
-
-func (fs *FsrsInfo) IsEmpty() bool {
-	return *fs == FsrsInfo{}
+	CardOrgid       string
 }

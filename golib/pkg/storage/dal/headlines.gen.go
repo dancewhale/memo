@@ -33,12 +33,13 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.DeletedAt = field.NewField(tableName, "deleted_at")
 	_headline.Title = field.NewString(tableName, "title")
 	_headline.Content = field.NewString(tableName, "content")
+	_headline.Type = field.NewString(tableName, "type")
 	_headline.ParentID = field.NewInt(tableName, "parent_id")
 	_headline.Level = field.NewInt(tableName, "level")
 	_headline.Order_ = field.NewInt(tableName, "order")
 	_headline.Status = field.NewString(tableName, "status")
 	_headline.Priority = field.NewString(tableName, "priority")
-	_headline.FileRefer = field.NewString(tableName, "file_refer")
+	_headline.FileID = field.NewString(tableName, "file_id")
 	_headline.OrgID = field.NewString(tableName, "org_id")
 	_headline.Children = headlineHasManyChildren{
 		db: db.Session(&gorm.Session{}),
@@ -49,7 +50,7 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		}{
 			RelationField: field.NewRelation("Children.File", "storage.File"),
 		},
-		Note: struct {
+		Card: struct {
 			field.RelationField
 			Fsrs struct {
 				field.RelationField
@@ -61,21 +62,21 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 				field.RelationField
 			}
 		}{
-			RelationField: field.NewRelation("Children.Note", "storage.Note"),
+			RelationField: field.NewRelation("Children.Card", "storage.Card"),
 			Fsrs: struct {
 				field.RelationField
 			}{
-				RelationField: field.NewRelation("Children.Note.Fsrs", "storage.FsrsInfo"),
+				RelationField: field.NewRelation("Children.Card.Fsrs", "storage.FsrsInfo"),
 			},
 			Headline: struct {
 				field.RelationField
 			}{
-				RelationField: field.NewRelation("Children.Note.Headline", "storage.Headline"),
+				RelationField: field.NewRelation("Children.Card.Headline", "storage.Headline"),
 			},
 			ReviewLogs: struct {
 				field.RelationField
 			}{
-				RelationField: field.NewRelation("Children.Note.ReviewLogs", "storage.ReviewLog"),
+				RelationField: field.NewRelation("Children.Card.ReviewLogs", "storage.ReviewLog"),
 			},
 		},
 		Children: struct {
@@ -91,10 +92,10 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		RelationField: field.NewRelation("File", "storage.File"),
 	}
 
-	_headline.Note = headlineBelongsToNote{
+	_headline.Card = headlineBelongsToCard{
 		db: db.Session(&gorm.Session{}),
 
-		RelationField: field.NewRelation("Note", "storage.Note"),
+		RelationField: field.NewRelation("Card", "storage.Card"),
 	}
 
 	_headline.fillFieldMap()
@@ -112,18 +113,19 @@ type headline struct {
 	DeletedAt field.Field
 	Title     field.String
 	Content   field.String
+	Type      field.String
 	ParentID  field.Int
 	Level     field.Int
 	Order_    field.Int
 	Status    field.String
 	Priority  field.String
-	FileRefer field.String
+	FileID    field.String
 	OrgID     field.String
 	Children  headlineHasManyChildren
 
 	File headlineBelongsToFile
 
-	Note headlineBelongsToNote
+	Card headlineBelongsToCard
 
 	fieldMap map[string]field.Expr
 }
@@ -146,12 +148,13 @@ func (h *headline) updateTableName(table string) *headline {
 	h.DeletedAt = field.NewField(table, "deleted_at")
 	h.Title = field.NewString(table, "title")
 	h.Content = field.NewString(table, "content")
+	h.Type = field.NewString(table, "type")
 	h.ParentID = field.NewInt(table, "parent_id")
 	h.Level = field.NewInt(table, "level")
 	h.Order_ = field.NewInt(table, "order")
 	h.Status = field.NewString(table, "status")
 	h.Priority = field.NewString(table, "priority")
-	h.FileRefer = field.NewString(table, "file_refer")
+	h.FileID = field.NewString(table, "file_id")
 	h.OrgID = field.NewString(table, "org_id")
 
 	h.fillFieldMap()
@@ -169,19 +172,20 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 16)
+	h.fieldMap = make(map[string]field.Expr, 17)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
 	h.fieldMap["deleted_at"] = h.DeletedAt
 	h.fieldMap["title"] = h.Title
 	h.fieldMap["content"] = h.Content
+	h.fieldMap["type"] = h.Type
 	h.fieldMap["parent_id"] = h.ParentID
 	h.fieldMap["level"] = h.Level
 	h.fieldMap["order"] = h.Order_
 	h.fieldMap["status"] = h.Status
 	h.fieldMap["priority"] = h.Priority
-	h.fieldMap["file_refer"] = h.FileRefer
+	h.fieldMap["file_id"] = h.FileID
 	h.fieldMap["org_id"] = h.OrgID
 
 }
@@ -204,7 +208,7 @@ type headlineHasManyChildren struct {
 	File struct {
 		field.RelationField
 	}
-	Note struct {
+	Card struct {
 		field.RelationField
 		Fsrs struct {
 			field.RelationField
@@ -357,13 +361,13 @@ func (a headlineBelongsToFileTx) Count() int64 {
 	return a.tx.Count()
 }
 
-type headlineBelongsToNote struct {
+type headlineBelongsToCard struct {
 	db *gorm.DB
 
 	field.RelationField
 }
 
-func (a headlineBelongsToNote) Where(conds ...field.Expr) *headlineBelongsToNote {
+func (a headlineBelongsToCard) Where(conds ...field.Expr) *headlineBelongsToCard {
 	if len(conds) == 0 {
 		return &a
 	}
@@ -376,27 +380,27 @@ func (a headlineBelongsToNote) Where(conds ...field.Expr) *headlineBelongsToNote
 	return &a
 }
 
-func (a headlineBelongsToNote) WithContext(ctx context.Context) *headlineBelongsToNote {
+func (a headlineBelongsToCard) WithContext(ctx context.Context) *headlineBelongsToCard {
 	a.db = a.db.WithContext(ctx)
 	return &a
 }
 
-func (a headlineBelongsToNote) Session(session *gorm.Session) *headlineBelongsToNote {
+func (a headlineBelongsToCard) Session(session *gorm.Session) *headlineBelongsToCard {
 	a.db = a.db.Session(session)
 	return &a
 }
 
-func (a headlineBelongsToNote) Model(m *storage.Headline) *headlineBelongsToNoteTx {
-	return &headlineBelongsToNoteTx{a.db.Model(m).Association(a.Name())}
+func (a headlineBelongsToCard) Model(m *storage.Headline) *headlineBelongsToCardTx {
+	return &headlineBelongsToCardTx{a.db.Model(m).Association(a.Name())}
 }
 
-type headlineBelongsToNoteTx struct{ tx *gorm.Association }
+type headlineBelongsToCardTx struct{ tx *gorm.Association }
 
-func (a headlineBelongsToNoteTx) Find() (result *storage.Note, err error) {
+func (a headlineBelongsToCardTx) Find() (result *storage.Card, err error) {
 	return result, a.tx.Find(&result)
 }
 
-func (a headlineBelongsToNoteTx) Append(values ...*storage.Note) (err error) {
+func (a headlineBelongsToCardTx) Append(values ...*storage.Card) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -404,7 +408,7 @@ func (a headlineBelongsToNoteTx) Append(values ...*storage.Note) (err error) {
 	return a.tx.Append(targetValues...)
 }
 
-func (a headlineBelongsToNoteTx) Replace(values ...*storage.Note) (err error) {
+func (a headlineBelongsToCardTx) Replace(values ...*storage.Card) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -412,7 +416,7 @@ func (a headlineBelongsToNoteTx) Replace(values ...*storage.Note) (err error) {
 	return a.tx.Replace(targetValues...)
 }
 
-func (a headlineBelongsToNoteTx) Delete(values ...*storage.Note) (err error) {
+func (a headlineBelongsToCardTx) Delete(values ...*storage.Card) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -420,11 +424,11 @@ func (a headlineBelongsToNoteTx) Delete(values ...*storage.Note) (err error) {
 	return a.tx.Delete(targetValues...)
 }
 
-func (a headlineBelongsToNoteTx) Clear() error {
+func (a headlineBelongsToCardTx) Clear() error {
 	return a.tx.Clear()
 }
 
-func (a headlineBelongsToNoteTx) Count() int64 {
+func (a headlineBelongsToCardTx) Count() int64 {
 	return a.tx.Count()
 }
 

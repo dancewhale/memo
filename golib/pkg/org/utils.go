@@ -13,9 +13,6 @@ import (
 	"memo/pkg/storage"
 )
 
-var datestampFormat = "2006-01-02 Mon"
-var timestampFormat = "2006-01-02 Mon 15:04"
-
 var emacsVar = options.EmacsEnvInit()
 
 func isRawTextBlock(name string) bool {
@@ -33,23 +30,20 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 	return result
 }
 
-func getNoteIdType(pd *org.PropertyDrawer) storage.Note {
+func getNoteIdType(pd *org.PropertyDrawer) storage.Card {
 	if pd != nil {
-		note := storage.Note{}
+		card := storage.Card{}
 		for _, kvPair := range pd.Properties {
 			k, v := kvPair[0], kvPair[1]
-			if k == emacsVar.MemoTypeProverty && v != "" {
-				note.Type = &v
-			}
 			if k == emacsVar.MemoIdProverty && v != "" {
-				note.Orgid = v
+				card.Orgid = v
 			}
 		}
-		if note.Orgid != "" {
-			return note
+		if card.Orgid != "" {
+			return card
 		}
 	}
-	return storage.Note{}
+	return storage.Card{}
 }
 
 func getFileID(d *org.Document) string {
@@ -88,4 +82,25 @@ func hash(filePath string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func getFileMeta(d *org.Document) *MetaInfo {
+	if len(d.Nodes) != 0 {
+		for _, node := range d.Nodes {
+			switch n := node.(type) {
+			case org.Headline:
+				break
+			case org.PropertyDrawer:
+				for _, kvPair := range n.Properties {
+					k, v := kvPair[0], kvPair[1]
+					if k == emacsVar.MemoIdProverty && v != "" {
+						meta := MetaInfo{}
+						meta.ID = v
+						return &meta
+					}
+				}
+			}
+		}
+	}
+	return nil
 }

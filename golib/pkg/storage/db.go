@@ -12,6 +12,9 @@ import (
 var Engine *gorm.DB
 
 func InitDBEngine() (*gorm.DB, error) {
+	if Engine != nil {
+		return Engine, nil
+	}
 	var err error
 	emacsv := options.EmacsEnvInit()
 	mlog.Infof("Current memo log level is %d, db log level is %d", emacsv.GetMemoLogLevel(), emacsv.GetMemoDbLogLevel())
@@ -24,7 +27,7 @@ func InitDBEngine() (*gorm.DB, error) {
 			return nil, err
 		}
 	}
-	err = Engine.AutoMigrate(&Note{}, &FsrsInfo{}, &ReviewLog{}, &Headline{}, &File{})
+	err = Engine.AutoMigrate(&Card{}, &FsrsInfo{}, &ReviewLog{}, &Headline{}, &File{})
 	if err != nil {
 		return nil, err
 	}

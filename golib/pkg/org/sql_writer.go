@@ -1,10 +1,13 @@
 package org
 
 import (
-	"github.com/niklasfasching/go-org/org"
-	"memo/pkg/storage"
 	"regexp"
 	"strings"
+
+	"memo/pkg/storage"
+
+	"github.com/emirpasic/gods/stacks/arraystack"
+	"github.com/niklasfasching/go-org/org"
 )
 
 var exampleBlockUnescapeRegexp = regexp.MustCompile(`(^|\n)([ \t]*)(\*|,\*|#\+|,#\+)`)
@@ -24,15 +27,15 @@ var emphasisOrgBorders = map[string][]string{
 type SqlWriter struct {
 	org.OrgWriter
 	// 用于存储headline 结构体的堆栈
-	s        storage.Stack
-	Headline []*storage.Headline
-	fileId   string
+	stack     *arraystack.Stack
+	Headlines []Headline
+	fileId    string
 }
 
 func NewSqlWriter() *SqlWriter {
 	return &SqlWriter{
 		OrgWriter: *org.NewOrgWriter(),
-		s:         storage.NewStack(),
+		stack:     arraystack.New(),
 	}
 }
 
@@ -42,15 +45,6 @@ func (w *SqlWriter) WriterWithExtensions() org.Writer {
 
 func (w *SqlWriter) Before(d *org.Document) {}
 func (w *SqlWriter) After(d *org.Document)  {}
-
-func (w *SqlWriter) WriteNodesAsString(nodes ...org.Node) string {
-	builder := w.Builder
-	w.Builder = strings.Builder{}
-	org.WriteNodes(w, nodes...)
-	out := w.String()
-	w.Builder = builder
-	return out
-}
 
 func (w *SqlWriter) WriteHeadlineContentAsString(nodes ...org.Node) string {
 	builder := w.Builder
@@ -77,19 +71,23 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	} else {
 		noteID = nil
 	}
-	headline := storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
-		Content: content, Priority: h.Priority,
-		Note:      note,
-		FileRefer: w.fileId,
-		OrgID:     noteID}
+	headline := Headline{
+		storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
+			Content: content, Priority: h.Priority,
+			Card:   note,
+			FileID: w.fileId,
+			OrgID:  noteID,
+		},
+		[]Headline{},
+	}
 	// 深度优先遍历
 	for {
-		preHeadline, _ := w.s.Pop()
+		preHeadline, _ := w.stack.Pop()
 		if preHeadline != nil {
-			if preHeadline.Level == headline.Level+1 {
-				headline.Children = append(headline.Children, *preHeadline)
+			if preHeadline.(Headline).Level == headline.Level+1 {
+				headline.Children = append(headline.Children, preHeadline.(Headline))
 			} else {
-				w.s.Push(preHeadline)
+				w.stack.Push(preHeadline)
 				break
 			}
 		} else {
@@ -97,9 +95,9 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 		}
 	}
 
-	w.s.Push(&headline)
+	w.stack.Push(headline)
 	if h.Lvl == 1 {
-		w.s.Pop()
-		w.Headline = append(w.Headline, &headline)
+		w.stack.Pop()
+		w.Headlines = append(w.Headlines, headline)
 	}
 }

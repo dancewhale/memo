@@ -2,25 +2,27 @@ package emodule
 
 import (
 	"errors"
-	"github.com/karrick/godirwalk"
-	emacs "github.com/sigma/go-emacs"
-	_ "github.com/sigma/go-emacs/gpl-compatible"
+	"strings"
+
+	"memo/pkg/card"
 	"memo/pkg/logger"
-	"memo/pkg/note"
 	"memo/pkg/org"
 	"memo/pkg/storage"
 	"memo/pkg/util"
-	"strings"
+
+	"github.com/karrick/godirwalk"
+	emacs "github.com/sigma/go-emacs"
+	_ "github.com/sigma/go-emacs/gpl-compatible"
 )
 
 type EModule struct {
-	napi *note.NoteApi
+	capi *card.CardApi
 	hapi *org.OrgApi
 	stdl emacs.StdLib
 }
 
 func (e *EModule) Init() {
-	e.napi, _ = note.NewNoteApi()
+	e.capi, _ = card.NewCardApi()
 	e.hapi, _ = org.NewOrgApi()
 }
 
@@ -55,7 +57,7 @@ func (e *EModule) HangNote(ectx emacs.FunctionCallContext) (emacs.Value, error) 
 		return e.EmacsReturn(ectx, error)
 	}
 
-	err = e.napi.RemoveNote(orgid)
+	err = e.capi.RemoveCard(orgid)
 	if err != nil {
 		logger.Errorf("Delete note failed: %v", err)
 		return e.EmacsReturn(ectx, err)
@@ -68,25 +70,25 @@ func (e *EModule) HangNote(ectx emacs.FunctionCallContext) (emacs.Value, error) 
 func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
 	stdl := env.StdLib()
-	fnote := e.napi.GetReviewNoteByDueTime()
-	if fnote == nil {
+	fcard := e.capi.GetReviewCardByDueTime()
+	if fcard == nil {
 		err := logger.Errorf("There is no card wait for review tody.")
 		return e.EmacsReturn(ectx, err)
 	}
-	head, err := e.hapi.GetHeadlineByOrgID(fnote.Orgid)
+	head, err := e.hapi.GetHeadlineByOrgID(fcard.Orgid)
 	if err != nil {
 		return e.EmacsReturn(ectx, err, stdl.Nil())
 	}
 	if head == nil {
-		if fnote.Type == nil {
-			err = logger.Errorf("Get headline by orgid %s failed: %v", fnote.Orgid, err)
-			return e.EmacsReturn(ectx, err, env.String(fnote.Orgid), env.String(""), env.String(""), env.String(""))
+		if head.Type == nil {
+			err = logger.Errorf("Get headline by orgid %s failed: %v", fcard.Orgid, err)
+			return e.EmacsReturn(ectx, err, env.String(fcard.Orgid), env.String(""), env.String(""), env.String(""))
 		} else {
-			err = logger.Errorf("Get headline by orgid %s failed: %v", fnote.Orgid, err)
-			return e.EmacsReturn(ectx, err, env.String(fnote.Orgid), env.String(*(fnote.Type)), env.String(""), env.String(""))
+			err = logger.Errorf("Get headline by orgid %s failed: %v", fcard.Orgid, err)
+			return e.EmacsReturn(ectx, err, env.String(fcard.Orgid), env.String(*head.Type), env.String(""), env.String(""))
 		}
 	}
-	return e.EmacsReturn(ectx, nil, env.String(fnote.Orgid), env.String(*fnote.Type), env.String(head.Content), env.String(head.File.FilePath))
+	return e.EmacsReturn(ectx, nil, env.String(fcard.Orgid), env.String(*head.Type), env.String(head.Content), env.String(head.File.FilePath))
 }
 
 func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
@@ -111,7 +113,7 @@ func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	}
 	fsrsRate := storage.StringToRate(rate)
 
-	r := e.napi.ReviewNote(orgid, fsrsRate)
+	r := e.capi.ReviewCard(orgid, fsrsRate)
 	logger.Infof("Review note success: %s", r.Orgid)
 
 	return e.EmacsReturn(ectx, nil)
@@ -137,7 +139,7 @@ func (e *EModule) UploadFile(ectx emacs.FunctionCallContext) (emacs.Value, error
 		logger.Errorf("Upload file %s failed: %v", filePath, err)
 		return e.EmacsReturn(ectx, err)
 	}
-	_, err = e.napi.ScanOrgForNoteInit()
+	_, err = e.capi.ScanOrgForCardInit()
 	if err != nil {
 		logger.Errorf("Scan for init card after upload file %s failed: %v", filePath, err)
 		return e.EmacsReturn(ectx, err)
@@ -216,7 +218,7 @@ func (e *EModule) UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Val
 		return e.EmacsReturn(ectx, err)
 	}
 
-	_, err = e.napi.ScanOrgForNoteInit()
+	_, err = e.capi.ScanOrgForCardInit()
 	if err != nil {
 		logger.Errorf("Scan for init card after upload file %s failed: %v", dirPath, err)
 		return e.EmacsReturn(ectx, err)

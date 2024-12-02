@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
-	emacs "github.com/sigma/go-emacs"
-	_ "github.com/sigma/go-emacs/gpl-compatible"
+
+	"memo/pkg/card"
 	"memo/pkg/emodule"
 	"memo/pkg/logger"
-	"memo/pkg/note"
 	memorg "memo/pkg/org"
+
+	"github.com/nekomeowww/elapsing"
+	emacs "github.com/sigma/go-emacs"
+	_ "github.com/sigma/go-emacs/gpl-compatible"
 )
 
 func init() {
@@ -30,15 +33,23 @@ func initModule(env emacs.Environment) {
 }
 
 func main() {
+	elapsing1 := elapsing.New()
+
 	api, err := memorg.NewOrgApi()
 	result, err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2024-10-22.org", true)
+	elapsing1.StepEnds()
+	fmt.Println("=======================================================\n", elapsing1.Stats(), "\n=======================================================")
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	napi, err := note.NewNoteApi()
+	capi, err := card.NewCardApi()
 	head, err := api.GetHeadlineByOrgID("73BAF7E2-F30B-44EC-BF2D-0581C82E8712")
 	fmt.Println(head)
-	_, err = napi.ScanOrgForNoteInit()
+
+	elapsing2 := elapsing.New()
+	_, err = capi.ScanOrgForCardInit()
+	elapsing2.StepEnds()
+	fmt.Println("=======================================================\n", elapsing2.Stats(), "\n=======================================================")
 	fmt.Println(result)
 }

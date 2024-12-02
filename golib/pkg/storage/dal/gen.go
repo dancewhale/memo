@@ -17,29 +17,29 @@ import (
 
 var (
 	Q         = new(Query)
+	Card      *card
 	File      *file
 	FsrsInfo  *fsrsInfo
 	Headline  *headline
-	Note      *note
 	ReviewLog *reviewLog
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	*Q = *Use(db, opts...)
+	Card = &Q.Card
 	File = &Q.File
 	FsrsInfo = &Q.FsrsInfo
 	Headline = &Q.Headline
-	Note = &Q.Note
 	ReviewLog = &Q.ReviewLog
 }
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
 		db:        db,
+		Card:      newCard(db, opts...),
 		File:      newFile(db, opts...),
 		FsrsInfo:  newFsrsInfo(db, opts...),
 		Headline:  newHeadline(db, opts...),
-		Note:      newNote(db, opts...),
 		ReviewLog: newReviewLog(db, opts...),
 	}
 }
@@ -47,10 +47,10 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 type Query struct {
 	db *gorm.DB
 
+	Card      card
 	File      file
 	FsrsInfo  fsrsInfo
 	Headline  headline
-	Note      note
 	ReviewLog reviewLog
 }
 
@@ -59,10 +59,10 @@ func (q *Query) Available() bool { return q.db != nil }
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
 		db:        db,
+		Card:      q.Card.clone(db),
 		File:      q.File.clone(db),
 		FsrsInfo:  q.FsrsInfo.clone(db),
 		Headline:  q.Headline.clone(db),
-		Note:      q.Note.clone(db),
 		ReviewLog: q.ReviewLog.clone(db),
 	}
 }
@@ -78,28 +78,28 @@ func (q *Query) WriteDB() *Query {
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
 		db:        db,
+		Card:      q.Card.replaceDB(db),
 		File:      q.File.replaceDB(db),
 		FsrsInfo:  q.FsrsInfo.replaceDB(db),
 		Headline:  q.Headline.replaceDB(db),
-		Note:      q.Note.replaceDB(db),
 		ReviewLog: q.ReviewLog.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
+	Card      *cardDo
 	File      *fileDo
 	FsrsInfo  *fsrsInfoDo
 	Headline  *headlineDo
-	Note      *noteDo
 	ReviewLog *reviewLogDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
+		Card:      q.Card.WithContext(ctx),
 		File:      q.File.WithContext(ctx),
 		FsrsInfo:  q.FsrsInfo.WithContext(ctx),
 		Headline:  q.Headline.WithContext(ctx),
-		Note:      q.Note.WithContext(ctx),
 		ReviewLog: q.ReviewLog.WithContext(ctx),
 	}
 }

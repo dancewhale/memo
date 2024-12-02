@@ -2,6 +2,8 @@ package org
 
 import (
 	"context"
+	"fmt"
+	"memo/pkg/org/db"
 	"os"
 
 	"memo/pkg/logger"
@@ -22,6 +24,19 @@ func NewOrgApi() (*OrgApi, error) {
 	DB, err := storage.InitDBEngine()
 
 	return &OrgApi{db: DB, hash: ""}, err
+}
+
+// 文件是否更新，更新则删除file的hash记录和相关headline，直到创建headline后变更hash。
+func (o *OrgApi) initFile2(filePath string, force bool) (file *storage.File, err error) {
+	f, err := NewFileFromPath(filePath)
+	if err != nil {
+		return nil, err
+	}
+	if err := f.Load(); err != nil {
+		return nil, err
+	}
+	_, _ = db.LoadHeadlinesFromDB(f.Meta.ID)
+	return nil, nil
 }
 
 // 确保id 的file记录存在，如果文件更新了则，删除file的hash记录和相关headline，直到创建headline后变更hash。
@@ -51,7 +66,7 @@ func (o *OrgApi) initFile(fileId string, filePath string, force bool) (file stor
 		existFile := existFileList[0]
 		if existFile.Hash != o.hash || force {
 			//file 记录存在且文件有更新或者force 为true，删除相关的headline 和file 的hash记录, 后续file相关head记录需要重新创建。
-			_, err = h.WithContext(context.Background()).Where(h.FileRefer.Eq(fileId)).Unscoped().Delete()
+			_, err = h.WithContext(context.Background()).Where(h.FileID.Eq(fileId)).Unscoped().Delete()
 			if err != nil {
 				return storage.File{}, logger.Errorf("Remove head record for file %s failed: %s", fileId, err.Error())
 			}
@@ -74,8 +89,13 @@ func (o *OrgApi) initFile(fileId string, filePath string, force bool) (file stor
 	}
 }
 
+func (o *OrgApi) UploadFile2(filePath string, force bool) (bool, error) {
+
+	//file = NewFileFromPath(filePath)
+	return true, nil
+}
+
 func (o *OrgApi) UploadFile(filePath string, force bool) (bool, error) {
-	h := dal.Use(o.db).Headline
 	fd := dal.Use(o.db).File
 
 	f, err := os.Open(filePath)
@@ -103,12 +123,16 @@ func (o *OrgApi) UploadFile(filePath string, force bool) (bool, error) {
 		return false, logger.Errorf("Upload file %s failed for doc.Write err: %v", filePath, err.Error())
 	}
 	if file.Hash == "" {
-		err = h.WithContext(context.Background()).Create(sql.Headline...)
+		for _, headline := range sql.Headlines {
+			// TODO: 此处需要替换，创建headline
+			fmt.Printf("headline: %v\n", headline)
+		}
 		if err != nil {
 			return false, logger.Errorf("Upload file %s failed: %s, when create headline.", fileID, err.Error())
 		}
-		for _, headline := range sql.Headline {
-			o.db.Session(&gorm.Session{FullSaveAssociations: true}).Updates(headline)
+		// TODO: 此处需要替换，创建headline
+		for _, headline := range sql.Headlines {
+			fmt.Printf("headline: %v\n", headline)
 		}
 		_, err = fd.WithContext(context.Background()).Where(fd.ID.Eq(file.ID)).UpdateSimple(fd.Hash.Value(o.hash))
 		if err != nil {
@@ -122,9 +146,10 @@ func (o *OrgApi) UploadFile(filePath string, force bool) (bool, error) {
 // GetNote 获取一张卡片,首先判断org是否有fsrs学习记录，没有
 func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	h := dal.Use(o.db).Headline
-	n := dal.Use(o.db).Note
+	c := dal.Use(o.db).Card
 
-	notes, err := n.WithContext(context.Background()).Where(n.Orgid.Eq(orgid)).Where(n.Type.IsNotNull()).Find()
+	// TODO: card 的type 绑定到headline 上,逻辑变了需要修正。
+	notes, err := c.WithContext(context.Background()).Where(c.Orgid.Eq(orgid)).Find()
 	if err != nil {
 		return nil, logger.Errorf("Get headline by orgid failed: %v", err)
 	}
