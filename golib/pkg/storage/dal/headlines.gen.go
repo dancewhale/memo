@@ -27,75 +27,69 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 
 	tableName := _headline.headlineDo.TableName()
 	_headline.ALL = field.NewAsterisk(tableName)
-	_headline.ID = field.NewUint(tableName, "id")
+	_headline.ID = field.NewString(tableName, "id")
 	_headline.CreatedAt = field.NewTime(tableName, "created_at")
 	_headline.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_headline.DeletedAt = field.NewField(tableName, "deleted_at")
 	_headline.Title = field.NewString(tableName, "title")
 	_headline.Content = field.NewString(tableName, "content")
 	_headline.Type = field.NewString(tableName, "type")
-	_headline.ParentID = field.NewInt(tableName, "parent_id")
+	_headline.ParentID = field.NewString(tableName, "parent_id")
 	_headline.Level = field.NewInt(tableName, "level")
 	_headline.Order_ = field.NewInt(tableName, "order")
 	_headline.Status = field.NewString(tableName, "status")
 	_headline.Priority = field.NewString(tableName, "priority")
 	_headline.FileID = field.NewString(tableName, "file_id")
-	_headline.OrgID = field.NewString(tableName, "org_id")
+	_headline.Fsrs = headlineHasOneFsrs{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Fsrs", "storage.FsrsInfo"),
+	}
+
 	_headline.Children = headlineHasManyChildren{
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("Children", "storage.Headline"),
 		File: struct {
 			field.RelationField
+			Headlines struct {
+				field.RelationField
+			}
 		}{
 			RelationField: field.NewRelation("Children.File", "storage.File"),
+			Headlines: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Children.File.Headlines", "storage.Headline"),
+			},
 		},
-		Card: struct {
+		Fsrs: struct {
 			field.RelationField
-			Fsrs struct {
-				field.RelationField
-			}
-			Headline struct {
-				field.RelationField
-			}
-			ReviewLogs struct {
-				field.RelationField
-			}
 		}{
-			RelationField: field.NewRelation("Children.Card", "storage.Card"),
-			Fsrs: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Children.Card.Fsrs", "storage.FsrsInfo"),
-			},
-			Headline: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Children.Card.Headline", "storage.Headline"),
-			},
-			ReviewLogs: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Children.Card.ReviewLogs", "storage.ReviewLog"),
-			},
+			RelationField: field.NewRelation("Children.Fsrs", "storage.FsrsInfo"),
 		},
 		Children: struct {
 			field.RelationField
 		}{
 			RelationField: field.NewRelation("Children.Children", "storage.Headline"),
 		},
+		ReviewLogs: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Children.ReviewLogs", "storage.ReviewLog"),
+		},
+	}
+
+	_headline.ReviewLogs = headlineHasManyReviewLogs{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("ReviewLogs", "storage.ReviewLog"),
 	}
 
 	_headline.File = headlineBelongsToFile{
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("File", "storage.File"),
-	}
-
-	_headline.Card = headlineBelongsToCard{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("Card", "storage.Card"),
 	}
 
 	_headline.fillFieldMap()
@@ -107,25 +101,26 @@ type headline struct {
 	headlineDo
 
 	ALL       field.Asterisk
-	ID        field.Uint
+	ID        field.String
 	CreatedAt field.Time
 	UpdatedAt field.Time
 	DeletedAt field.Field
 	Title     field.String
 	Content   field.String
 	Type      field.String
-	ParentID  field.Int
+	ParentID  field.String
 	Level     field.Int
 	Order_    field.Int
 	Status    field.String
 	Priority  field.String
 	FileID    field.String
-	OrgID     field.String
-	Children  headlineHasManyChildren
+	Fsrs      headlineHasOneFsrs
+
+	Children headlineHasManyChildren
+
+	ReviewLogs headlineHasManyReviewLogs
 
 	File headlineBelongsToFile
-
-	Card headlineBelongsToCard
 
 	fieldMap map[string]field.Expr
 }
@@ -142,20 +137,19 @@ func (h headline) As(alias string) *headline {
 
 func (h *headline) updateTableName(table string) *headline {
 	h.ALL = field.NewAsterisk(table)
-	h.ID = field.NewUint(table, "id")
+	h.ID = field.NewString(table, "id")
 	h.CreatedAt = field.NewTime(table, "created_at")
 	h.UpdatedAt = field.NewTime(table, "updated_at")
 	h.DeletedAt = field.NewField(table, "deleted_at")
 	h.Title = field.NewString(table, "title")
 	h.Content = field.NewString(table, "content")
 	h.Type = field.NewString(table, "type")
-	h.ParentID = field.NewInt(table, "parent_id")
+	h.ParentID = field.NewString(table, "parent_id")
 	h.Level = field.NewInt(table, "level")
 	h.Order_ = field.NewInt(table, "order")
 	h.Status = field.NewString(table, "status")
 	h.Priority = field.NewString(table, "priority")
 	h.FileID = field.NewString(table, "file_id")
-	h.OrgID = field.NewString(table, "org_id")
 
 	h.fillFieldMap()
 
@@ -186,7 +180,6 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["status"] = h.Status
 	h.fieldMap["priority"] = h.Priority
 	h.fieldMap["file_id"] = h.FileID
-	h.fieldMap["org_id"] = h.OrgID
 
 }
 
@@ -200,6 +193,77 @@ func (h headline) replaceDB(db *gorm.DB) headline {
 	return h
 }
 
+type headlineHasOneFsrs struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a headlineHasOneFsrs) Where(conds ...field.Expr) *headlineHasOneFsrs {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineHasOneFsrs) WithContext(ctx context.Context) *headlineHasOneFsrs {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineHasOneFsrs) Session(session *gorm.Session) *headlineHasOneFsrs {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineHasOneFsrs) Model(m *storage.Headline) *headlineHasOneFsrsTx {
+	return &headlineHasOneFsrsTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineHasOneFsrsTx struct{ tx *gorm.Association }
+
+func (a headlineHasOneFsrsTx) Find() (result *storage.FsrsInfo, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineHasOneFsrsTx) Append(values ...*storage.FsrsInfo) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineHasOneFsrsTx) Replace(values ...*storage.FsrsInfo) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineHasOneFsrsTx) Delete(values ...*storage.FsrsInfo) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineHasOneFsrsTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineHasOneFsrsTx) Count() int64 {
+	return a.tx.Count()
+}
+
 type headlineHasManyChildren struct {
 	db *gorm.DB
 
@@ -207,20 +271,17 @@ type headlineHasManyChildren struct {
 
 	File struct {
 		field.RelationField
+		Headlines struct {
+			field.RelationField
+		}
 	}
-	Card struct {
+	Fsrs struct {
 		field.RelationField
-		Fsrs struct {
-			field.RelationField
-		}
-		Headline struct {
-			field.RelationField
-		}
-		ReviewLogs struct {
-			field.RelationField
-		}
 	}
 	Children struct {
+		field.RelationField
+	}
+	ReviewLogs struct {
 		field.RelationField
 	}
 }
@@ -287,6 +348,77 @@ func (a headlineHasManyChildrenTx) Clear() error {
 }
 
 func (a headlineHasManyChildrenTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type headlineHasManyReviewLogs struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a headlineHasManyReviewLogs) Where(conds ...field.Expr) *headlineHasManyReviewLogs {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineHasManyReviewLogs) WithContext(ctx context.Context) *headlineHasManyReviewLogs {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineHasManyReviewLogs) Session(session *gorm.Session) *headlineHasManyReviewLogs {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineHasManyReviewLogs) Model(m *storage.Headline) *headlineHasManyReviewLogsTx {
+	return &headlineHasManyReviewLogsTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineHasManyReviewLogsTx struct{ tx *gorm.Association }
+
+func (a headlineHasManyReviewLogsTx) Find() (result []*storage.ReviewLog, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineHasManyReviewLogsTx) Append(values ...*storage.ReviewLog) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineHasManyReviewLogsTx) Replace(values ...*storage.ReviewLog) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineHasManyReviewLogsTx) Delete(values ...*storage.ReviewLog) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineHasManyReviewLogsTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineHasManyReviewLogsTx) Count() int64 {
 	return a.tx.Count()
 }
 
@@ -358,77 +490,6 @@ func (a headlineBelongsToFileTx) Clear() error {
 }
 
 func (a headlineBelongsToFileTx) Count() int64 {
-	return a.tx.Count()
-}
-
-type headlineBelongsToCard struct {
-	db *gorm.DB
-
-	field.RelationField
-}
-
-func (a headlineBelongsToCard) Where(conds ...field.Expr) *headlineBelongsToCard {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a headlineBelongsToCard) WithContext(ctx context.Context) *headlineBelongsToCard {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a headlineBelongsToCard) Session(session *gorm.Session) *headlineBelongsToCard {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a headlineBelongsToCard) Model(m *storage.Headline) *headlineBelongsToCardTx {
-	return &headlineBelongsToCardTx{a.db.Model(m).Association(a.Name())}
-}
-
-type headlineBelongsToCardTx struct{ tx *gorm.Association }
-
-func (a headlineBelongsToCardTx) Find() (result *storage.Card, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a headlineBelongsToCardTx) Append(values ...*storage.Card) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a headlineBelongsToCardTx) Replace(values ...*storage.Card) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a headlineBelongsToCardTx) Delete(values ...*storage.Card) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a headlineBelongsToCardTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a headlineBelongsToCardTx) Count() int64 {
 	return a.tx.Count()
 }
 

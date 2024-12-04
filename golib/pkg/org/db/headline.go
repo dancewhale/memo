@@ -2,36 +2,87 @@ package db
 
 import (
 	"context"
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+
+	"github.com/gohugoio/hashstructure"
 )
 
-// 该文件中的函数用于数据库中对Headline表的操作，包括文件的创建，更新，删除等操作。
-
-func LoadHeadlineFromDB(id string) (*storage.Headline, error) {
-	r := dal.Use(storage.Engine).Headline
-	headlines, err := r.WithContext(context.Background()).Where(r.OrgID.Eq(id)).Find()
-	if err != nil {
-		return nil, logger.Errorf("Headline search error for %s: %v", id, err)
-	}
-	if len(headlines) == 0 {
-		return nil, nil
-	} else if len(headlines) == 1 {
-		return headlines[0], nil
-	} else {
-		return nil, logger.Errorf("Headline search error for %s: more than one record found", id)
-	}
+type Headline struct {
+	Data     storage.Headline
+	Children []Headline
+	Hash     uint64
 }
 
-// 从数据库中加载file的第一层级headline数据。
-// TODO: wait for fix.
-func LoadHeadlinesFromDB(fileId string) ([]*storage.Headline, error) {
-	r := dal.Use(storage.Engine).Headline
-	headlines, err := r.WithContext(context.Background()).Where(r.OrgID.Eq(fileId)).Find()
+func (h *Headline) update() error {
+	headline := dal.Use(storage.Engine).Headline
+	_, err := headline.WithContext(context.Background()).Updates(&h.Data)
 	if err != nil {
-		return nil, logger.Errorf("Headline search error for %s: %v", fileId, err)
+		return logger.Errorf("Insert headline %v error: %v", h.Data, err)
 	}
-	return headlines, nil
+	return nil
+}
+
+func (h *Headline) create() error {
+	headline := dal.Use(storage.Engine).Headline
+	err := headline.WithContext(context.Background()).Create(&h.Data)
+	if err != nil {
+		return logger.Errorf("Insert headline %v error: %v", h.Data, err)
+	}
+	return nil
+}
+
+func LoadHeadsByFileIDFromDB(fileID string) (*HeadsCache, error) {
+	headsCache := HeadsCache{FileID: fileID, HeadlineMap: linkedhashmap.New()}
+	if err := headsCache.loadHeadlinesFromDB(); err != nil {
+		return nil, err
+	}
+	return &headsCache, nil
+}
+
+type HeadsCache struct {
+	FileID      string
+	HeadlineMap *linkedhashmap.Map // { hashid: Headline{} ... }
+}
+
+// Load all headline attach id from database.
+func (h *HeadsCache) loadHeadlinesFromDB() error {
+	headline := dal.Use(storage.Engine).Headline
+	headlines, err := headline.WithContext(context.Background()).Where(headline.FileID.Eq(h.FileID)).Find()
+	if err != nil {
+		return logger.Errorf("Headlines load for file %s error: %v", h.FileID, err)
+	}
+	if len(headlines) != 0 {
+		for _, headline := range headlines {
+			hash, err := hashstructure.Hash(*headline, nil)
+			if err != nil {
+				return logger.Errorf("Hash headline struct error: %v", err)
+			}
+			head := Headline{Data: *headline, Hash: hash}
+			h.HeadlineMap.Put(headline.ID, head)
+		}
+	}
+	return nil
+}
+
+func (h *HeadsCache) UpdateHeadlineToDB(headFromFileCache *linkedhashmap.Map) error {
+	it := headFromFileCache.Iterator()
+	var err error
+	for it.Begin(); it.Next(); {
+		id, value := it.Key(), it.Value()
+		head := value.(Headline)
+		if headFromDB, ok := h.HeadlineMap.Get(id); ok {
+			if headFromDB.(Headline).Hash != head.Hash {
+				err = head.update()
+			} else {
+				continue
+			}
+		} else {
+			err = head.create()
+		}
+	}
+	return err
 }

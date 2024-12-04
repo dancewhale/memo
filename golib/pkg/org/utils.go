@@ -10,7 +10,6 @@ import (
 
 	"memo/cmd/libmemo/options"
 	"memo/pkg/logger"
-	"memo/pkg/storage"
 )
 
 var emacsVar = options.EmacsEnvInit()
@@ -30,20 +29,21 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 	return result
 }
 
-func getNoteIdType(pd *org.PropertyDrawer) storage.Card {
+func getHeadlineIdType(pd *org.PropertyDrawer) (string, *string) {
+	var id string
+	var headType *string
 	if pd != nil {
-		card := storage.Card{}
 		for _, kvPair := range pd.Properties {
 			k, v := kvPair[0], kvPair[1]
 			if k == emacsVar.MemoIdProverty && v != "" {
-				card.Orgid = v
+				id = v
+			}
+			if k == emacsVar.MemoTypeProverty && v != "" {
+				headType = &v
 			}
 		}
-		if card.Orgid != "" {
-			return card
-		}
 	}
-	return storage.Card{}
+	return id, headType
 }
 
 func getFileID(d *org.Document) string {

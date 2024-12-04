@@ -28,8 +28,44 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 	tableName := _file.fileDo.TableName()
 	_file.ALL = field.NewAsterisk(tableName)
 	_file.ID = field.NewString(tableName, "id")
+	_file.CreatedAt = field.NewTime(tableName, "created_at")
+	_file.UpdatedAt = field.NewTime(tableName, "updated_at")
+	_file.DeletedAt = field.NewField(tableName, "deleted_at")
 	_file.FilePath = field.NewString(tableName, "file_path")
 	_file.Hash = field.NewString(tableName, "hash")
+	_file.Headlines = fileHasManyHeadlines{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Headlines", "storage.Headline"),
+		File: struct {
+			field.RelationField
+			Headlines struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headlines.File", "storage.File"),
+			Headlines: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headlines.File.Headlines", "storage.Headline"),
+			},
+		},
+		Fsrs: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headlines.Fsrs", "storage.FsrsInfo"),
+		},
+		Children: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headlines.Children", "storage.Headline"),
+		},
+		ReviewLogs: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headlines.ReviewLogs", "storage.ReviewLog"),
+		},
+	}
 
 	_file.fillFieldMap()
 
@@ -39,10 +75,14 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 type file struct {
 	fileDo
 
-	ALL      field.Asterisk
-	ID       field.String
-	FilePath field.String
-	Hash     field.String
+	ALL       field.Asterisk
+	ID        field.String
+	CreatedAt field.Time
+	UpdatedAt field.Time
+	DeletedAt field.Field
+	FilePath  field.String
+	Hash      field.String
+	Headlines fileHasManyHeadlines
 
 	fieldMap map[string]field.Expr
 }
@@ -60,6 +100,9 @@ func (f file) As(alias string) *file {
 func (f *file) updateTableName(table string) *file {
 	f.ALL = field.NewAsterisk(table)
 	f.ID = field.NewString(table, "id")
+	f.CreatedAt = field.NewTime(table, "created_at")
+	f.UpdatedAt = field.NewTime(table, "updated_at")
+	f.DeletedAt = field.NewField(table, "deleted_at")
 	f.FilePath = field.NewString(table, "file_path")
 	f.Hash = field.NewString(table, "hash")
 
@@ -78,10 +121,14 @@ func (f *file) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (f *file) fillFieldMap() {
-	f.fieldMap = make(map[string]field.Expr, 3)
+	f.fieldMap = make(map[string]field.Expr, 7)
 	f.fieldMap["id"] = f.ID
+	f.fieldMap["created_at"] = f.CreatedAt
+	f.fieldMap["updated_at"] = f.UpdatedAt
+	f.fieldMap["deleted_at"] = f.DeletedAt
 	f.fieldMap["file_path"] = f.FilePath
 	f.fieldMap["hash"] = f.Hash
+
 }
 
 func (f file) clone(db *gorm.DB) file {
@@ -92,6 +139,93 @@ func (f file) clone(db *gorm.DB) file {
 func (f file) replaceDB(db *gorm.DB) file {
 	f.fileDo.ReplaceDB(db)
 	return f
+}
+
+type fileHasManyHeadlines struct {
+	db *gorm.DB
+
+	field.RelationField
+
+	File struct {
+		field.RelationField
+		Headlines struct {
+			field.RelationField
+		}
+	}
+	Fsrs struct {
+		field.RelationField
+	}
+	Children struct {
+		field.RelationField
+	}
+	ReviewLogs struct {
+		field.RelationField
+	}
+}
+
+func (a fileHasManyHeadlines) Where(conds ...field.Expr) *fileHasManyHeadlines {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a fileHasManyHeadlines) WithContext(ctx context.Context) *fileHasManyHeadlines {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a fileHasManyHeadlines) Session(session *gorm.Session) *fileHasManyHeadlines {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a fileHasManyHeadlines) Model(m *storage.File) *fileHasManyHeadlinesTx {
+	return &fileHasManyHeadlinesTx{a.db.Model(m).Association(a.Name())}
+}
+
+type fileHasManyHeadlinesTx struct{ tx *gorm.Association }
+
+func (a fileHasManyHeadlinesTx) Find() (result []*storage.Headline, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a fileHasManyHeadlinesTx) Append(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a fileHasManyHeadlinesTx) Replace(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a fileHasManyHeadlinesTx) Delete(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a fileHasManyHeadlinesTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a fileHasManyHeadlinesTx) Count() int64 {
+	return a.tx.Count()
 }
 
 type fileDo struct{ gen.DO }

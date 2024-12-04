@@ -1,6 +1,9 @@
 package org
 
 import (
+	"github.com/gohugoio/hashstructure"
+	"memo/pkg/logger"
+	"memo/pkg/org/db"
 	"regexp"
 	"strings"
 
@@ -28,7 +31,7 @@ type SqlWriter struct {
 	org.OrgWriter
 	// 用于存储headline 结构体的堆栈
 	stack     *arraystack.Stack
-	Headlines []Headline
+	Headlines []db.Headline
 	fileId    string
 }
 
@@ -64,28 +67,30 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	org.WriteNodes(w, h.Children...)
 	title := w.WriteNodesAsString(h.Title...)
 	content := w.WriteHeadlineContentAsString(h.Children...)
-	note := getNoteIdType(h.Properties)
-	var noteID *string
-	if note.Orgid != "" {
-		noteID = &note.Orgid
-	} else {
-		noteID = nil
-	}
-	headline := Headline{
-		storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
+	id, headtype := getHeadlineIdType(h.Properties)
+
+	headline := db.Headline{
+		Data: storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 			Content: content, Priority: h.Priority,
-			Card:   note,
 			FileID: w.fileId,
-			OrgID:  noteID,
+			ID:     id,
+			Type:   headtype,
 		},
-		[]Headline{},
+		Children: []db.Headline{},
 	}
+	hash, err := hashstructure.Hash(headline.Data, nil)
+	if err != nil {
+		logger.Errorf("Hash headline error: %v", err)
+		panic(err)
+	}
+	headline.Hash = hash
+
 	// 深度优先遍历
 	for {
 		preHeadline, _ := w.stack.Pop()
 		if preHeadline != nil {
-			if preHeadline.(Headline).Level == headline.Level+1 {
-				headline.Children = append(headline.Children, preHeadline.(Headline))
+			if preHeadline.(db.Headline).Data.Level == headline.Data.Level+1 {
+				headline.Children = append(headline.Children, preHeadline.(db.Headline))
 			} else {
 				w.stack.Push(preHeadline)
 				break

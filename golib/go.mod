@@ -6,9 +6,8 @@ toolchain go1.22.2
 
 require (
 	github.com/emirpasic/gods v1.18.1
-	github.com/jinzhu/copier v0.4.0
+	github.com/gohugoio/hashstructure v0.1.0
 	github.com/karrick/godirwalk v1.17.0
-	github.com/maniartech/gotime v1.1.0
 	github.com/nekomeowww/elapsing v1.3.0
 	github.com/niklasfasching/go-org v1.7.0
 	github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0

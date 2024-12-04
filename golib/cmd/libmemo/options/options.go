@@ -88,8 +88,14 @@ func (e *EmacsEnv) GetMemoDBConnMaxLifetime() time.Duration {
 }
 
 func (e *EmacsEnv) GetMemoLogLevel() int {
-	e.MemoLogLevel, _ = strconv.Atoi(os.Getenv("MEMO_LOG_LEVEL"))
-	return e.MemoLogLevel
+	level, exist := os.LookupEnv("MEMO_LOG_LEVEL")
+	if !exist {
+		e.MemoLogLevel = -1
+		return e.MemoLogLevel
+	} else {
+		e.MemoLogLevel, _ = strconv.Atoi(level)
+		return e.MemoLogLevel
+	}
 }
 
 func (e *EmacsEnv) GetMemoDbLogLevel() logger.LogLevel {

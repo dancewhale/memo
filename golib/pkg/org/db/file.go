@@ -2,36 +2,76 @@ package db
 
 import (
 	"context"
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
-
-	"gorm.io/gorm"
 )
 
-// 该文件中的函数用于数据库中对File表的操作，包括文件的创建，更新，删除等操作。
-
-func LoadFileFromDB(id string) (*storage.File, error) {
-	r := dal.Use(storage.Engine).File
-	file := storage.File{ID: id}
-	files, err := r.WithContext(context.Background()).Where(r.ID.Eq(id)).Find()
+// load file and headline from db.
+// file data prepare for hash check.
+func LoadFileFromDB(id string) (*File, error) {
+	f := dal.Use(storage.Engine).File
+	file, err := f.WithContext(context.Background()).Where(f.ID.Eq(id)).Find()
+	var filedb File
 	if err != nil {
-		return nil, logger.Errorf("File search error for %s: %v", id, err)
+		return nil, logger.Errorf("Load id %s file from db error for %v", id, err)
 	}
-	if len(files) == 0 {
-		err := r.WithContext(context.Background()).Create(&file)
-		if err != nil {
-			return nil, logger.Errorf("Create file record %s failed: %s", id, err.Error())
-		}
-		return &file, nil
-	} else if len(files) == 1 {
-		return files[0], nil
+	if len(file) == 0 {
+		filedb = File{}
+	} else if len(file) > 1 {
+		return nil, logger.Errorf("Find more than one file with the same id %s", id)
 	} else {
-		return nil, logger.Errorf("File search error for %s: more than one record found", id)
+		filedb = File{ID: id, Hash: file[0].Hash, FilePath: file[0].FilePath}
 	}
+	if err := filedb.loadHeadCache(); err != nil {
+		return nil, err
+	}
+	return &filedb, nil
 }
 
-func Save(file storage.File) {
-	storage.Engine.Session(&gorm.Session{FullSaveAssociations: true}).Updates(file)
+// 该文件中的函数用于数据库中对File表的操作，包括文件的创建，更新，删除等操作。
+type File struct {
+	ID       string
+	Hash     string
+	FilePath string
+	hcache   *HeadsCache
+}
+
+func (f *File) loadHeadCache() error {
+	h, err := LoadHeadsByFileIDFromDB(f.ID)
+	if err != nil {
+		return err
+	}
+	f.hcache = h
+	return nil
+}
+
+func (f *File) Update(id, hash, filePath string, headFromFileCache *linkedhashmap.Map) error {
+	fd := dal.Use(storage.Engine).File
+	file := storage.File{ID: id, Hash: hash, FilePath: filePath}
+	_, err := fd.WithContext(context.Background()).Updates(&file)
+	if err != nil {
+		return logger.Errorf("Create file in db error: %v", err)
+	}
+	err = f.hcache.UpdateHeadlineToDB(headFromFileCache)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (f *File) Create(id, hash, filePath string, headFromFileCache *linkedhashmap.Map) error {
+	fd := dal.Use(storage.Engine).File
+	file := storage.File{ID: id, Hash: hash, FilePath: filePath}
+	err := fd.WithContext(context.Background()).Create(&file)
+	if err != nil {
+		return logger.Errorf("Create file in db error: %v", err)
+	}
+	err = f.hcache.UpdateHeadlineToDB(headFromFileCache)
+	if err != nil {
+		return err
+	}
+	return nil
 }

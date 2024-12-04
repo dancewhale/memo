@@ -2,16 +2,24 @@ package storage
 
 import (
 	"gorm.io/gorm"
+	"time"
 )
 
 type File struct {
-	ID       string `gorm:"primaryKey;unique;not null"`
-	FilePath string
-	Hash     string
+	ID        string `gorm:"primaryKey;not null"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	FilePath  string         `gorm:"primaryKey;not null"`
+	Hash      string
+	Headlines []Headline
 }
 
 type Headline struct {
-	gorm.Model
+	ID        string `gorm:"primarykey;not null"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 
 	// 标题
 	Title string `json:"title"`
@@ -20,7 +28,7 @@ type Headline struct {
 	// 类型
 	Type *string `json:"type"`
 	// 父级ID
-	ParentID int `json:"parent_id"`
+	ParentID string `json:"parent_id"`
 	// 层级
 	Level int `json:"level"`
 	// 同一层级下的排序
@@ -28,11 +36,10 @@ type Headline struct {
 	// 任务状态
 	Status string `json:"status"`
 	// 优先级
-	Priority string     `json:"priority"`
-	Children []Headline `gorm:"foreignKey:ParentID" json:"children"`
-	FileID   string
-	File     File `gorm:"foreignKey:FileID;references:ID" json:"file"`
-	// note 引用包含orgid和type
-	OrgID *string
-	Card  Card `gorm:"foreignKey:OrgID;references:Orgid" json:"-"`
+	Priority   string     `json:"priority"`
+	Children   []Headline `gorm:"foreignKey:ParentID" json:"children"`
+	FileID     string     `gorm:"primaryKey;not null"`
+	File       File       `gorm:"foreignKey:FileID;references:ID" json:"file"`
+	Fsrs       FsrsInfo
+	ReviewLogs []ReviewLog
 }

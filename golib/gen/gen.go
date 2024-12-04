@@ -12,7 +12,7 @@ func main() {
 		Mode:    gen.WithoutContext | gen.WithDefaultQuery,
 	})
 
-	g.ApplyBasic(storage.Card{}, storage.FsrsInfo{}, storage.ReviewLog{}, storage.Headline{}, storage.File{})
+	g.ApplyBasic(storage.FsrsInfo{}, storage.ReviewLog{}, storage.Headline{}, storage.File{})
 
 	g.Execute()
 }

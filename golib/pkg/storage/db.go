@@ -27,7 +27,7 @@ func InitDBEngine() (*gorm.DB, error) {
 			return nil, err
 		}
 	}
-	err = Engine.AutoMigrate(&Card{}, &FsrsInfo{}, &ReviewLog{}, &Headline{}, &File{})
+	err = Engine.AutoMigrate(&FsrsInfo{}, &ReviewLog{}, &Headline{}, &File{})
 	if err != nil {
 		return nil, err
 	}

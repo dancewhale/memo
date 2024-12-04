@@ -30,12 +30,14 @@ func newReviewLog(db *gorm.DB, opts ...gen.DOOption) reviewLog {
 	_reviewLog.ID = field.NewUint(tableName, "id")
 	_reviewLog.CreatedAt = field.NewTime(tableName, "created_at")
 	_reviewLog.UpdatedAt = field.NewTime(tableName, "updated_at")
+	_reviewLog.DeletedAt = field.NewField(tableName, "deleted_at")
 	_reviewLog.Rating = field.NewInt8(tableName, "rating")
 	_reviewLog.ScheduledDays = field.NewUint64(tableName, "scheduled_days")
 	_reviewLog.ElapsedDays = field.NewUint64(tableName, "elapsed_days")
 	_reviewLog.Review = field.NewTime(tableName, "review")
 	_reviewLog.State = field.NewInt8(tableName, "state")
-	_reviewLog.CardOrgid = field.NewString(tableName, "card_orgid")
+	_reviewLog.CardID = field.NewUint(tableName, "card_id")
+	_reviewLog.HeadlineID = field.NewString(tableName, "headline_id")
 
 	_reviewLog.fillFieldMap()
 
@@ -49,12 +51,14 @@ type reviewLog struct {
 	ID            field.Uint
 	CreatedAt     field.Time
 	UpdatedAt     field.Time
+	DeletedAt     field.Field
 	Rating        field.Int8
 	ScheduledDays field.Uint64
 	ElapsedDays   field.Uint64
 	Review        field.Time
 	State         field.Int8
-	CardOrgid     field.String
+	CardID        field.Uint
+	HeadlineID    field.String
 
 	fieldMap map[string]field.Expr
 }
@@ -74,12 +78,14 @@ func (r *reviewLog) updateTableName(table string) *reviewLog {
 	r.ID = field.NewUint(table, "id")
 	r.CreatedAt = field.NewTime(table, "created_at")
 	r.UpdatedAt = field.NewTime(table, "updated_at")
+	r.DeletedAt = field.NewField(table, "deleted_at")
 	r.Rating = field.NewInt8(table, "rating")
 	r.ScheduledDays = field.NewUint64(table, "scheduled_days")
 	r.ElapsedDays = field.NewUint64(table, "elapsed_days")
 	r.Review = field.NewTime(table, "review")
 	r.State = field.NewInt8(table, "state")
-	r.CardOrgid = field.NewString(table, "card_orgid")
+	r.CardID = field.NewUint(table, "card_id")
+	r.HeadlineID = field.NewString(table, "headline_id")
 
 	r.fillFieldMap()
 
@@ -96,16 +102,18 @@ func (r *reviewLog) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (r *reviewLog) fillFieldMap() {
-	r.fieldMap = make(map[string]field.Expr, 9)
+	r.fieldMap = make(map[string]field.Expr, 11)
 	r.fieldMap["id"] = r.ID
 	r.fieldMap["created_at"] = r.CreatedAt
 	r.fieldMap["updated_at"] = r.UpdatedAt
+	r.fieldMap["deleted_at"] = r.DeletedAt
 	r.fieldMap["rating"] = r.Rating
 	r.fieldMap["scheduled_days"] = r.ScheduledDays
 	r.fieldMap["elapsed_days"] = r.ElapsedDays
 	r.fieldMap["review"] = r.Review
 	r.fieldMap["state"] = r.State
-	r.fieldMap["card_orgid"] = r.CardOrgid
+	r.fieldMap["card_id"] = r.CardID
+	r.fieldMap["headline_id"] = r.HeadlineID
 }
 
 func (r reviewLog) clone(db *gorm.DB) reviewLog {

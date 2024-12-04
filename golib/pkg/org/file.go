@@ -8,11 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/niklasfasching/go-org/org"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
-	"memo/pkg/storage"
-
-	"github.com/niklasfasching/go-org/org"
 )
 
 // 分为两种操作，File 类中数据由文件查询加载， File.Data 由类由数据库查询加载。
@@ -53,13 +51,14 @@ type MetaInfo struct {
 
 type File struct {
 	// store the data for file from database.
-	Data *storage.File
+	Data *db.File
 	// store the data parse from file in disk.
-	Content  string
-	FilePath string
-	Hash     string
-	Meta     *MetaInfo
-	doc      *org.Document
+	Content   string
+	FilePath  string
+	Hash      string
+	Meta      *MetaInfo
+	doc       *org.Document
+	HeadCache *HeadlineCacheMap
 }
 
 // getHash returns the md5 hash of the file content
@@ -104,7 +103,7 @@ func (f *File) parseContent() error {
 	return nil
 }
 
-// 解析获取Document 的相关元数据，比如文件的id、tag和其他属性。
+// 解析获取Document 的所有数据.
 // TODO:  增加File 类型描述字段。
 func (f *File) parseDocument() error {
 	if err := f.parseContent(); err != nil {
@@ -115,10 +114,19 @@ func (f *File) parseDocument() error {
 	if f.Meta == nil {
 		return logger.Errorf("File %s has no id Property.", f.FilePath)
 	}
+	sql := NewSqlWriter()
+	sql.fileId = f.Meta.ID
+	_, err := f.doc.Write(sql)
+	if err != nil {
+		return logger.Errorf("Parse Document use org writer failed: %v", err)
+	}
+	f.HeadCache, err = NewHeadlineCache(sql.Headlines, f.Meta.ID)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-// 整体加载文件数据
 func (f *File) Load() error {
 	if err := f.getHash(); err != nil {
 		return err
@@ -126,25 +134,52 @@ func (f *File) Load() error {
 	if err := f.parseDocument(); err != nil {
 		return err
 	}
-	file, err := db.LoadFileFromDB(f.Meta.ID)
+	filedb, err := db.LoadFileFromDB(f.Meta.ID)
 	if err != nil {
 		return err
-	} else {
-		f.Data = file
+	} else if filedb != nil {
+		f.Data = filedb
 	}
 	return nil
 }
 
-// 解析获取Document 的Headline 数据。
-func (f *File) UpdateHashDB() {
+// check if file not exist in db or changed after last update to db.
+func (f *File) ifNeedUpdate() (bool, error) {
 	// Check if the file content has changed
-	err := f.getHash()
-	if err != nil {
-		logger.Errorf("Get file hash failed: %v", err)
+	if f.Data == nil {
+		return false, logger.Errorf("File Data init error when load file.")
 	}
-	if f.Hash != f.Data.Hash && f.Hash != "" {
+	if f.Hash != f.Data.Hash {
 		// The file content has changed
 		f.Data.Hash = f.Hash
 		logger.Infof("File %s content has changed, updating hash to %s.", f.FilePath, f.Hash)
+		return true, nil
+	} else {
+		// The file content has not changed
+		logger.Infof("File %s content has not changed.", f.FilePath)
+		return false, nil
+	}
+}
+
+func (f *File) UpdateFile(force bool) error {
+	// Check if the file content has changed
+	needUpdate, err := f.ifNeedUpdate()
+	if err != nil {
+		return err
+	}
+	if !needUpdate && !force {
+		return nil
+	} else {
+		// create file record if id not exist.
+		if f.Data.ID == "" {
+			err = f.Data.Create(f.Meta.ID, f.Hash, f.FilePath, f.HeadCache.HeadlinesFileCache)
+		} else {
+			err = f.Data.Update(f.Meta.ID, f.Hash, f.FilePath, f.HeadCache.HeadlinesFileCache)
+		}
+		if err != nil {
+			return err
+		} else {
+			return nil
+		}
 	}
 }

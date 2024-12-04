@@ -3,7 +3,6 @@ package org
 import (
 	"context"
 	"fmt"
-	"memo/pkg/org/db"
 	"os"
 
 	"memo/pkg/logger"
@@ -27,16 +26,20 @@ func NewOrgApi() (*OrgApi, error) {
 }
 
 // 文件是否更新，更新则删除file的hash记录和相关headline，直到创建headline后变更hash。
-func (o *OrgApi) initFile2(filePath string, force bool) (file *storage.File, err error) {
+// force mean alway update file even hash is same.
+func (o *OrgApi) UploadFile2(filePath string, force bool) error {
 	f, err := NewFileFromPath(filePath)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if err := f.Load(); err != nil {
-		return nil, err
+		return err
 	}
-	_, _ = db.LoadHeadlinesFromDB(f.Meta.ID)
-	return nil, nil
+	if f.Data.Hash != f.Hash || force {
+		return f.UpdateFile(force)
+	} else {
+		return nil
+	}
 }
 
 // 确保id 的file记录存在，如果文件更新了则，删除file的hash记录和相关headline，直到创建headline后变更hash。
@@ -87,12 +90,6 @@ func (o *OrgApi) initFile(fileId string, filePath string, force bool) (file stor
 			return file, nil
 		}
 	}
-}
-
-func (o *OrgApi) UploadFile2(filePath string, force bool) (bool, error) {
-
-	//file = NewFileFromPath(filePath)
-	return true, nil
 }
 
 func (o *OrgApi) UploadFile(filePath string, force bool) (bool, error) {
@@ -146,17 +143,16 @@ func (o *OrgApi) UploadFile(filePath string, force bool) (bool, error) {
 // GetNote 获取一张卡片,首先判断org是否有fsrs学习记录，没有
 func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	h := dal.Use(o.db).Headline
-	c := dal.Use(o.db).Card
 
 	// TODO: card 的type 绑定到headline 上,逻辑变了需要修正。
-	notes, err := c.WithContext(context.Background()).Where(c.Orgid.Eq(orgid)).Find()
+	notes, err := h.WithContext(context.Background()).Where(h.ID.Eq(orgid)).Find()
 	if err != nil {
 		return nil, logger.Errorf("Get headline by orgid failed: %v", err)
 	}
 	if len(notes) == 0 {
 		return nil, logger.Errorf("The orgid your request has no memo card")
 	} else {
-		headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.OrgID.Eq(notes[0].Orgid)).Find()
+		headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.ID.Eq(notes[0].ID)).Find()
 		if err != nil {
 			return nil, logger.Errorf("Get headline by orgid failed: %v", err)
 		} else if len(headlines) == 0 {
@@ -172,7 +168,7 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 					return nil, logger.Errorf("GetHeadlineByOrgID %s failed because upload failed: %v", orgid, err.Error())
 				}
 			}
-			headlines, err = h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.OrgID.Eq(notes[0].Orgid)).Find()
+			headlines, err = h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.ID.Eq(notes[0].ID)).Find()
 			if err != nil {
 				return nil, logger.Errorf("GetHeadlineByOrgID %s failed for headline search error: %v", orgid, err.Error())
 			}

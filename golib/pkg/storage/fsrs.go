@@ -1,10 +1,8 @@
 package storage
 
 import (
-	"gorm.io/gorm"
-	"time"
-
 	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
+	"gorm.io/gorm"
 )
 
 var QuestionType string = "Question"
@@ -58,28 +56,16 @@ func IntToRate(rate int8) gfsrs.Rating {
 	}
 }
 
-type Card struct {
-	Orgid      string `gorm:"primaryKey;index"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	DeletedAt  gorm.DeletedAt `gorm:"index"`
-	Headline   []Headline     `gorm:"foreignKey:OrgID"`
-	Fsrs       FsrsInfo
-	ReviewLogs []ReviewLog
-}
-
 type FsrsInfo struct {
-	ID         uint `gorm:"primarykey"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	gorm.Model
 	gfsrs.Card `gorm:"embedded"`
-	CardOrgid  string
+	CardID     uint
+	HeadlineID string
 }
 
 type ReviewLog struct {
-	ID              uint `gorm:"primarykey"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	gorm.Model
 	gfsrs.ReviewLog `gorm:"embedded",json:"Flog"`
-	CardOrgid       string
+	CardID          uint
+	HeadlineID      string
 }
