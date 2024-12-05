@@ -36,7 +36,7 @@ func (h *Headline) create() error {
 }
 
 func LoadHeadsByFileIDFromDB(fileID string) (*HeadsCache, error) {
-	headsCache := HeadsCache{FileID: fileID, HeadlineMap: linkedhashmap.New()}
+	headsCache := HeadsCache{FileID: fileID, HeadFromDBCache: linkedhashmap.New()}
 	if err := headsCache.loadHeadlinesFromDB(); err != nil {
 		return nil, err
 	}
@@ -44,8 +44,8 @@ func LoadHeadsByFileIDFromDB(fileID string) (*HeadsCache, error) {
 }
 
 type HeadsCache struct {
-	FileID      string
-	HeadlineMap *linkedhashmap.Map // { hashid: Headline{} ... }
+	FileID          string
+	HeadFromDBCache *linkedhashmap.Map // { hashid: Headline{} ... }
 }
 
 // Load all headline attach id from database.
@@ -57,31 +57,50 @@ func (h *HeadsCache) loadHeadlinesFromDB() error {
 	}
 	if len(headlines) != 0 {
 		for _, headline := range headlines {
-			hash, err := hashstructure.Hash(*headline, nil)
+			options := hashstructure.HashOptions{IgnoreZeroValue: true, ZeroNil: true}
+			hash, err := hashstructure.Hash(*headline, &options)
 			if err != nil {
 				return logger.Errorf("Hash headline struct error: %v", err)
 			}
 			head := Headline{Data: *headline, Hash: hash}
-			h.HeadlineMap.Put(headline.ID, head)
+			h.HeadFromDBCache.Put(headline.ID, head)
 		}
 	}
 	return nil
 }
 
+// 通过对比两个缓存，进行对比更新数据库中的headline
 func (h *HeadsCache) UpdateHeadlineToDB(headFromFileCache *linkedhashmap.Map) error {
-	it := headFromFileCache.Iterator()
+	itFile := headFromFileCache.Iterator()
 	var err error
-	for it.Begin(); it.Next(); {
-		id, value := it.Key(), it.Value()
-		head := value.(Headline)
-		if headFromDB, ok := h.HeadlineMap.Get(id); ok {
-			if headFromDB.(Headline).Hash != head.Hash {
-				err = head.update()
+	for itFile.Begin(); itFile.Next(); {
+		id, value := itFile.Key(), itFile.Value()
+		headFile := value.(Headline)
+		if headFromDB, ok := h.HeadFromDBCache.Get(id); ok {
+			if headFromDB.(Headline).Hash != headFile.Hash {
+				err = headFile.update()
+				h.HeadFromDBCache.Remove(id)
 			} else {
 				continue
 			}
 		} else {
-			err = head.create()
+			err = headFile.create()
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	// Unattach the headline from fileid which still left in dbcache map.
+	itDB := h.HeadFromDBCache.Iterator()
+	for itDB.Begin(); itDB.Next(); {
+		_, head := itDB.Key(), itDB.Value()
+		headDB := head.(Headline)
+		headDB.Data.FileID = ""
+		headDB.Data.ParentID = ""
+		err = headDB.update()
+		if err != nil {
+			return err
 		}
 	}
 	return err

@@ -36,7 +36,6 @@ func newReviewLog(db *gorm.DB, opts ...gen.DOOption) reviewLog {
 	_reviewLog.ElapsedDays = field.NewUint64(tableName, "elapsed_days")
 	_reviewLog.Review = field.NewTime(tableName, "review")
 	_reviewLog.State = field.NewInt8(tableName, "state")
-	_reviewLog.CardID = field.NewUint(tableName, "card_id")
 	_reviewLog.HeadlineID = field.NewString(tableName, "headline_id")
 
 	_reviewLog.fillFieldMap()
@@ -57,7 +56,6 @@ type reviewLog struct {
 	ElapsedDays   field.Uint64
 	Review        field.Time
 	State         field.Int8
-	CardID        field.Uint
 	HeadlineID    field.String
 
 	fieldMap map[string]field.Expr
@@ -84,7 +82,6 @@ func (r *reviewLog) updateTableName(table string) *reviewLog {
 	r.ElapsedDays = field.NewUint64(table, "elapsed_days")
 	r.Review = field.NewTime(table, "review")
 	r.State = field.NewInt8(table, "state")
-	r.CardID = field.NewUint(table, "card_id")
 	r.HeadlineID = field.NewString(table, "headline_id")
 
 	r.fillFieldMap()
@@ -102,7 +99,7 @@ func (r *reviewLog) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (r *reviewLog) fillFieldMap() {
-	r.fieldMap = make(map[string]field.Expr, 11)
+	r.fieldMap = make(map[string]field.Expr, 10)
 	r.fieldMap["id"] = r.ID
 	r.fieldMap["created_at"] = r.CreatedAt
 	r.fieldMap["updated_at"] = r.UpdatedAt
@@ -112,7 +109,6 @@ func (r *reviewLog) fillFieldMap() {
 	r.fieldMap["elapsed_days"] = r.ElapsedDays
 	r.fieldMap["review"] = r.Review
 	r.fieldMap["state"] = r.State
-	r.fieldMap["card_id"] = r.CardID
 	r.fieldMap["headline_id"] = r.HeadlineID
 }
 

@@ -3,7 +3,9 @@ package org
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"github.com/emirpasic/gods/stacks/arraystack"
 	"io"
+	"memo/pkg/org/db"
 	"os"
 
 	"github.com/niklasfasching/go-org/org"
@@ -13,10 +15,6 @@ import (
 )
 
 var emacsVar = options.EmacsEnvInit()
-
-func isRawTextBlock(name string) bool {
-	return name == "SRC" || name == "EXAMPLE" || name == "EXPORT"
-}
 
 // 用于对[]org.Nodes 过滤
 func Filter[T any](slice []T, predicate func(T) bool) []T {
@@ -103,4 +101,22 @@ func getFileMeta(d *org.Document) *MetaInfo {
 		}
 	}
 	return nil
+}
+
+func getHeadOrder(stack *arraystack.Stack, currentHead db.Headline) int {
+	order := 1
+	if stack.Size() == 0 {
+		return order
+	}
+	it := stack.Iterator()
+	for it.End(); it.Prev(); {
+		v := it.Value()
+		if v.(db.Headline).Data.Level == currentHead.Data.Level {
+			order++
+		} else {
+			break
+		}
+	}
+	return order
+
 }

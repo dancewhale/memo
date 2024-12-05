@@ -59,13 +59,11 @@ func IntToRate(rate int8) gfsrs.Rating {
 type FsrsInfo struct {
 	gorm.Model
 	gfsrs.Card `gorm:"embedded"`
-	CardID     uint
 	HeadlineID string
 }
 
 type ReviewLog struct {
 	gorm.Model
 	gfsrs.ReviewLog `gorm:"embedded",json:"Flog"`
-	CardID          uint
 	HeadlineID      string
 }

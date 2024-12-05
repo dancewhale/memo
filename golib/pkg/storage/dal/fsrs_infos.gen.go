@@ -40,7 +40,6 @@ func newFsrsInfo(db *gorm.DB, opts ...gen.DOOption) fsrsInfo {
 	_fsrsInfo.Lapses = field.NewUint64(tableName, "lapses")
 	_fsrsInfo.State = field.NewInt8(tableName, "state")
 	_fsrsInfo.LastReview = field.NewTime(tableName, "last_review")
-	_fsrsInfo.CardID = field.NewUint(tableName, "card_id")
 	_fsrsInfo.HeadlineID = field.NewString(tableName, "headline_id")
 
 	_fsrsInfo.fillFieldMap()
@@ -65,7 +64,6 @@ type fsrsInfo struct {
 	Lapses        field.Uint64
 	State         field.Int8
 	LastReview    field.Time
-	CardID        field.Uint
 	HeadlineID    field.String
 
 	fieldMap map[string]field.Expr
@@ -96,7 +94,6 @@ func (f *fsrsInfo) updateTableName(table string) *fsrsInfo {
 	f.Lapses = field.NewUint64(table, "lapses")
 	f.State = field.NewInt8(table, "state")
 	f.LastReview = field.NewTime(table, "last_review")
-	f.CardID = field.NewUint(table, "card_id")
 	f.HeadlineID = field.NewString(table, "headline_id")
 
 	f.fillFieldMap()
@@ -114,7 +111,7 @@ func (f *fsrsInfo) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (f *fsrsInfo) fillFieldMap() {
-	f.fieldMap = make(map[string]field.Expr, 15)
+	f.fieldMap = make(map[string]field.Expr, 14)
 	f.fieldMap["id"] = f.ID
 	f.fieldMap["created_at"] = f.CreatedAt
 	f.fieldMap["updated_at"] = f.UpdatedAt
@@ -128,7 +125,6 @@ func (f *fsrsInfo) fillFieldMap() {
 	f.fieldMap["lapses"] = f.Lapses
 	f.fieldMap["state"] = f.State
 	f.fieldMap["last_review"] = f.LastReview
-	f.fieldMap["card_id"] = f.CardID
 	f.fieldMap["headline_id"] = f.HeadlineID
 }
 

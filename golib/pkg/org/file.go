@@ -120,7 +120,7 @@ func (f *File) parseDocument() error {
 	if err != nil {
 		return logger.Errorf("Parse Document use org writer failed: %v", err)
 	}
-	f.HeadCache, err = NewHeadlineCache(sql.Headlines, f.Meta.ID)
+	f.HeadCache, err = NewHeadlineCache(sql.Headlines, f.Meta.ID, f.FilePath)
 	if err != nil {
 		return err
 	}

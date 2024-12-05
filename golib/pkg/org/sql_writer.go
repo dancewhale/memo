@@ -1,8 +1,6 @@
 package org
 
 import (
-	"github.com/gohugoio/hashstructure"
-	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"regexp"
 	"strings"
@@ -68,7 +66,6 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	title := w.WriteNodesAsString(h.Title...)
 	content := w.WriteHeadlineContentAsString(h.Children...)
 	id, headtype := getHeadlineIdType(h.Properties)
-
 	headline := db.Headline{
 		Data: storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 			Content: content, Priority: h.Priority,
@@ -78,19 +75,15 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 		},
 		Children: []db.Headline{},
 	}
-	hash, err := hashstructure.Hash(headline.Data, nil)
-	if err != nil {
-		logger.Errorf("Hash headline error: %v", err)
-		panic(err)
-	}
-	headline.Hash = hash
 
 	// 深度优先遍历
 	for {
 		preHeadline, _ := w.stack.Pop()
 		if preHeadline != nil {
-			if preHeadline.(db.Headline).Data.Level == headline.Data.Level+1 {
-				headline.Children = append(headline.Children, preHeadline.(db.Headline))
+			ph := preHeadline.(db.Headline)
+			if ph.Data.Level == headline.Data.Level+1 {
+				ph.Data.ParentID = headline.Data.ID
+				headline.Children = append(headline.Children, ph)
 			} else {
 				w.stack.Push(preHeadline)
 				break
@@ -100,9 +93,16 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 		}
 	}
 
+	if h.Lvl == 1 {
+		headline.Data.Order = len(w.Headlines) + 1
+	} else {
+		headline.Data.Order = getHeadOrder(w.stack, headline)
+	}
+
 	w.stack.Push(headline)
 	if h.Lvl == 1 {
 		w.stack.Pop()
 		w.Headlines = append(w.Headlines, headline)
 	}
+
 }
