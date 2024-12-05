@@ -82,8 +82,9 @@ func hash(filePath string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func getFileMeta(d *org.Document) *MetaInfo {
+func getFileMeta(d *org.Document) (*MetaInfo, error) {
 	if len(d.Nodes) != 0 {
+		meta := MetaInfo{}
 		for _, node := range d.Nodes {
 			switch n := node.(type) {
 			case org.Headline:
@@ -92,9 +93,12 @@ func getFileMeta(d *org.Document) *MetaInfo {
 				for _, kvPair := range n.Properties {
 					k, v := kvPair[0], kvPair[1]
 					if k == emacsVar.MemoIdProverty && v != "" {
-						meta := MetaInfo{}
-						meta.ID = v
-						return &meta
+						if meta.ID == "" {
+							meta.ID = v
+						} else {
+							return nil, logger.Errorf("Found more than one file id.")
+						}
+						return &meta, nil
 					}
 				}
 			}

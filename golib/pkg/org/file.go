@@ -109,7 +109,10 @@ func (f *File) parseDocument() error {
 	if err := f.parseContent(); err != nil {
 		return err
 	} else {
-		f.Meta = getFileMeta(f.doc)
+		f.Meta, err = getFileMeta(f.doc)
+		if err != nil {
+			return err
+		}
 	}
 	if f.Meta == nil {
 		return logger.Errorf("File %s has no id Property.", f.FilePath)
