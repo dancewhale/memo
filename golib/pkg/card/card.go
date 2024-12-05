@@ -193,7 +193,7 @@ func (api *CardApi) ScanHeadlineInitFsrs() ([]*storage.Headline, error) {
 		fsrsinfo := storage.FsrsInfo{}
 		fsrsinfo.Card = gfsrs.NewCard()
 		fsrsinfo.HeadlineID = head.ID
-		api.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fsrsinfo)
+		fsrsInfo.WithContext(context.Background()).Create(&fsrsinfo)
 	}
 	return heads, err
 }

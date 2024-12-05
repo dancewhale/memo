@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/sigma/go-emacs"
+	"memo/pkg/card"
 	"memo/pkg/emodule"
 	"memo/pkg/logger"
 
@@ -36,13 +37,16 @@ func main() {
 
 	api, _ := memorg.NewOrgApi()
 	elapsing1 := elapsing.New()
-	//err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2024-10-22.org", true)
-	err := api.UploadFilesUnderDir("/Users/whale/Dropbox/roam/", true)
+	err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2024-10-22.org", true)
+	err = api.UploadFile("/Users/whale/Seafile/Dropbox/roam/20200402150453-记忆力的几个本质要点.org", true)
+	//err := api.UploadFilesUnderDir("/Users/whale/Dropbox/roam/", true)
 	elapsing1.StepEnds()
 	fmt.Println("=======================================================\n", elapsing1.Stats(), "\n=======================================================")
 	if err != nil {
 		fmt.Println(err)
 	}
+	capi, _ := card.NewCardApi()
+	capi.ScanHeadlineInitFsrs()
 
 	//capi, err := card.NewCardApi()
 	//head, err := api.GetHeadlineByOrgID("73BAF7E2-F30B-44EC-BF2D-0581C82E8712")
