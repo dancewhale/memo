@@ -86,24 +86,8 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 			return nil, nil
 		} else if len(headlines) == 1 {
 			return headlines[0], nil
-		} else if len(headlines) > 1 {
-			// 多个headline引用了一个orgid，尝试修复, 重新上传相关文件，删除多余的headline
-			for _, headline := range headlines {
-				err := o.UploadFile(headline.File.FilePath, true)
-				if err != nil {
-					return nil, logger.Errorf("GetHeadlineByOrgID %s failed because upload failed: %v", orgid, err.Error())
-				}
-			}
-			headlines, err = h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.ID.Eq(notes[0].ID)).Find()
-			if err != nil {
-				return nil, logger.Errorf("GetHeadlineByOrgID %s failed for headline search error: %v", orgid, err.Error())
-			}
-			if len(headlines) == 1 {
-				return headlines[0], nil
-			} else if len(headlines) > 1 {
-				return nil, logger.Errorf("orgid %s has no headline attach to it.", orgid)
-			}
+		} else {
+			return nil, logger.Errorf("The orgid %s has more than one headline attach to it.", orgid)
 		}
 	}
-	return nil, nil
 }
