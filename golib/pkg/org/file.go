@@ -17,7 +17,8 @@ import (
 // 数据库操作函数放在storage 中做为底层操作函数。
 func NewFileFromPath(filePath string) (*File, error) {
 	if filepath.Ext(filePath) != ".org" {
-		return nil, logger.Errorf("The file %s is not a org file.", filePath)
+		logger.Infof("The file %s is not a org file, skip this file.", filePath)
+		return nil, nil
 	}
 	info, err := os.Stat(filePath)
 	if os.IsNotExist(err) {

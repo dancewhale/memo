@@ -33,6 +33,10 @@
   (org-set-property memo-prop-note-type "default")
   (org-id-get-create))
 
+(defun memo-open-package-dir ()
+  (interactive)
+  (dired "/Users/whale/.emacs.d/.local/straight/repos/memo/"))
+
 
 
 ;; setting config for memo.
@@ -43,6 +47,7 @@
     "s-e l P"      'memo-sync-db
     "s-e l b"      'memo-goto-org
     "s-e l r"      'memo-review-note
+    "s-e l h"      'memo-open-package-dir
 )
 
 

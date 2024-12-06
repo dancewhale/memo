@@ -2,6 +2,7 @@ package org
 
 import (
 	"context"
+	"errors"
 	"github.com/karrick/godirwalk"
 	"gorm.io/gorm"
 	"memo/pkg/logger"
@@ -27,6 +28,8 @@ func (o *OrgApi) UploadFile(filePath string, force bool) error {
 	f, err := NewFileFromPath(filePath)
 	if err != nil {
 		return err
+	} else if f == nil {
+		return nil
 	}
 	if err := f.Load(); err != nil {
 		return err
@@ -47,7 +50,11 @@ func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
 			// example here:
 			if strings.Contains(osPathname, ".org") && !de.IsDir() {
 				err := e.UploadFile(osPathname, needForce)
-				if err != nil {
+				if errors.Is(err, MissFileID) {
+					return nil
+				} else if errors.Is(err, FoundDupID) {
+					return nil
+				} else if err != nil {
 					return logger.Errorf("Upload file %s failed: %v", osPathname, err)
 				}
 				return godirwalk.SkipThis
@@ -71,7 +78,7 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	if len(notes) == 0 {
 		return nil, logger.Errorf("The orgid your request has no memo card")
 	} else {
-		headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.ID.Eq(notes[0].ID)).Find()
+		headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.ID.Eq(orgid)).Find()
 		if err != nil {
 			return nil, logger.Errorf("Get headline by orgid failed: %v", err)
 		} else if len(headlines) == 0 {

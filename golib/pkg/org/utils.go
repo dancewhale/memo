@@ -27,9 +27,9 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 	return result
 }
 
-func getHeadlineIdType(pd *org.PropertyDrawer) (string, *string) {
+func getHeadlineIdType(pd *org.PropertyDrawer) (string, string) {
 	var id string
-	var headType *string
+	var headType string
 	if pd != nil {
 		for _, kvPair := range pd.Properties {
 			k, v := kvPair[0], kvPair[1]
@@ -37,7 +37,7 @@ func getHeadlineIdType(pd *org.PropertyDrawer) (string, *string) {
 				id = v
 			}
 			if k == emacsVar.MemoTypeProverty && v != "" {
-				headType = &v
+				headType = v
 			}
 		}
 	}
@@ -96,7 +96,8 @@ func getFileMeta(d *org.Document) (*MetaInfo, error) {
 						if meta.ID == "" {
 							meta.ID = v
 						} else {
-							return nil, logger.Errorf("Found more than one file id.")
+							logger.Warnf("Found duplicate id: %s in file %s.", v, d.Path)
+							return nil, FoundDupID
 						}
 						return &meta, nil
 					}
@@ -104,7 +105,8 @@ func getFileMeta(d *org.Document) (*MetaInfo, error) {
 			}
 		}
 	}
-	return nil
+	logger.Warnf("No content in file %s.", d.Path)
+	return nil, MissFileID
 }
 
 func getHeadOrder(stack *arraystack.Stack, currentHead db.Headline) int {

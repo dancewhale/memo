@@ -26,7 +26,7 @@ type Headline struct {
 	// 内容
 	Content string `json:"content"`
 	// 类型
-	Type *string `json:"type"`
+	Type string `json:"type"`
 	// 父级ID
 	ParentID string `json:"parent_id"`
 	// 层级
