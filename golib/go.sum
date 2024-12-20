@@ -48,8 +48,6 @@ github.com/microsoft/go-mssqldb v0.17.0 h1:Fto83dMZPnYv1Zwx5vHHxpNraeEaUlQ/hhHLg
 github.com/microsoft/go-mssqldb v0.17.0/go.mod h1:OkoNGhGEs8EZqchVTtochlXruEhEOaO4S0d2sB5aeGQ=
 github.com/nekomeowww/elapsing v1.3.0 h1:umpsRhiqKBe2mvGVtMitFRxKscxJRtGFTAUqHAgSK4U=
 github.com/nekomeowww/elapsing v1.3.0/go.mod h1:N+GzIHEwhUcCx3cPOw0F2NSeQ5th5XBy90ld+lv3Ksw=
-github.com/niklasfasching/go-org v1.7.0 h1:vyMdcMWWTe/XmANk19F4k8XGBYg0GQ/gJGMimOjGMek=
-github.com/niklasfasching/go-org v1.7.0/go.mod h1:WuVm4d45oePiE0eX25GqTDQIt/qPW1T9DGkRscqLW5o=
 github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0 h1:lDY1dURLg5xYGbCcz9bxB7c+1v36+wZRYnSHOdQloPA=
 github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0/go.mod h1:zTtQIk3kOO9kweg5zJAgbdwBXR2HBPsDN0k6AxmTpzY=
 github.com/pkg/profile v1.6.0/go.mod h1:qBsxPvzyUincmltOk6iyRVxHYg4adc0OFOv72ZdLa18=

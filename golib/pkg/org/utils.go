@@ -3,12 +3,13 @@ package org
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/emirpasic/gods/stacks/arraystack"
 	"io"
 	"memo/pkg/org/db"
 	"os"
 
-	"github.com/niklasfasching/go-org/org"
+	"github.com/emirpasic/gods/stacks/arraystack"
+
+	"github.com/dancewhale/go-org/org"
 
 	"memo/cmd/libmemo/options"
 	"memo/pkg/logger"

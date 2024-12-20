@@ -5,13 +5,13 @@ go 1.22.0
 toolchain go1.22.2
 
 require (
+	github.com/dancewhale/go-org v0.0.0-20241220095456-9099a6162e03
 	github.com/emirpasic/gods v1.18.1
 	github.com/gohugoio/hashstructure v0.1.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/karrick/godirwalk v1.17.0
 	github.com/maniartech/gotime v1.1.0
 	github.com/nekomeowww/elapsing v1.3.0
-	github.com/niklasfasching/go-org v1.7.0
 	github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0
 	github.com/sigma/go-emacs v0.0.1
 	go.uber.org/zap v1.26.0
@@ -20,6 +20,8 @@ require (
 	gorm.io/gorm v1.25.10
 	gorm.io/plugin/dbresolver v1.5.1
 )
+
+replace github.com/dancewhale/go-org v0.0.0-20241220095456-9099a6162e03 => ./go-org
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect

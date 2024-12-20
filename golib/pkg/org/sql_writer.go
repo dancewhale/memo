@@ -7,8 +7,8 @@ import (
 
 	"memo/pkg/storage"
 
+	"github.com/dancewhale/go-org/org"
 	"github.com/emirpasic/gods/stacks/arraystack"
-	"github.com/niklasfasching/go-org/org"
 )
 
 var exampleBlockUnescapeRegexp = regexp.MustCompile(`(^|\n)([ \t]*)(\*|,\*|#\+|,#\+)`)

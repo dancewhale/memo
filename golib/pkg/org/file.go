@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/niklasfasching/go-org/org"
+	"github.com/dancewhale/go-org/org"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 )
