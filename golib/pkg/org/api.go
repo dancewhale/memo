@@ -70,24 +70,15 @@ func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
 func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	h := dal.Use(o.db).Headline
 
-	// TODO: card 的type 绑定到headline 上,逻辑变了需要修正。
-	notes, err := h.WithContext(context.Background()).Where(h.ID.Eq(orgid)).Find()
+	headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.ID.Eq(orgid)).Find()
 	if err != nil {
 		return nil, logger.Errorf("Get headline by orgid failed: %v", err)
-	}
-	if len(notes) == 0 {
-		return nil, logger.Errorf("The orgid your request has no memo card")
+	} else if len(headlines) == 0 {
+		logger.Warnf("orgid %s has no headline attach to it.", orgid)
+		return nil, nil
+	} else if len(headlines) == 1 {
+		return headlines[0], nil
 	} else {
-		headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.ID.Eq(orgid)).Find()
-		if err != nil {
-			return nil, logger.Errorf("Get headline by orgid failed: %v", err)
-		} else if len(headlines) == 0 {
-			logger.Warnf("orgid %s has no headline attach to it.", orgid)
-			return nil, nil
-		} else if len(headlines) == 1 {
-			return headlines[0], nil
-		} else {
-			return nil, logger.Errorf("The orgid %s has more than one headline attach to it.", orgid)
-		}
+		return nil, logger.Errorf("The orgid %s has more than one headline attach to it.", orgid)
 	}
 }
