@@ -10,15 +10,16 @@ import (
 type Headline struct {
 	Data     storage.Headline
 	Children []Headline
-	Hash     uint64
+	Hash     []byte
 }
 
 func (h *Headline) update() error {
-	headline := dal.Use(storage.Engine).Headline
-	_, err := headline.WithContext(context.Background()).Updates(&h.Data)
+	clock := dal.Use(storage.Engine).Clock
+	_, err := clock.WithContext(context.Background()).Unscoped().Where(clock.HeadlineID.Eq(h.Data.ID)).Delete()
 	if err != nil {
-		return logger.Errorf("Insert headline %v error: %v", h.Data, err)
+		return logger.Errorf("Delete logbook of head %s error: %v", h.Data.ID, err)
 	}
+	storage.Engine.Save(h.Data)
 	return nil
 }
 

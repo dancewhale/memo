@@ -2,7 +2,6 @@ package org
 
 import (
 	"memo/pkg/org/db"
-	"regexp"
 	"strings"
 
 	"memo/pkg/storage"
@@ -10,19 +9,6 @@ import (
 	"github.com/dancewhale/go-org/org"
 	"github.com/emirpasic/gods/stacks/arraystack"
 )
-
-var exampleBlockUnescapeRegexp = regexp.MustCompile(`(^|\n)([ \t]*)(\*|,\*|#\+|,#\+)`)
-
-var emphasisOrgBorders = map[string][]string{
-	"_":   {"_", "_"},
-	"*":   {"*", "*"},
-	"/":   {"/", "/"},
-	"+":   {"+", "+"},
-	"~":   {"~", "~"},
-	"=":   {"=", "="},
-	"_{}": {"_{", "}"},
-	"^{}": {"^{", "}"},
-}
 
 // SqlWriter an org document into database.
 type SqlWriter struct {
@@ -50,10 +36,7 @@ func (w *SqlWriter) After(d *org.Document)  {}
 func (w *SqlWriter) WriteHeadlineContentAsString(nodes ...org.Node) string {
 	builder := w.Builder
 	w.Builder = strings.Builder{}
-	contentNode := Filter(nodes, func(n org.Node) bool {
-		_, ok := n.(org.Headline)
-		return !ok
-	})
+	contentNode := Filter(nodes, FilterContentForHeadline)
 	org.WriteNodes(w, contentNode...)
 	out := w.String()
 	w.Builder = builder
@@ -69,9 +52,13 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	headline := db.Headline{
 		Data: storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 			Content: content, Priority: h.Priority,
-			FileID: w.fileId,
-			ID:     id,
-			Type:   headtype,
+			FileID:    w.fileId,
+			ID:        id,
+			Type:      headtype,
+			Scheduled: h.TaskTime.GetScheduled(),
+			Deadline:  h.TaskTime.GetDeadline(),
+			Closed:    h.TaskTime.GetClosed(),
+			LogBook:   GetLogBookFromDrawer(h.LogBook),
 		},
 		Children: []db.Headline{},
 	}
@@ -105,4 +92,22 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 		w.Headlines = append(w.Headlines, headline)
 	}
 
+}
+
+// change org.Logbook class to storage.Clock.
+func GetLogBookFromDrawer(logBook *org.LogBookDrawer) []*storage.Clock {
+	if logBook == nil {
+		return nil
+	} else if len(logBook.Clocks) == 0 {
+		return nil
+	}
+	logs := make([]*storage.Clock, 0)
+	for _, c := range logBook.Clocks {
+		log := &storage.Clock{
+			Start: c.GetStart(),
+			End:   c.GetEnd(),
+		}
+		logs = append(logs, log)
+	}
+	return logs
 }

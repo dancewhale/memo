@@ -48,20 +48,21 @@ func (f *File) loadHeadCache() error {
 	return nil
 }
 
-func (f *File) Update(id, hash, filePath string, headFromFileCache *linkedhashmap.Map) error {
+func (f *File) Update(id, hash, filePath string, headFromFileCache *linkedhashmap.Map, force bool) error {
 	fd := dal.Use(storage.Engine).File
 	file := storage.File{ID: id, Hash: hash, FilePath: filePath}
 	_, err := fd.WithContext(context.Background()).Updates(&file)
 	if err != nil {
 		return logger.Errorf("Create file in db error: %v", err)
 	}
-	err = f.hcache.UpdateHeadlineToDB(headFromFileCache)
+	err = f.hcache.UpdateHeadlineToDB(headFromFileCache, force)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// 文件id 不存在创建记录并更新headline
 func (f *File) Create(id, hash, filePath string, headFromFileCache *linkedhashmap.Map) error {
 	fd := dal.Use(storage.Engine).File
 	file := storage.File{ID: id, Hash: hash, FilePath: filePath}
@@ -69,7 +70,7 @@ func (f *File) Create(id, hash, filePath string, headFromFileCache *linkedhashma
 	if err != nil {
 		return logger.Errorf("Create file in db error: %v", err)
 	}
-	err = f.hcache.UpdateHeadlineToDB(headFromFileCache)
+	err = f.hcache.UpdateHeadlineToDB(headFromFileCache, false)
 	if err != nil {
 		return err
 	}

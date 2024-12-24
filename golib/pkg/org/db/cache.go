@@ -1,11 +1,11 @@
 package db
 
 import (
+	"bytes"
 	"context"
 
+	"github.com/creker/hashstructure"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
-	"github.com/gohugoio/hashstructure"
-
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
@@ -34,7 +34,7 @@ func (h *HeadsCache) loadHeadlinesFromDB() error {
 	if len(headlines) != 0 {
 		for _, headline := range headlines {
 			options := hashstructure.HashOptions{IgnoreZeroValue: true, ZeroNil: true}
-			hash, err := hashstructure.Hash(*headline, &options)
+			hash, err := hashstructure.Hash(*headline, hashstructure.FormatV2, &options)
 			if err != nil {
 				return logger.Errorf("Hash headline struct error: %v", err)
 			}
@@ -46,14 +46,14 @@ func (h *HeadsCache) loadHeadlinesFromDB() error {
 }
 
 // 通过对比两个缓存，进行对比更新数据库中的headline
-func (h *HeadsCache) UpdateHeadlineToDB(headFromFileCache *linkedhashmap.Map) error {
+func (h *HeadsCache) UpdateHeadlineToDB(headFromFileCache *linkedhashmap.Map, force bool) error {
 	itFile := headFromFileCache.Iterator()
 	var err error
 	for itFile.Begin(); itFile.Next(); {
 		id, value := itFile.Key(), itFile.Value()
 		headFile := value.(Headline)
 		if headFromDB, ok := h.HeadFromDBCache.Get(id); ok {
-			if headFromDB.(Headline).Hash != headFile.Hash {
+			if !bytes.Equal(headFromDB.(Headline).Hash, headFile.Hash) || force {
 				err = headFile.update()
 				h.HeadFromDBCache.Remove(id)
 			} else {

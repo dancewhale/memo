@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"time"
 )
@@ -34,7 +35,10 @@ type Headline struct {
 	// 同一层级下的排序
 	Order int `json:"order"`
 	// 任务状态
-	Status string `json:"status"`
+	Status    string     `json:"status"`
+	Scheduled *time.Time `json:"scheduled"`
+	Deadline  *time.Time `json:"deadline"`
+	Closed    *time.Time `json:"closed"`
 	// 优先级
 	Priority   string      `json:"priority"`
 	Children   []Headline  `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
@@ -42,4 +46,25 @@ type Headline struct {
 	File       File        `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
 	Fsrs       FsrsInfo    `hash:"ignore"`
 	ReviewLogs []ReviewLog `hash:"ignore"`
+	LogBook    []*Clock    `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
+}
+
+type Clock struct {
+	gorm.Model
+	HeadlineID string   `gorm:"not null"`
+	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
+	Start      *time.Time
+	End        *time.Time
+}
+
+func (c Clock) String() string {
+	start := "nil"
+	end := "nil"
+	if c.Start != nil {
+		start = c.Start.Format("2006-01-02 15:04:05")
+	}
+	if c.End != nil {
+		end = c.End.Format("2006-01-02 15:04:05")
+	}
+	return fmt.Sprintf("Clock{Start: %s, End: %s}", start, end)
 }

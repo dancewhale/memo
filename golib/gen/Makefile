@@ -1,6 +1,6 @@
 GO ?= go
 EMACS ?= emacs
 
-run:
+db:
 	rm -rf ../pkg/storage/dal
 	$(GO) run ./

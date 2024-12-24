@@ -38,6 +38,8 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.Level = field.NewInt(tableName, "level")
 	_headline.Order_ = field.NewInt(tableName, "order")
 	_headline.Status = field.NewString(tableName, "status")
+	_headline.Scheduled = field.NewTime(tableName, "scheduled")
+	_headline.Deadline = field.NewTime(tableName, "deadline")
 	_headline.Priority = field.NewString(tableName, "priority")
 	_headline.FileID = field.NewString(tableName, "file_id")
 	_headline.Fsrs = headlineHasOneFsrs{
@@ -78,12 +80,31 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		}{
 			RelationField: field.NewRelation("Children.ReviewLogs", "storage.ReviewLog"),
 		},
+		LogBook: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Children.LogBook", "storage.Clock"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Children.LogBook.Headline", "storage.Headline"),
+			},
+		},
 	}
 
 	_headline.ReviewLogs = headlineHasManyReviewLogs{
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("ReviewLogs", "storage.ReviewLog"),
+	}
+
+	_headline.LogBook = headlineHasManyLogBook{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("LogBook", "storage.Clock"),
 	}
 
 	_headline.File = headlineBelongsToFile{
@@ -112,6 +133,8 @@ type headline struct {
 	Level     field.Int
 	Order_    field.Int
 	Status    field.String
+	Scheduled field.Time
+	Deadline  field.Time
 	Priority  field.String
 	FileID    field.String
 	Fsrs      headlineHasOneFsrs
@@ -119,6 +142,8 @@ type headline struct {
 	Children headlineHasManyChildren
 
 	ReviewLogs headlineHasManyReviewLogs
+
+	LogBook headlineHasManyLogBook
 
 	File headlineBelongsToFile
 
@@ -148,6 +173,8 @@ func (h *headline) updateTableName(table string) *headline {
 	h.Level = field.NewInt(table, "level")
 	h.Order_ = field.NewInt(table, "order")
 	h.Status = field.NewString(table, "status")
+	h.Scheduled = field.NewTime(table, "scheduled")
+	h.Deadline = field.NewTime(table, "deadline")
 	h.Priority = field.NewString(table, "priority")
 	h.FileID = field.NewString(table, "file_id")
 
@@ -166,7 +193,7 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 17)
+	h.fieldMap = make(map[string]field.Expr, 20)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
@@ -178,6 +205,8 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["level"] = h.Level
 	h.fieldMap["order"] = h.Order_
 	h.fieldMap["status"] = h.Status
+	h.fieldMap["scheduled"] = h.Scheduled
+	h.fieldMap["deadline"] = h.Deadline
 	h.fieldMap["priority"] = h.Priority
 	h.fieldMap["file_id"] = h.FileID
 
@@ -283,6 +312,12 @@ type headlineHasManyChildren struct {
 	}
 	ReviewLogs struct {
 		field.RelationField
+	}
+	LogBook struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
 	}
 }
 
@@ -419,6 +454,77 @@ func (a headlineHasManyReviewLogsTx) Clear() error {
 }
 
 func (a headlineHasManyReviewLogsTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type headlineHasManyLogBook struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a headlineHasManyLogBook) Where(conds ...field.Expr) *headlineHasManyLogBook {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineHasManyLogBook) WithContext(ctx context.Context) *headlineHasManyLogBook {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineHasManyLogBook) Session(session *gorm.Session) *headlineHasManyLogBook {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineHasManyLogBook) Model(m *storage.Headline) *headlineHasManyLogBookTx {
+	return &headlineHasManyLogBookTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineHasManyLogBookTx struct{ tx *gorm.Association }
+
+func (a headlineHasManyLogBookTx) Find() (result []*storage.Clock, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineHasManyLogBookTx) Append(values ...*storage.Clock) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineHasManyLogBookTx) Replace(values ...*storage.Clock) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineHasManyLogBookTx) Delete(values ...*storage.Clock) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineHasManyLogBookTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineHasManyLogBookTx) Count() int64 {
 	return a.tx.Count()
 }
 

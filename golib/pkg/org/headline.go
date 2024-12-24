@@ -3,12 +3,13 @@ package org
 import (
 	"errors"
 	"fmt"
+	"github.com/creker/hashstructure"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
-	"github.com/gohugoio/hashstructure"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 )
 
+// 用于加载从硬盘文件读取的 headline 数据，用于和数据库 headline 数据进行比较。
 func NewHeadlineCache(headlines []db.Headline, fileID string, filePath string) (*HeadlineCacheMap, error) {
 	cache := HeadlineCacheMap{HeadlinesFileCache: linkedhashmap.New(), DuplicateID: []string{},
 		HeadlinesDBCache: linkedhashmap.New(), fileID: fileID, filePath: filePath}
@@ -38,7 +39,7 @@ func (h *HeadlineCacheMap) scanDuplicateID(headlines []db.Headline) {
 			h.DuplicateID = append(h.DuplicateID, head.Data.ID)
 		} else {
 			// compute headline struct hash.
-			hash, err := hashstructure.Hash(head.Data, &options)
+			hash, err := hashstructure.Hash(head.Data, hashstructure.FormatV2, &options)
 			if err != nil {
 				logger.Errorf("Hash headline error: %v", err)
 				return

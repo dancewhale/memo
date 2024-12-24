@@ -1,13 +1,8 @@
 package org
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"io"
-	"memo/pkg/org/db"
-	"os"
-
 	"github.com/emirpasic/gods/stacks/arraystack"
+	"memo/pkg/org/db"
 
 	"github.com/dancewhale/go-org/org"
 
@@ -28,6 +23,17 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 	return result
 }
 
+func FilterContentForHeadline(node org.Node) bool {
+	_, d := node.(org.Drawer)
+	_, p := node.(org.PropertyDrawer)
+	_, h := node.(org.Headline)
+	if !d && !p && !h {
+		return true
+	} else {
+		return false
+	}
+}
+
 func getHeadlineIdType(pd *org.PropertyDrawer) (string, string) {
 	var id string
 	var headType string
@@ -43,44 +49,6 @@ func getHeadlineIdType(pd *org.PropertyDrawer) (string, string) {
 		}
 	}
 	return id, headType
-}
-
-func getFileID(d *org.Document) string {
-	if len(d.Nodes) != 0 {
-		for _, node := range d.Nodes {
-			switch n := node.(type) {
-			case org.Headline:
-				break
-			case org.PropertyDrawer:
-				for _, kvPair := range n.Properties {
-					k, v := kvPair[0], kvPair[1]
-					if k == emacsVar.MemoIdProverty && v != "" {
-						return v
-					}
-				}
-			}
-		}
-	}
-	return ""
-}
-
-func hash(filePath string) (string, error) {
-	f, err := os.Open(filePath)
-	defer f.Close()
-
-	if err != nil {
-		logger.Errorf(err.Error())
-		return "", err
-	}
-
-	hash := md5.New()
-
-	_, err = io.Copy(hash, f)
-	if err != nil {
-		logger.Errorf(err.Error())
-		return "", err
-	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func getFileMeta(d *org.Document) (*MetaInfo, error) {
@@ -125,5 +93,4 @@ func getHeadOrder(stack *arraystack.Stack, currentHead db.Headline) int {
 		}
 	}
 	return order
-
 }

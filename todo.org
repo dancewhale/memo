@@ -2,3 +2,5 @@
 
 *  计划
 ** TODO GC 函数和功能,更新当前完整状态,另外删除已经不存在的file,不再存在的headline
+** TODO review 增加跳过接口
+** TODO memo db 的路径调整问题, 目前在home 目录

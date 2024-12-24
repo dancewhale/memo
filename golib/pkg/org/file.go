@@ -178,7 +178,7 @@ func (f *File) UpdateFile(force bool) error {
 		if f.Data.ID == "" {
 			err = f.Data.Create(f.Meta.ID, f.Hash, f.FilePath, f.HeadCache.HeadlinesFileCache)
 		} else {
-			err = f.Data.Update(f.Meta.ID, f.Hash, f.FilePath, f.HeadCache.HeadlinesFileCache)
+			err = f.Data.Update(f.Meta.ID, f.Hash, f.FilePath, f.HeadCache.HeadlinesFileCache, force)
 		}
 		if err != nil {
 			return err
