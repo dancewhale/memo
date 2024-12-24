@@ -72,7 +72,12 @@
   (unless memo--lib-loaded
     (unless (file-exists-p memo--module-path)
       (memo-compile-module))
-    (memo--load-dynamic-module)))
+    (memo--load-dynamic-module))
+  (require 'memo-core)
+  (require 'memo-buffer)
+  (require 'memo-api)
+  (require 'memo-fast)
+)
 
 ;  TODO: 如何处理版本不一致问题
 ;  (unless (string-equal memo-version (memo-lib-version))

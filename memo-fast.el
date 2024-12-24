@@ -33,28 +33,5 @@
   (org-set-property memo-prop-note-type "default")
   (org-id-get-create))
 
-(defun memo-open-package-dir ()
-  (interactive)
-  (dired "/Users/whale/.emacs.d/.local/straight/repos/memo/"))
-
-
-
-;; setting config for memo.
-(general-define-key
-    "s-e l RET"    'memo-create-head
-    "s-e l n"      'memo-create-subhead
-    "s-e l p"      'memo-sync-current-file
-    "s-e l P"      'memo-sync-db
-    "s-e l b"      'memo-goto-org
-    "s-e l r"      'memo-review-note
-    "s-e l h"      'memo-open-package-dir
-)
-
-
-(setq memo-org-directory "/Users/whale/Seafile/Dropbox/roam")
-(setq memo-log-level "-1")
-
-(add-hook 'after-save-hook 'memo-sync-file-after-save)
-
 (provide 'memo-fast)
 ;;; memo-fast.el ends here

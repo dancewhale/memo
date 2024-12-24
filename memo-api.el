@@ -92,6 +92,9 @@ memo-note is (orgid  type  content)."
 (defvar  memo-org-directory nil
 "Setting memo dir to scan org file.")
 
+(defvar  memo-db-path nil
+"Setting memo db dir path to store database, default is user home dir.")
+
 
 (defun memo-sync-db ()
 "Synchronize the db state with the current Org files on-disk."
