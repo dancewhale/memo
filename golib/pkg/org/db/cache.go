@@ -51,16 +51,17 @@ func (h *HeadsCache) UpdateHeadlineToDB(headFromFileCache *linkedhashmap.Map, fo
 	var err error
 	for itFile.Begin(); itFile.Next(); {
 		id, value := itFile.Key(), itFile.Value()
-		headFile := value.(Headline)
+		headFromFile := value.(Headline)
 		if headFromDB, ok := h.HeadFromDBCache.Get(id); ok {
-			if !bytes.Equal(headFromDB.(Headline).Hash, headFile.Hash) || force {
-				err = headFile.update()
+			if !bytes.Equal(headFromDB.(Headline).Hash, headFromFile.Hash) || force {
+				err = headFromFile.updateByIDFile()
 				h.HeadFromDBCache.Remove(id)
 			} else {
+				h.HeadFromDBCache.Remove(id)
 				continue
 			}
 		} else {
-			err = headFile.create()
+			err = headFromFile.createOrUpdate()
 		}
 		if err != nil {
 			return err
@@ -72,9 +73,7 @@ func (h *HeadsCache) UpdateHeadlineToDB(headFromFileCache *linkedhashmap.Map, fo
 	for itDB.Begin(); itDB.Next(); {
 		_, head := itDB.Key(), itDB.Value()
 		headDB := head.(Headline)
-		headDB.Data.FileID = ""
-		headDB.Data.ParentID = ""
-		err = headDB.update()
+		err = headDB.unattachFromFile()
 		if err != nil {
 			return err
 		}

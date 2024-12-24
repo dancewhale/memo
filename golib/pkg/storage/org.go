@@ -29,7 +29,7 @@ type Headline struct {
 	// 类型
 	Type string `json:"type"`
 	// 父级ID
-	ParentID string `json:"parent_id"`
+	ParentID *string `json:"parent_id"`
 	// 层级
 	Level int `json:"level"`
 	// 同一层级下的排序
@@ -42,7 +42,7 @@ type Headline struct {
 	// 优先级
 	Priority   string      `json:"priority"`
 	Children   []Headline  `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
-	FileID     string      `gorm:"primaryKey;not null"`
+	FileID     *string     `gorm:"primaryKey"`
 	File       File        `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
 	Fsrs       FsrsInfo    `hash:"ignore"`
 	ReviewLogs []ReviewLog `hash:"ignore"`

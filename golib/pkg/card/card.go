@@ -190,12 +190,14 @@ func (api *CardApi) ScanHeadlineInitFsrs() ([]*storage.Headline, error) {
 		return nil, err
 	}
 	for _, head := range heads {
-		fsrsinfo := storage.FsrsInfo{}
-		fsrsinfo.Card = gfsrs.NewCard()
-		fsrsinfo.HeadlineID = head.ID
-		err = fsrsInfo.WithContext(context.Background()).Create(&fsrsinfo)
-		if err != nil {
-			return nil, logger.Errorf("Create fsrs info for headline %s failed: %v", head.ID, err)
+		if head.Status == "" && head.Content != "" {
+			fsrsinfo := storage.FsrsInfo{}
+			fsrsinfo.Card = gfsrs.NewCard()
+			fsrsinfo.HeadlineID = head.ID
+			err = fsrsInfo.WithContext(context.Background()).Create(&fsrsinfo)
+			if err != nil {
+				return nil, logger.Errorf("Create fsrs info for headline %s failed: %v", head.ID, err)
+			}
 		}
 	}
 	return heads, err

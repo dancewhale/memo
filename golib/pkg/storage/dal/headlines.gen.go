@@ -40,6 +40,7 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.Status = field.NewString(tableName, "status")
 	_headline.Scheduled = field.NewTime(tableName, "scheduled")
 	_headline.Deadline = field.NewTime(tableName, "deadline")
+	_headline.Closed = field.NewTime(tableName, "closed")
 	_headline.Priority = field.NewString(tableName, "priority")
 	_headline.FileID = field.NewString(tableName, "file_id")
 	_headline.Fsrs = headlineHasOneFsrs{
@@ -135,6 +136,7 @@ type headline struct {
 	Status    field.String
 	Scheduled field.Time
 	Deadline  field.Time
+	Closed    field.Time
 	Priority  field.String
 	FileID    field.String
 	Fsrs      headlineHasOneFsrs
@@ -175,6 +177,7 @@ func (h *headline) updateTableName(table string) *headline {
 	h.Status = field.NewString(table, "status")
 	h.Scheduled = field.NewTime(table, "scheduled")
 	h.Deadline = field.NewTime(table, "deadline")
+	h.Closed = field.NewTime(table, "closed")
 	h.Priority = field.NewString(table, "priority")
 	h.FileID = field.NewString(table, "file_id")
 
@@ -193,7 +196,7 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 20)
+	h.fieldMap = make(map[string]field.Expr, 21)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
@@ -207,6 +210,7 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["status"] = h.Status
 	h.fieldMap["scheduled"] = h.Scheduled
 	h.fieldMap["deadline"] = h.Deadline
+	h.fieldMap["closed"] = h.Closed
 	h.fieldMap["priority"] = h.Priority
 	h.fieldMap["file_id"] = h.FileID
 

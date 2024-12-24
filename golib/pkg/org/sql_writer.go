@@ -52,7 +52,7 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	headline := db.Headline{
 		Data: storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 			Content: content, Priority: h.Priority,
-			FileID:    w.fileId,
+			FileID:    &w.fileId,
 			ID:        id,
 			Type:      headtype,
 			Scheduled: h.TaskTime.GetScheduled(),
@@ -69,7 +69,7 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 		if preHeadline != nil {
 			ph := preHeadline.(db.Headline)
 			if ph.Data.Level == headline.Data.Level+1 {
-				ph.Data.ParentID = headline.Data.ID
+				ph.Data.ParentID = &headline.Data.ID
 				headline.Children = append(headline.Children, ph)
 			} else {
 				w.stack.Push(preHeadline)
