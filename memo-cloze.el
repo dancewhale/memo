@@ -43,7 +43,7 @@
   :type 'boolean)
 
 (defconst memo-cloze-regexp
-  (rx "{{" (group (*? not-newline))
+  (rx "{{" (group-n 1 (*? not-newline))
       (or "}}" (and "}{" (group (*? not-newline)) "}}"))))
 
 (cl-defun memo-cloze-collect (&optional (begin (point-min)) (end (point-max)))
@@ -89,7 +89,11 @@
 (defun memo-cloze-dwim ()
   "Cloze the active region at point."
   (interactive)
-  (memo-cloze-default))
+  (if (use-region-p)
+      (progn  (memo-cloze-default (region-beginning) (region-end))
+	      (backward-char 2))
+    (progn (memo-cloze-default (point) (point))
+	   (forward-char 2))))
 
 (cl-defun memo-cloze-bounds (&optional (position (point)))
   (save-excursion
@@ -98,7 +102,7 @@
              for line-bound in (list (pos-bol) (pos-eol))
              if (funcall function memo-cloze-regexp line-bound t)
              if (<= (match-beginning 0) position (1- (match-end 0)))
-             return (cons (match-beginning 0) (match-end 0))
+             return (list (match-beginning 0) (match-end 0))
              else do (goto-char (funcall match-bound 0))
              else do (goto-char line-bound))))
 
@@ -106,13 +110,14 @@
   (save-excursion
     (cl-loop initially (goto-char begin)
              while (re-search-forward memo-cloze-regexp end t)
-             do (replace-match "\\2" t))))
+             do (replace-match (match-string 1) t))))
 
 ;;;###autoload
 (defun memo-uncloze-dwim ()
   "Uncloze the element at point. Also see `memo-cloze-dwim'."
   (interactive)
-  (memo-uncloze-default (memo-cloze-bounds)))
+  (let ((cloze-region (memo-cloze-bounds)))
+    (if cloze-region (apply 'memo-uncloze-default cloze-region))))
 
 
 (defun memo-cloze-at-point ()
