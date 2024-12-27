@@ -26,34 +26,35 @@
 
 ;;; Working with Overlays / Hiding Text
 ;;;; Showing / Hiding Overlays
-
-(defun memo-remove-overlays ()
-  "Remove all memo overlays in the current buffer."
-  (remove-overlays (point-min) (point-max) 'category 'memo))
-
-;; Based on `outline-flag-region'
-(defun memo-hide-region (from to &optional text face)
-  "Hide region FROM ... TO, optionally replacing it with TEXT.
-FACE can be used to set the text face of the overlay, e.g. to
-make it bold."
-  ;; (remove-overlays from to 'category 'memo)
-  (let ((o (make-overlay from to nil 'front-advance)))
-    (overlay-put o 'category 'memo)
-    (overlay-put o 'evaporate t)
-    (if face (overlay-put o 'face face))
-    (if (stringp text)
-        (progn
-          (overlay-put o 'invisible nil)
-          (overlay-put o 'display text))
-      (overlay-put o 'invisible t))
-    o))
-
-(defun memo-make-overlay (begin end &rest props)
-  "Create an overlay from BEGIN to END with PROPS."
-  (let ((o (make-overlay begin end)))
-    (overlay-put o 'category 'memo)
+(defun memo-set-overlay-props (overlay &rest props)
+  "Set an OVERLAY with PROPS.
+\(memo-set-overlay-props overlay 'face '(:foreground \"red\" :background \"yellow\"))."
+  (let ((o overlay))
     (cl-loop for (prop value) on props by #'cddr do
              (overlay-put o prop value))
+    o))
+
+(defun memo-set-overlay-text (text overlay)
+  "Set the text of the OVERLAY to TEXT."
+  (overlay-put overlay 'display  text))
+
+(cl-defun memo-card-create-overlay (begin end &optional (text  "...") face)
+  "Create card overlay from BEGIN to END, optionally replacing it with TEXT.
+FACE can be used end set the text face of the overlay, e.g. end
+make it bold."
+  (cl-check-type text string)
+  (let ((o (make-overlay begin end nil 'front-advance)))
+    (memo-set-overlay-props o 'category 'memo-card 'evaporate t)
+    (memo-set-overlay-props o 'invisible nil 'display text)
+    (if face  (memo-set-overlay-props o 'face face))
+    o))
+
+(cl-defun memo-cloze-create-overlay (begin end &optional (text "..."))
+  "Create a cloze overlay between BEGIN END with TEXT."
+  (cl-check-type text string)
+  (let ((o (make-overlay begin end)))
+    (memo-set-overlay-props o 'category 'memo-cloze)
+    (memo-set-overlay-props o 'display text)
     o))
 
 (defun memo-overlay-surround (o before after &optional face)
@@ -62,6 +63,18 @@ make it bold."
   (overlay-put o 'after-string (propertize after 'face face))
   o)
 
+(cl-defun memo-card-remove-overlays (&optional (begin (point-min)) (end (point-max)))
+  "Remove all card overlays in the region between BEGIN END."
+  (remove-overlays begin end 'category 'memo-card))
+
+(cl-defun memo-cloze-remove-overlays (&optional (begin (point-min)) (end (point-max)))
+  "Remove all cloze overlays in the region between BEGIN END."
+  (remove-overlays begin end 'category 'memo-cloze))
+
+(cl-defun memo-remove-all-overlays (&optional (begin (point-min)) (end (point-max)))
+  "Remove all overlays include card and cloze in the region between BEGIN END."
+  (remove-overlays begin end 'category 'memo-cloze)
+  (remove-overlays begin end 'category 'memo-card))
 
 ;;; Working with org-mode buffer Text
 (defun memo-narrow-to-org-subtree-content (&optional element)

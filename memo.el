@@ -86,6 +86,8 @@
 
 (require 'memo-core)
 (require 'memo-buffer)
+(require 'memo-card)
+(require 'memo-cloze)
 (require 'memo-api)
 (require 'memo-fast)
 

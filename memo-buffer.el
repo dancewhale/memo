@@ -27,39 +27,24 @@
   "The memo buffer for review note show and flip.")
 
 
-;; review note.
-(defun memo--review-show ()
-  "Show note in review buffer, MNOTE is memo-note object."
+(defun memo-review-note()
+  "Get next review note in review buffer."
+  (interactive)
+  (memo--get-review-note-object)
   (if (not (memo-note-id memo--review-note))
       (user-error "Review memo-note object is nil"))
   (let* ((buf (get-buffer-create memo--review-buffer-name))
 	 answer-start answer-end)
     (with-current-buffer buf
 	(read-only-mode -1)
-	(memo-remove-overlays)
+	(memo-card-remove-overlays)
 	(erase-buffer)
 	(insert (memo-note-content memo--review-note))
-	(goto-char (point-min))
-	(if (re-search-forward "^-+$" nil t)
-	    (progn
-	       (forward-line)
-	       (beginning-of-line)
-	       (setq answer-start (point))
-	       (goto-char (point-max))
-	       (setq answer-end (point))
-	       (memo-hide-region answer-start answer-end)))
+	(memo-card-hidden)
+	(memo-cloze-hidden)
 	(switch-to-buffer buf)
 	(org-mode)
-	(read-only-mode)
-      )
-   )
- )
-
-(defun memo-review-note()
-  "Review note."
-  (interactive)
-  (memo--get-review-note-object)
-  (memo--review-show ))
+	(read-only-mode))))
 
 
 (defun memo-review-easy()
@@ -100,9 +85,8 @@
   (let* ((buf (get-buffer  memo--review-buffer-name)))
     (if buf
 	(with-current-buffer buf
-	  (memo-remove-overlays)
-	  )))
-  )
+	  (memo-remove-all-overlays)
+	  ))))
 
 
 ;; jump to org and enable editor.
