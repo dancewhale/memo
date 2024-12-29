@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/nekomeowww/elapsing"
-	"github.com/sigma/go-emacs"
+	"github.com/dancewhale/go-emacs"
 	"memo/pkg/emodule"
 	"memo/pkg/logger"
 	memorg "memo/pkg/org"
 
-	_ "github.com/sigma/go-emacs/gpl-compatible"
+	_ "github.com/dancewhale/go-emacs/gpl-compatible"
 )
 
 func init() {

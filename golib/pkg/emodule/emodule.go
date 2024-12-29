@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/karrick/godirwalk"
-	emacs "github.com/sigma/go-emacs"
-	_ "github.com/sigma/go-emacs/gpl-compatible"
+	emacs "github.com/dancewhale/go-emacs"
+	_ "github.com/dancewhale/go-emacs/gpl-compatible"
 	"memo/pkg/card"
 	"memo/pkg/logger"
 	"memo/pkg/org"

@@ -7,6 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/blevesearch/bleve v1.0.14
 	github.com/creker/hashstructure v1.0.0
+	github.com/dancewhale/go-emacs v0.0.0-20241229094131-e094648946af
 	github.com/dancewhale/go-org v0.0.0-20241220095456-9099a6162e03
 	github.com/emirpasic/gods v1.18.1
 	github.com/jinzhu/copier v0.4.0
@@ -14,7 +15,6 @@ require (
 	github.com/maniartech/gotime v1.1.0
 	github.com/nekomeowww/elapsing v1.3.0
 	github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0
-	github.com/sigma/go-emacs v0.0.1
 	go.uber.org/zap v1.26.0
 	gorm.io/driver/sqlite v1.5.5
 	gorm.io/gen v0.3.26
@@ -23,6 +23,8 @@ require (
 )
 
 replace github.com/dancewhale/go-org v0.0.0-20241220095456-9099a6162e03 => ./go-org
+
+replace github.com/dancewhale/go-emacs v0.0.0-20241229094131-e094648946af => ./go-emacs
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
