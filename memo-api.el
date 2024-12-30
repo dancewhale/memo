@@ -39,32 +39,26 @@ and used for backend to indentify memo head.")
   "Use to prepare some action like env setting before call backend api."
   (setenv "MEMO_TYPE_PROVERTY" memo-prop-note-type)
   (setenv "MEMO_ID_PROVERTY" memo-prop-note-id)
+  (setenv "MEMO_DB_PATH" memo-db-path)
   (setenv "MEMO_LOG_LEVEL" memo-log-level))
 
 
 
 ;;; parse api call result; store value and throught err.
-(cl-defstruct memo-api--return
-  err value)
-
-(defvar  memo-api-result  nil
-"Store result return from memo-api call.")
-
-(defvar  memo-api-result-err  nil
+(defvar  memo-api-return-err  nil
 "Store err message of result return from memo-api call.")
 
-(defvar  memo-api-result-value  nil
+(defvar  memo-api-return-value  nil
 "Store value of result return from memo-api call.")
 
-(defun memo--parse-result (result)
-"To parse value return from backend memo-api call;
-pare value like (err (value value))"
-  (setq memo-api-result  (make-memo-api--return  :err (car result) 
-                                                 :value (cadr result)))
-  (setq memo-api-result-err (memo-api--return-err memo-api-result))
-  (setq memo-api-result-value (memo-api--return-value  memo-api-result))
-  (if  (car result)
-    (user-error (car result))))
+(defun memo--parse-result (api-call)
+"To parse value return from 'API-CALL;
+catch error to  memo-api-return-err, value to memo-api-return-value"
+  (memo--before-api-call)
+  (let ((result (catch 'error (eval api-call))))
+    (if (stringp result)
+        (progn (setq memo-api-return-err result) (setq memo-api-return-value nil) (user-error result))
+        (progn (setq memo-api-return-err nil) (setq memo-api-return-value result)))))
 
 
 ;; get note for review.
@@ -77,12 +71,11 @@ pare value like (err (value value))"
 (defun memo--get-review-note-object ()
   "Return memo-note object which need review from server;
 memo-note is (orgid  type  content)."
-  (memo--before-api-call)
-  (memo--parse-result (memo-api--get-next-review-note))
-  (let* ((note-id (car memo-api-result-value))
-	 (note-type (cadr memo-api-result-value))
-	 (note-content (caddr memo-api-result-value))
-	 (note-file (cadddr memo-api-result-value)))
+  (memo--parse-result '(memo-api--get-next-review-note))
+  (let* ((note-id (car memo-api-return-value))
+	 (note-type (cadr memo-api-return-value))
+	 (note-content (caddr memo-api-return-value))
+	 (note-file (cadddr memo-api-return-value)))
     (setq memo--review-note (make-memo-note :id note-id
 					     :type note-type
 					     :content note-content
@@ -93,21 +86,21 @@ memo-note is (orgid  type  content)."
 "Setting memo dir to scan org file.")
 
 (defvar  memo-db-path nil
-"Setting memo db dir path to store database, default is user home dir.")
+"Setting memo db dir path to store database, if nil will default use user home dir.")
 
 
 (defun memo-sync-db ()
 "Synchronize the db state with the current Org files on-disk."
   (interactive)
-  (memo--parse-result (memo-api--sync-dir memo-org-directory "false"))
-  (if (not  (memo-api--return-err memo-api-result) )
+  (memo--parse-result '(memo-api--sync-dir memo-org-directory "false"))
+  (if (not  memo-api-return-err)
       (message "Sync dir is success complete.")))
 
 (defun memo-sync-db-force ()
 "Synchronize the db state with the current Org files on-disk."
   (interactive)
-  (memo--parse-result (memo-api--sync-dir memo-org-directory "true"))
-  (if (not  (memo-api--return-err memo-api-result) )
+  (memo--parse-result '(memo-api--sync-dir memo-org-directory "true"))
+  (if (not  memo-api-return-err)
       (message "Sync dir is success complete.")))
 
 
@@ -115,10 +108,16 @@ memo-note is (orgid  type  content)."
 "Synchronize current org-file to db."
   (interactive)
   (save-buffer)
-  (memo--parse-result (memo-api--sync-file (buffer-file-name) "false"))
-  (if (not  (memo-api--return-err memo-api-result) )
+  (memo--parse-result '(memo-api--sync-file (buffer-file-name) "false"))
+  (if (not  memo-api-return-err)
       (message "Push file is success complete.")))
 
+;; auto sync file after save buffer.
+(defun memo-sync-file-after-save ()
+  "Sync file to database after save file."
+  (let ((path (buffer-file-name)))
+    (if (and  (f-ext-p path "org") (f-ancestor-of-p memo-org-directory path))
+	(memo--parse-result `(memo-api--sync-file ,path "false")))))
 
 
 (provide 'memo-api)

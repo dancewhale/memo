@@ -4,13 +4,14 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/karrick/godirwalk"
-	emacs "github.com/dancewhale/go-emacs"
-	_ "github.com/dancewhale/go-emacs/gpl-compatible"
 	"memo/pkg/card"
 	"memo/pkg/logger"
 	"memo/pkg/org"
 	"memo/pkg/storage"
+
+	emacs "github.com/dancewhale/go-emacs"
+	_ "github.com/dancewhale/go-emacs/gpl-compatible"
+	"github.com/karrick/godirwalk"
 )
 
 type EModule struct {
@@ -24,20 +25,20 @@ func (e *EModule) Init() {
 	e.orgApi, _ = org.NewOrgApi()
 }
 
-// return (ErrMessage (value1 value2 value3 ...))
-// errMessage 为nil 或者string
-// evalue 代表(value1 value2 value3)
-func (e *EModule) EmacsReturn(ectx emacs.FunctionCallContext, err error, result ...emacs.Value) (emacs.List, error) {
+// 将emacs.Value 转变为list
+func (e *EModule) EmacsReturn(ectx emacs.FunctionCallContext, err error, result ...emacs.Value) (emacs.Value, error) {
 	env := ectx.Environment()
 	stdl := env.StdLib()
 	var evalue emacs.List
 	if err != nil {
-		eerr := env.String(err.Error())
-		evalue = stdl.List(eerr, stdl.Nil())
-		return evalue, nil
-	} else {
+		return stdl.Nil(), err
+	} else if len(result) > 1 {
 		evalue = stdl.List(result...)
-		return stdl.List(stdl.Nil(), evalue), nil
+		return evalue, nil
+	} else if len(result) == 1 {
+		return result[0], nil
+	} else {
+		return stdl.Nil(), nil
 	}
 }
 
@@ -48,7 +49,6 @@ func (e *EModule) HangNote(ectx emacs.FunctionCallContext) (emacs.Value, error) 
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
 		err = logger.Errorf("Pass arg orgid from emacs in create note failed: %v", err)
-		return e.EmacsReturn(ectx, err)
 	}
 	if orgid == "" {
 		err = logger.Errorf("Orgid in args from emacs call  is empty.")
