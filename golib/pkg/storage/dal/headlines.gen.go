@@ -33,7 +33,7 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.DeletedAt = field.NewField(tableName, "deleted_at")
 	_headline.Title = field.NewString(tableName, "title")
 	_headline.Content = field.NewString(tableName, "content")
-	_headline.Type = field.NewString(tableName, "type")
+	_headline.Weight = field.NewInt64(tableName, "weight")
 	_headline.ParentID = field.NewString(tableName, "parent_id")
 	_headline.Level = field.NewInt(tableName, "level")
 	_headline.Order_ = field.NewInt(tableName, "order")
@@ -129,7 +129,7 @@ type headline struct {
 	DeletedAt field.Field
 	Title     field.String
 	Content   field.String
-	Type      field.String
+	Weight    field.Int64
 	ParentID  field.String
 	Level     field.Int
 	Order_    field.Int
@@ -170,7 +170,7 @@ func (h *headline) updateTableName(table string) *headline {
 	h.DeletedAt = field.NewField(table, "deleted_at")
 	h.Title = field.NewString(table, "title")
 	h.Content = field.NewString(table, "content")
-	h.Type = field.NewString(table, "type")
+	h.Weight = field.NewInt64(table, "weight")
 	h.ParentID = field.NewString(table, "parent_id")
 	h.Level = field.NewInt(table, "level")
 	h.Order_ = field.NewInt(table, "order")
@@ -203,7 +203,7 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["deleted_at"] = h.DeletedAt
 	h.fieldMap["title"] = h.Title
 	h.fieldMap["content"] = h.Content
-	h.fieldMap["type"] = h.Type
+	h.fieldMap["weight"] = h.Weight
 	h.fieldMap["parent_id"] = h.ParentID
 	h.fieldMap["level"] = h.Level
 	h.fieldMap["order"] = h.Order_

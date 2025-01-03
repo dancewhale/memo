@@ -68,7 +68,7 @@ func (e *EModule) HangNote(ectx emacs.FunctionCallContext) (emacs.Value, error) 
 func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	env := ectx.Environment()
 	stdl := env.StdLib()
-	fcard := e.capi.GetReviewCardByDueTime()
+	fcard := e.capi.GetReviewCardByWeightDueTime()
 	if fcard == nil {
 		err := logger.Errorf("There is no card wait for review tody.")
 		return e.EmacsReturn(ectx, err)
@@ -81,7 +81,7 @@ func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value
 		err = logger.Errorf("Get headline by orgid %s failed: %v", fcard.ID, err)
 		return e.EmacsReturn(ectx, err, env.String(fcard.ID), env.String(""), env.String(""), env.String(""))
 	}
-	return e.EmacsReturn(ectx, nil, env.String(fcard.ID), env.String(head.Type), env.String(head.Content), env.String(head.File.FilePath))
+	return e.EmacsReturn(ectx, nil, env.String(fcard.ID), env.Int(int64(head.Weight)), env.String(head.Content), env.String(head.File.FilePath))
 }
 
 func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {

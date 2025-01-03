@@ -26,8 +26,8 @@ type Headline struct {
 	Title string `json:"title"`
 	// 内容
 	Content string `json:"content"`
-	// 类型
-	Type string `json:"type"`
+	// 卡片复习优先级
+	Weight int64 `json:"weight"`
 	// 父级ID
 	ParentID *string `json:"parent_id"`
 	// 层级
@@ -39,7 +39,7 @@ type Headline struct {
 	Scheduled *time.Time `json:"scheduled"`
 	Deadline  *time.Time `json:"deadline"`
 	Closed    *time.Time `json:"closed"`
-	// 优先级
+	// org 任务优先级
 	Priority   string      `json:"priority"`
 	Children   []Headline  `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
 	FileID     *string     `gorm:"primaryKey"`
@@ -55,6 +55,12 @@ type Clock struct {
 	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
 	Start      *time.Time
 	End        *time.Time
+}
+
+type Source struct {
+	Link        string
+	LinkType    string
+	Description string
 }
 
 func (c Clock) String() string {

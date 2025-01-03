@@ -11,7 +11,7 @@ import (
 var EmacsVar *EmacsEnv
 
 type EmacsEnv struct {
-	MemoTypeProverty      string
+	MemoWeightProverty    string
 	MemoIdProverty        string
 	MemoDBPath            string
 	MemoDBMaxIdleConn     int
@@ -25,7 +25,7 @@ func EmacsEnvInit() *EmacsEnv {
 		return EmacsVar
 	}
 	EmacsVar = &EmacsEnv{}
-	EmacsVar.GetMemoTypeProverty()
+	EmacsVar.GetMemoWeightProverty()
 	EmacsVar.GetMemoIdProverty()
 	EmacsVar.GetMemoDBPath()
 	EmacsVar.GetMemoDBMaxIdleConn()
@@ -35,12 +35,12 @@ func EmacsEnvInit() *EmacsEnv {
 	return EmacsVar
 }
 
-func (e *EmacsEnv) GetMemoTypeProverty() string {
-	e.MemoTypeProverty, _ = os.LookupEnv("MEMO_TYPE_PROVERTY")
-	if e.MemoTypeProverty == "" {
-		e.MemoTypeProverty = "MEMO_NOTE_TYPE"
+func (e *EmacsEnv) GetMemoWeightProverty() string {
+	e.MemoWeightProverty, _ = os.LookupEnv("MEMO_WEIGHT_PROVERTY")
+	if e.MemoWeightProverty == "" {
+		e.MemoWeightProverty = "MEMO_NOTE_WEIGHT"
 	}
-	return e.MemoTypeProverty
+	return e.MemoWeightProverty
 }
 
 func (e *EmacsEnv) GetMemoIdProverty() string {

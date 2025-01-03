@@ -5,9 +5,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var QuestionType string = "Question"
-var ClozeType string = "Cloze"
-
 // change string to fsrs.rate
 func StringToRate(rate string) gfsrs.Rating {
 	switch rate {

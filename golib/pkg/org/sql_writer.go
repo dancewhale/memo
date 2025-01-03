@@ -48,13 +48,10 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 	org.WriteNodes(w, h.Children...)
 	title := w.WriteNodesAsString(h.Title...)
 	content := w.WriteHeadlineContentAsString(h.Children...)
-	id, headtype := getHeadlineIdType(h.Properties)
 	headline := db.Headline{
 		Data: storage.Headline{Level: h.Lvl, Title: title, Status: h.Status,
 			Content: content, Priority: h.Priority,
 			FileID:    &w.fileId,
-			ID:        id,
-			Type:      headtype,
 			Scheduled: h.TaskTime.GetScheduled(),
 			Deadline:  h.TaskTime.GetDeadline(),
 			Closed:    h.TaskTime.GetClosed(),
@@ -62,6 +59,7 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 		},
 		Children: []db.Headline{},
 	}
+	updateHeadlineProperty(&headline, h.Properties)
 
 	// 深度优先遍历
 	for {

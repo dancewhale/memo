@@ -99,7 +99,7 @@ func (api *CardApi) DueCardsInDay(day int64) []*storage.Headline {
 	dueDay := time.Now().In(china).AddDate(0, 0, int(day))
 	dueDayStart := gotime.SoD(dueDay)
 	dueDayEnd := gotime.EoD(dueDay)
-	heads, err := h.WithContext(context.Background()).Join(f, h.ID.EqCol(f.HeadlineID)).Where(f.Due.Gte(dueDayStart)).Where(f.Due.Lte(dueDayEnd)).Find()
+	heads, err := h.WithContext(context.Background()).Join(f, h.ID.EqCol(f.HeadlineID)).Order(h.Weight.Desc()).Order(f.Due.Asc()).Where(f.Due.Gte(dueDayStart)).Where(f.Due.Lte(dueDayEnd)).Find()
 	if err != nil {
 		_ = logger.Errorf("Get due heads in %d day failed: %v", day, err)
 		return nil
@@ -108,28 +108,47 @@ func (api *CardApi) DueCardsInDay(day int64) []*storage.Headline {
 }
 
 // 获取已经到期且已经延期的卡片
-func (api *CardApi) DueCardsDeferred() []*storage.Headline {
+func (api *CardApi) DueCardsBeforeToday() []*storage.Headline {
 	c := api.Headline
 	f := api.FsrsInfo
 	china, _ := time.LoadLocation("Asia/Shanghai")
 	today := time.Now().In(china)
 	todayStart := gotime.SoD(today)
-	heads, err := c.WithContext(context.Background()).Join(f, c.ID.EqCol(f.HeadlineID)).Where(f.Due.Lte(todayStart)).Find()
+	heads, err := c.WithContext(context.Background()).Join(f, c.ID.EqCol(f.HeadlineID)).Order(c.Weight.Desc()).Order(f.Due.Asc()).Where(f.Due.Lte(todayStart)).Find()
 	if err != nil {
-		logger.Errorf("Get due Headline order by duetime failed: %v", err)
+		logger.Errorf("Get Headline due before today order by weight,duetime failed: %v", err)
 		return nil
 	}
 	return heads
 }
 
-// TODO: 获取过期卡片的逻辑需要修正，优先当天的卡片，之后是延期的卡片
-func (api *CardApi) GetReviewCardByDueTime() *storage.Headline {
-	cards := api.DueCardsDeferred()
-	if len(cards) == 0 {
-		logger.Infof("No Headline need to review.")
+// get card which due time is today
+func (api *CardApi) DueCardsInToday() []*storage.Headline {
+	c := api.Headline
+	f := api.FsrsInfo
+	china, _ := time.LoadLocation("Asia/Shanghai")
+	today := time.Now().In(china)
+	todayStart := gotime.SoD(today)
+	todayEnd := gotime.EoD(today)
+	heads, err := c.WithContext(context.Background()).Join(f, c.ID.EqCol(f.HeadlineID)).Where(f.Due.Lte(todayEnd)).Where(f.Due.Gt(todayStart)).Order(c.Weight.Desc()).Order(f.Due.Asc()).Find()
+	if err != nil {
+		logger.Errorf("Get Headline due in today order by weight,duetime failed: %v", err)
 		return nil
 	}
-	return cards[0]
+	return heads
+}
+
+func (api *CardApi) GetReviewCardByWeightDueTime() *storage.Headline {
+	cards := api.DueCardsInToday()
+	if len(cards) == 0 {
+		cards = api.DueCardsBeforeToday()
+		if len(cards) == 0 {
+			return nil
+		}
+		return cards[0]
+	} else {
+		return cards[0]
+	}
 }
 
 // 给指定过期的闪卡打分进行review,返回复习后的闪卡
@@ -144,7 +163,7 @@ func (api *CardApi) ReviewCard(orgID string, rating gfsrs.Rating) *storage.Headl
 	}
 
 	// review 状态为waitReview 的Card, 如果评价为easy,则设置为WaitCardInit
-	needReview, error := api.IfCardIsDue(orgID)
+	needReview, error := api.ifCardIsDue(orgID)
 
 	if needReview && error == nil {
 		schedulingInfo := api.scheduler.Repeat(fcard.Fsrs.Card, now)
@@ -164,7 +183,7 @@ func (api *CardApi) ReviewCard(orgID string, rating gfsrs.Rating) *storage.Headl
 }
 
 // 传入参数orgid,当对应的Card 卡片已经到期则返回true,否则返回false
-func (api *CardApi) IfCardIsDue(orgid string) (bool, error) {
+func (api *CardApi) ifCardIsDue(orgid string) (bool, error) {
 	h := api.Headline
 	f := api.FsrsInfo
 	china, _ := time.LoadLocation("Asia/Shanghai")

@@ -1,10 +1,10 @@
 package org
 
 import (
+	"github.com/dancewhale/go-org/org"
 	"github.com/emirpasic/gods/stacks/arraystack"
 	"memo/pkg/org/db"
-
-	"github.com/dancewhale/go-org/org"
+	"strconv"
 
 	"memo/cmd/libmemo/options"
 	"memo/pkg/logger"
@@ -34,50 +34,53 @@ func FilterContentForHeadline(node org.Node) bool {
 	}
 }
 
-func getHeadlineIdType(pd *org.PropertyDrawer) (string, string) {
-	var id string
-	var headType string
-	if pd != nil {
-		for _, kvPair := range pd.Properties {
-			k, v := kvPair[0], kvPair[1]
-			if k == emacsVar.MemoIdProverty && v != "" {
-				id = v
-			}
-			if k == emacsVar.MemoTypeProverty && v != "" {
-				headType = v
-			}
+func getWeightFromPropertyDrawer(pd *org.PropertyDrawer) int64 {
+	weight, exist := pd.Get(emacsVar.MemoWeightProverty)
+	if !exist {
+		return 50
+	} else {
+		w, err := strconv.Atoi(weight)
+		if err != nil {
+			return 50
+		} else {
+			return int64(w)
 		}
 	}
-	return id, headType
+}
+
+func updateHeadlineProperty(headline *db.Headline, pd *org.PropertyDrawer) {
+	if pd != nil {
+		headline.Data.ID, _ = pd.Get(emacsVar.MemoIdProverty)
+		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
+	}
 }
 
 func getFileMeta(d *org.Document) (*MetaInfo, error) {
+	meta := MetaInfo{}
 	if len(d.Nodes) != 0 {
-		meta := MetaInfo{}
 		for _, node := range d.Nodes {
 			switch n := node.(type) {
 			case org.Headline:
 				break
 			case org.PropertyDrawer:
-				for _, kvPair := range n.Properties {
-					k, v := kvPair[0], kvPair[1]
-					if k == emacsVar.MemoIdProverty && v != "" {
-						if meta.ID == "" {
-							meta.ID = v
-						} else {
-							logger.Warnf("Found duplicate id: %s in file %s.", v, d.Path)
-							return nil, FoundDupID
-						}
-						return &meta, nil
-					}
+				id, exist := n.Get(emacsVar.MemoIdProverty)
+				if exist && meta.ID != "" {
+					return nil, FoundDupID
+				} else if exist {
+					meta.ID = id
 				}
 			}
 		}
 	}
-	logger.Warnf("No content in file %s.", d.Path)
-	return nil, MissFileID
+	if meta.ID == "" {
+		logger.Warnf("No content in file %s.", d.Path)
+		return nil, MissFileID
+	} else {
+		return &meta, nil
+	}
 }
 
+// Get the order of headline.
 func getHeadOrder(stack *arraystack.Stack, currentHead db.Headline) int {
 	order := 1
 	if stack.Size() == 0 {
