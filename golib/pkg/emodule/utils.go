@@ -1,10 +1,9 @@
 package emodule
 
 import (
-	"memo/pkg/logger"
-	"strings"
-
 	"github.com/karrick/godirwalk"
+	"memo/pkg/logger"
+	"path/filepath"
 )
 
 func GetOrgFileCountInDir(dirname string) (int, error) {
@@ -14,7 +13,8 @@ func GetOrgFileCountInDir(dirname string) (int, error) {
 			// Following string operation is not most performant way
 			// of doing this, but common enough to warrant a simple
 			// example here:
-			if strings.Contains(osPathname, ".org") && !de.IsDir() {
+			ext := filepath.Ext(osPathname)
+			if ext == ".org" && !de.IsDir() {
 				count++
 				return godirwalk.SkipThis
 			}
