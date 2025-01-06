@@ -10,8 +10,6 @@ import (
 	"memo/pkg/logger"
 )
 
-var emacsVar = options.EmacsEnvInit()
-
 // 用于对[]org.Nodes 过滤
 func Filter[T any](slice []T, predicate func(T) bool) []T {
 	result := []T{}
@@ -35,7 +33,7 @@ func FilterContentForHeadline(node org.Node) bool {
 }
 
 func getWeightFromPropertyDrawer(pd *org.PropertyDrawer) int64 {
-	weight, exist := pd.Get(emacsVar.MemoWeightProverty)
+	weight, exist := pd.Get(options.GetPropertyWeight())
 	if !exist {
 		return 50
 	} else {
@@ -50,7 +48,7 @@ func getWeightFromPropertyDrawer(pd *org.PropertyDrawer) int64 {
 
 func updateHeadlineProperty(headline *db.Headline, pd *org.PropertyDrawer) {
 	if pd != nil {
-		headline.Data.ID, _ = pd.Get(emacsVar.MemoIdProverty)
+		headline.Data.ID, _ = pd.Get(options.GetPropertyID())
 		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
 	}
 }
@@ -63,7 +61,7 @@ func getFileMeta(d *org.Document) (*MetaInfo, error) {
 			case org.Headline:
 				break
 			case org.PropertyDrawer:
-				id, exist := n.Get(emacsVar.MemoIdProverty)
+				id, exist := n.Get(options.GetPropertyID())
 				if exist && meta.ID != "" {
 					return nil, FoundDupID
 				} else if exist {

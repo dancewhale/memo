@@ -22,7 +22,7 @@
 "Create a new head as note in org file."
   (interactive)
   (org-insert-heading-respect-content)
-  (org-set-property memo-prop-note-type "default")
+  (org-set-property memo-prop-note-weight "50")
   (org-id-get-create))
 
 (defun memo-create-subhead ()
@@ -30,7 +30,7 @@
   (interactive)
   (org-insert-heading-respect-content)
   (org-demote-subtree)
-  (org-set-property memo-prop-note-type "default")
+  (org-set-property memo-prop-note-weight "50")
   (org-id-get-create))
 
 (provide 'memo-fast)

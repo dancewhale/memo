@@ -50,7 +50,6 @@
 (defun memo-review-easy()
   "Review note with score: Easy."
   (interactive)
-  (memo--before-api-call)
   (memo-api--review-note (memo-note-id memo--review-note) "Easy")
   (memo-review-note)
   )
@@ -58,7 +57,6 @@
 (defun memo-review-good()
   "Review note with score: Good."
   (interactive)
-  (memo--before-api-call)
   (memo-api--review-note (memo-note-id memo--review-note) "Good")
   (memo-review-note)
   )
@@ -66,7 +64,6 @@
 (defun memo-review-hard()
   "Review note with score: Hard."
   (interactive)
-  (memo--before-api-call)
   (memo-api--review-note (memo-note-id memo--review-note) "Hard")
   (memo-review-note)
   )
@@ -74,7 +71,6 @@
 (defun memo-review-again()
   "Review note with score: Again."
   (interactive)
-  (memo--before-api-call)
   (memo-api--review-note (memo-note-id memo--review-note) "Again")
   (memo-review-note)
   )

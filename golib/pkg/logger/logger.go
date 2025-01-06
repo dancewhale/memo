@@ -3,10 +3,9 @@ package logger
 import (
 	"errors"
 	"fmt"
+	"memo/cmd/libmemo/options"
 	"os"
 	"sync"
-
-	"memo/cmd/libmemo/options"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -37,10 +36,9 @@ func NewLogger() {
 }
 
 func getStdCore() zapcore.Core {
-	emacsv := options.EmacsEnvInit()
 	stdEncoder := getEncoder()
 	consoleWriter := zapcore.Lock(os.Stdout)
-	LogLevel := zapcore.Level(emacsv.GetMemoLogLevel())
+	LogLevel := zapcore.Level(options.GetLogLevel())
 	return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
 }
 

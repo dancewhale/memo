@@ -2,6 +2,7 @@ package emodule
 
 import (
 	"errors"
+	"memo/cmd/libmemo/options"
 	"strings"
 
 	"memo/pkg/card"
@@ -20,6 +21,7 @@ func EModuleInit(env emacs.Environment) EModule {
 	e.orgApi, _ = org.NewOrgApi()
 	e.env = env
 	e.stdl = env.StdLib()
+	options.Evariable = &options.Variable{Stdl: e.stdl, Env: env}
 	return e
 }
 

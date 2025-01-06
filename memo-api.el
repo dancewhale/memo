@@ -21,7 +21,7 @@
 (require 'org-element)
 
 ;;; Properties and Env setting
-(defconst memo-prop-note-type  "MEMO_NOTE_TYPE"
+(defconst memo-prop-note-weight  "MEMO_NOTE_WEIGHT"
   "Property used to store the cards type;
 and used for backend to indentify memo head.")
 
@@ -32,15 +32,6 @@ and used for backend to indentify memo head.")
 (defvar  memo-log-level "0"
   "Setting dynamic module log level, -1 debug, 0 info, 1 warn, 2 error.")
 
-
-;;; hook for memo-api call.
-;;; Setting env before call go module api.
-(defun memo--before-api-call ()
-  "Use to prepare some action like env setting before call backend api."
-  (setenv "MEMO_TYPE_PROVERTY" memo-prop-note-type)
-  (setenv "MEMO_ID_PROVERTY" memo-prop-note-id)
-  (setenv "MEMO_DB_PATH" memo-db-path)
-  (setenv "MEMO_LOG_LEVEL" memo-log-level))
 
 
 
@@ -54,7 +45,6 @@ and used for backend to indentify memo head.")
 (defun memo--parse-result (api-call)
 "To parse value return from 'API-CALL;
 catch error to  memo-api-return-err, value to memo-api-return-value"
-  (memo--before-api-call)
   (let ((result (catch 'error (eval api-call))))
     (if (stringp result)
         (progn (setq memo-api-return-err result) (setq memo-api-return-value nil) (user-error result))
