@@ -23,6 +23,7 @@
   (interactive)
   (org-insert-heading-respect-content)
   (org-set-property memo-prop-note-weight "50")
+  (org-set-property memo-prop-note-schedule "NORMAL")
   (org-id-get-create))
 
 (defun memo-create-subhead ()
@@ -31,6 +32,7 @@
   (org-insert-heading-respect-content)
   (org-demote-subtree)
   (org-set-property memo-prop-note-weight "50")
+  (org-set-property memo-prop-note-schedule "NORMAL")
   (org-id-get-create))
 
 (provide 'memo-fast)

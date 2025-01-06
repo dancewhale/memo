@@ -15,17 +15,19 @@ import (
 	"github.com/karrick/godirwalk"
 )
 
-func EModuleInit(env emacs.Environment) EModule {
-	e := EModule{}
+func apiInit(ectx emacs.FunctionCallContext) EApi {
+	e := EApi{}
+	e.env = ectx.Environment()
+	e.stdl = e.env.StdLib()
+	logger.Init()
+	options.Evariable = options.Variable{Stdl: e.stdl, Env: e.env}
+
 	e.capi, _ = card.NewCardApi()
 	e.orgApi, _ = org.NewOrgApi()
-	e.env = env
-	e.stdl = env.StdLib()
-	options.Evariable = &options.Variable{Stdl: e.stdl, Env: env}
 	return e
 }
 
-type EModule struct {
+type EApi struct {
 	capi   *card.CardApi
 	orgApi *org.OrgApi
 	stdl   emacs.StdLib
@@ -33,7 +35,7 @@ type EModule struct {
 }
 
 // 将emacs.Value 转变为list
-func (e *EModule) EmacsReturn(err error, result ...emacs.Value) (emacs.Value, error) {
+func (e *EApi) EmacsReturn(err error, result ...emacs.Value) (emacs.Value, error) {
 	var evalue emacs.List
 	if err != nil {
 		return e.stdl.Nil(), err
@@ -47,29 +49,48 @@ func (e *EModule) EmacsReturn(err error, result ...emacs.Value) (emacs.Value, er
 	}
 }
 
-// TODO: 暂停卡片
-func (e *EModule) HangNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
-
+func SuspendNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	e := apiInit(ectx)
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
-		err = logger.Errorf("Pass arg orgid from emacs in create note failed: %v", err)
+		err = logger.Errorf("Pass arg orgid from emacs in suspend note failed: %v", err)
 	}
 	if orgid == "" {
 		err = logger.Errorf("Orgid in args from emacs call  is empty.")
 		return e.EmacsReturn(err)
 	}
 
-	err = e.capi.RemoveCard(orgid)
-	if err != nil {
-		err = logger.Errorf("Delete note failed: %v", err)
-		return e.EmacsReturn(err)
+	result := e.capi.SuspendCard(orgid)
+	if result {
+		return e.EmacsReturn(nil, e.env.StdLib().T())
+	} else {
+		return e.EmacsReturn(nil)
 	}
-	logger.Infof("Delete note success: %s", orgid)
-
-	return e.EmacsReturn(nil, e.env.StdLib().T())
 }
 
-func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+// temp change card status to postpone and move to the end of the review queue
+// After review this card, it will be recovered to normal status.
+func TempSkipNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	e := apiInit(ectx)
+	orgid, err := ectx.GoStringArg(0)
+	if err != nil {
+		err = logger.Errorf("Pass arg orgid from emacs in skip note failed: %v", err)
+	}
+	if orgid == "" {
+		err = logger.Errorf("Orgid in args from emacs call  is empty.")
+		return e.EmacsReturn(err)
+	}
+
+	result := e.capi.SkipCard(orgid)
+	if result {
+		return e.EmacsReturn(nil, e.env.StdLib().T())
+	} else {
+		return e.EmacsReturn(nil)
+	}
+}
+
+func GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	e := apiInit(ectx)
 	fcard := e.capi.GetReviewCardByWeightDueTime()
 	if fcard == nil {
 		err := logger.Errorf("There is no card wait for review tody.")
@@ -86,7 +107,8 @@ func (e *EModule) GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value
 	return e.EmacsReturn(nil, e.env.String(fcard.ID), e.env.Int(int64(head.Weight)), e.env.String(head.Content), e.env.String(head.File.FilePath))
 }
 
-func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+func ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	e := apiInit(ectx)
 	orgid, err := ectx.GoStringArg(0)
 	if err != nil {
 		err = logger.Errorf("Pass arg orgid from emacs in review note failed: %v", err)
@@ -114,7 +136,8 @@ func (e *EModule) ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error
 	return e.EmacsReturn(nil)
 }
 
-func (e *EModule) UploadFile(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+func UploadFile(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	e := apiInit(ectx)
 	filePath, err := ectx.GoStringArg(0)
 	if err != nil {
 		err = logger.Errorf("Pass arg filePath from emacs in UploadFile failed: %v", err)
@@ -142,7 +165,8 @@ func (e *EModule) UploadFile(ectx emacs.FunctionCallContext) (emacs.Value, error
 	return e.EmacsReturn(err)
 }
 
-func (e *EModule) UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+func UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	e := apiInit(ectx)
 	dirPath, err := ectx.GoStringArg(0)
 	if err != nil {
 		err = logger.Errorf("Pass arg dirPath %s from emacs in upload file in dir failed: %v", dirPath, err)
@@ -163,11 +187,15 @@ func (e *EModule) UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Val
 	count, err := GetOrgFileCountInDir(dirPath)
 	logger.Infof("Get org file count %d in dirPath %s", count, dirPath)
 	if err != nil {
+		logger.Infof("test1")
 		err = logger.Errorf("Get org file count in dirPath %s failed: %v", dirPath, err)
 		return e.EmacsReturn(err)
 	}
+	logger.Infof("test2")
 	makeProgressReporter := e.stdl.Intern("make-progress-reporter")
+	logger.Infof("test3")
 	progressMess := "Start to upload org file under dir " + dirPath
+	logger.Infof(progressMess)
 	progressReporter, err := e.stdl.Funcall(makeProgressReporter, e.env.String(progressMess), e.env.Int(-1), e.env.Int(int64(count)))
 	if err != nil {
 		err = logger.Errorf("Progress report create failed: %v", err)

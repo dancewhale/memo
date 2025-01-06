@@ -2,9 +2,14 @@ package storage
 
 import (
 	"fmt"
-	"gorm.io/gorm"
 	"time"
+
+	"gorm.io/gorm"
 )
+
+const POSTPONE string = "postpone"
+const SUSPEND string = "suspend"
+const NORMAL string = "normal"
 
 type File struct {
 	ID        string `gorm:"primaryKey;not null"`
@@ -22,31 +27,28 @@ type Headline struct {
 	UpdatedAt time.Time      `hash:"ignore"`
 	DeletedAt gorm.DeletedAt `gorm:"index" hash:"ignore"`
 
-	// 标题
-	Title string `json:"title"`
-	// 内容
+	Title   string `json:"title"`
 	Content string `json:"content"`
-	// 卡片复习优先级
-	Weight int64 `json:"weight"`
-	// 父级ID
-	ParentID *string `json:"parent_id"`
-	// 层级
-	Level int `json:"level"`
-	// 同一层级下的排序
-	Order int `json:"order"`
-	// 任务状态
-	Status    string     `json:"status"`
-	Scheduled *time.Time `json:"scheduled"`
-	Deadline  *time.Time `json:"deadline"`
-	Closed    *time.Time `json:"closed"`
-	// org 任务优先级
-	Priority   string      `json:"priority"`
-	Children   []Headline  `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
-	FileID     *string     `gorm:"primaryKey"`
-	File       File        `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
-	Fsrs       FsrsInfo    `hash:"ignore"`
-	ReviewLogs []ReviewLog `hash:"ignore"`
-	LogBook    []*Clock    `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
+	Weight  int64  `json:"weight"`
+	// Scheduled Type
+	// Suspend: hang up card, not review until set to normal.
+	// Normal: normal schedule.
+	// Postphone: move card to the end of the queue in today and reset to 0 after review.
+	ScheduledType string      `json:"scheduled_type"`
+	ParentID      *string     `json:"parent_id"`
+	Level         int         `json:"level"`
+	Order         int         `json:"order"`
+	Status        string      `json:"status"`
+	Scheduled     *time.Time  `json:"scheduled"`
+	Deadline      *time.Time  `json:"deadline"`
+	Closed        *time.Time  `json:"closed"`
+	Priority      string      `json:"priority"`
+	Children      []Headline  `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
+	FileID        *string     `gorm:"primaryKey"`
+	File          File        `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
+	Fsrs          FsrsInfo    `hash:"ignore"`
+	ReviewLogs    []ReviewLog `hash:"ignore"`
+	LogBook       []*Clock    `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
 }
 
 type Clock struct {

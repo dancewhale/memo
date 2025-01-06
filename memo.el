@@ -69,27 +69,16 @@
 (defun memo-activate ()
   "Activate memo."
   (interactive)
-  (unless memo--lib-loaded
-    (unless (file-exists-p memo--module-path)
-      (memo-compile-module))
-    (memo--load-dynamic-module))
   (require 'memo-core)
   (require 'memo-buffer)
   (require 'memo-api)
+  (require 'memo-card)
+  (require 'memo-cloze)
   (require 'memo-fast)
-)
-
-;  TODO: 如何处理版本不一致问题
-;  (unless (string-equal memo-version (memo-lib-version))
-;  (memo-compile-module)
-;  (error "Dynamic module recompiled, please restart Emacs"))
-
-(require 'memo-core)
-(require 'memo-buffer)
-(require 'memo-card)
-(require 'memo-cloze)
-(require 'memo-api)
-(require 'memo-fast)
+  (unless memo--lib-loaded
+    (unless (file-exists-p memo--module-path)
+      (memo-compile-module))
+    (memo--load-dynamic-module)))
 
 (provide 'memo)
 ;;; memo.el ends here

@@ -26,6 +26,12 @@
 (defconst memo--review-buffer-name "*memo-review*"
   "The memo buffer for review note show and flip.")
 
+(defun memo-skip-current-review-note ()
+  "Skip current review note and review next note."
+  (interactive)
+  (memo--skip-review-note)
+  (memo-review-note)
+)
 
 (defun memo-review-note()
   "Get next review note in review buffer."

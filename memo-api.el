@@ -20,8 +20,8 @@
 (require 'cl-lib)
 (require 'org-element)
 
-;;; Properties and Env setting
-(defconst memo-prop-note-weight  "MEMO_NOTE_WEIGHT"
+;;; Properties and Value setting.
+(defconst memo-prop-note-schedule  "MEMO_NOTE_SCHEDULE"
   "Property used to store the cards type;
 and used for backend to indentify memo head.")
 
@@ -29,8 +29,28 @@ and used for backend to indentify memo head.")
   "Property used to store the cards id; 
 and used for backend to indentify memo head.")
 
-(defvar  memo-log-level "0"
+(defconst memo-prop-note-weight  "MEMO_NOTE_WEIGHT"
+  "Property used to store the cards type;
+and used for backend to indentify memo head.")
+
+
+(defvar memo-log-level "0"
   "Setting dynamic module log level, -1 debug, 0 info, 1 warn, 2 error.")
+
+(defvar memo-db-max-idle-conn  "10"
+  "Property used to store the cards type;
+and used for backend to indentify memo head.")
+
+(defvar memo-db-max-open-conn  "100"
+  "Property used to store the cards type;
+and used for backend to indentify memo head.")
+
+(defvar memo-db-path nil
+"Setting memo db dir path to store database;
+if nil will default use user home dir.")
+
+(defvar memo-org-directory nil
+"Setting memo dir to scan org file.")
 
 
 
@@ -71,13 +91,10 @@ memo-note is (orgid  type  content)."
 					     :content note-content
 					     :file note-file))))
 
-;; setting memo scan dir and function.
-(defvar  memo-org-directory nil
-"Setting memo dir to scan org file.")
-
-(defvar  memo-db-path nil
-"Setting memo db dir path to store database, if nil will default use user home dir.")
-
+(defun memo--skip-review-note ()
+  (when memo--review-note
+    (memo-api--skip-note (memo-note-id memo--review-note)))
+)
 
 (defun memo-sync-db ()
 "Synchronize the db state with the current Org files on-disk."

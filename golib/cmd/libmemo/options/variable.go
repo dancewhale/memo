@@ -9,7 +9,7 @@ import (
 	log "gorm.io/gorm/logger"
 )
 
-var Evariable *Variable
+var Evariable Variable
 
 type Variable struct {
 	Stdl emacs.StdLib
@@ -33,10 +33,10 @@ func (v *Variable) get(name string) string {
 // GetPropertyID get property id from emacs, if not found, return default value
 func getStringValue(propertyName, defaultValue string) string {
 	var result string
-	if Evariable != nil {
+	if Evariable.Env != nil {
 		result = Evariable.get(propertyName)
 	}
-	if Evariable == nil || result == "" {
+	if Evariable.Env == nil || result == "" {
 		result = defaultValue
 	}
 	return result
@@ -45,10 +45,10 @@ func getStringValue(propertyName, defaultValue string) string {
 // GetPropertyID get property id from emacs, if not found, return default value
 func getIntValue(propertyName string, defaultValue int) int {
 	var value string
-	if Evariable != nil {
+	if Evariable.Env != nil {
 		value = Evariable.get(propertyName)
 	}
-	if Evariable == nil || value == "" {
+	if Evariable.Env == nil || value == "" {
 		return defaultValue
 	} else {
 		result, err := strconv.Atoi(value)
@@ -65,7 +65,11 @@ func GetPropertyID() string {
 }
 
 func GetPropertyWeight() string {
-	return getStringValue("memo-prop-note-weight", "MEMO-NOTE-WEIGHT")
+	return getStringValue("memo-prop-note-weight", "MEMO_NOTE_WEIGHT")
+}
+
+func GetPropertySchedule() string {
+	return getStringValue("memo-prop-note-schedule", "MEMO_NOTE_SCHEDULE")
 }
 
 func GetLogLevel() int {
@@ -94,7 +98,12 @@ func GetDBPath() string {
 		panic(err)
 	}
 	defaultPath := dirname + "/.memo.db"
-	return getStringValue("memo-db-path", defaultPath)
+	dbPath := getStringValue("memo-db-path", defaultPath)
+	info, err := os.Stat(dbPath)
+	if info.IsDir() {
+		return defaultPath
+	}
+	return dbPath
 }
 
 func GetDBMaxIdleConn() int {

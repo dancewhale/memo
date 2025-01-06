@@ -42,7 +42,6 @@ func (o *OrgApi) UploadFile(filePath string, force bool) error {
 }
 
 func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
-
 	err := godirwalk.Walk(dirPath, &godirwalk.Options{
 		Callback: func(osPathname string, de *godirwalk.Dirent) error {
 			// Following string operation is not most performant way

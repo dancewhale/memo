@@ -8,6 +8,7 @@ import (
 
 	"memo/cmd/libmemo/options"
 	"memo/pkg/logger"
+	"memo/pkg/storage"
 )
 
 // 用于对[]org.Nodes 过滤
@@ -46,10 +47,29 @@ func getWeightFromPropertyDrawer(pd *org.PropertyDrawer) int64 {
 	}
 }
 
-func updateHeadlineProperty(headline *db.Headline, pd *org.PropertyDrawer) {
+func getScheduleFromPropertyDrawer(pd *org.PropertyDrawer) string {
+	schedule, exist := pd.Get(options.GetPropertySchedule())
+	if !exist {
+		return storage.NORMAL
+	} else {
+		switch schedule {
+		case storage.NORMAL:
+			return storage.NORMAL
+		case storage.SUSPEND:
+			return storage.SUSPEND
+		case storage.POSTPONE:
+			return storage.POSTPONE
+		default:
+			return storage.NORMAL
+		}
+	}
+}
+
+func getHeadlineProperty(headline *db.Headline, pd *org.PropertyDrawer) {
 	if pd != nil {
 		headline.Data.ID, _ = pd.Get(options.GetPropertyID())
 		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
+		headline.Data.ScheduledType = getScheduleFromPropertyDrawer(pd)
 	}
 }
 

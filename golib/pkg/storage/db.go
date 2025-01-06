@@ -17,7 +17,7 @@ func InitDBEngine() (*gorm.DB, error) {
 		return Engine, nil
 	}
 	var err error
-	mlog.Infof("Current memo log level is %d, db log level is %d", options.GetLogLevel(), options.GetDbLogLevel())
+	mlog.Infof("Current memo log level is %d, db log level is %d, dbpath is %s", options.GetLogLevel(), options.GetDbLogLevel(), options.GetDBPath())
 	if Engine == nil {
 		Engine, err = gorm.Open(sqlite.Open(options.GetDBPath()), &gorm.Config{
 			Logger: logger.Default.LogMode(options.GetDbLogLevel()),

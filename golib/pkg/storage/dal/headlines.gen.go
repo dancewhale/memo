@@ -34,6 +34,7 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.Title = field.NewString(tableName, "title")
 	_headline.Content = field.NewString(tableName, "content")
 	_headline.Weight = field.NewInt64(tableName, "weight")
+	_headline.ScheduledType = field.NewString(tableName, "scheduled_type")
 	_headline.ParentID = field.NewString(tableName, "parent_id")
 	_headline.Level = field.NewInt(tableName, "level")
 	_headline.Order_ = field.NewInt(tableName, "order")
@@ -122,24 +123,25 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 type headline struct {
 	headlineDo
 
-	ALL       field.Asterisk
-	ID        field.String
-	CreatedAt field.Time
-	UpdatedAt field.Time
-	DeletedAt field.Field
-	Title     field.String
-	Content   field.String
-	Weight    field.Int64
-	ParentID  field.String
-	Level     field.Int
-	Order_    field.Int
-	Status    field.String
-	Scheduled field.Time
-	Deadline  field.Time
-	Closed    field.Time
-	Priority  field.String
-	FileID    field.String
-	Fsrs      headlineHasOneFsrs
+	ALL           field.Asterisk
+	ID            field.String
+	CreatedAt     field.Time
+	UpdatedAt     field.Time
+	DeletedAt     field.Field
+	Title         field.String
+	Content       field.String
+	Weight        field.Int64
+	ScheduledType field.String
+	ParentID      field.String
+	Level         field.Int
+	Order_        field.Int
+	Status        field.String
+	Scheduled     field.Time
+	Deadline      field.Time
+	Closed        field.Time
+	Priority      field.String
+	FileID        field.String
+	Fsrs          headlineHasOneFsrs
 
 	Children headlineHasManyChildren
 
@@ -171,6 +173,7 @@ func (h *headline) updateTableName(table string) *headline {
 	h.Title = field.NewString(table, "title")
 	h.Content = field.NewString(table, "content")
 	h.Weight = field.NewInt64(table, "weight")
+	h.ScheduledType = field.NewString(table, "scheduled_type")
 	h.ParentID = field.NewString(table, "parent_id")
 	h.Level = field.NewInt(table, "level")
 	h.Order_ = field.NewInt(table, "order")
@@ -196,7 +199,7 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 21)
+	h.fieldMap = make(map[string]field.Expr, 22)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
@@ -204,6 +207,7 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["title"] = h.Title
 	h.fieldMap["content"] = h.Content
 	h.fieldMap["weight"] = h.Weight
+	h.fieldMap["scheduled_type"] = h.ScheduledType
 	h.fieldMap["parent_id"] = h.ParentID
 	h.fieldMap["level"] = h.Level
 	h.fieldMap["order"] = h.Order_

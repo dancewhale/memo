@@ -69,10 +69,7 @@
            for (text begin end string hint) = cloze
            do (memo-cloze-create-overlay begin end (memo-cloze-hidden-show))
            finally
-           (when memo-cloze-centered-in-review-p
-                (goto-char begin)
-                (recenter)
-                (memo-cloze-recenter-horizontally))))
+           (goto-char (point-min))))
 
 
 (defun memo-cloze-default (begin end &optional hint)

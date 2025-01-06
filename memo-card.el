@@ -58,7 +58,8 @@
 	(progn
 	  (let* ((begin (car card-back-position))
 		 (end (cadr card-back-position)))
-	    (memo-card-create-overlay begin end (memo-card-hidden-show)))))))
+	    (memo-card-create-overlay begin end (memo-card-hidden-show)))))
+    (goto-char (point-min))))
 
 (defun memo-card-show ()
   "Remove card overlay and show content."

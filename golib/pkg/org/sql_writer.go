@@ -59,7 +59,7 @@ func (w *SqlWriter) WriteHeadline(h org.Headline) {
 		},
 		Children: []db.Headline{},
 	}
-	updateHeadlineProperty(&headline, h.Properties)
+	getHeadlineProperty(&headline, h.Properties)
 
 	// 深度优先遍历
 	for {
