@@ -49,11 +49,11 @@ type Headline struct {
 	Fsrs          FsrsInfo    `hash:"ignore"`
 	ReviewLogs    []ReviewLog `hash:"ignore"`
 	LogBook       []*Clock    `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
-	Locations     []Location  `gorm:"many2many:headline_locations;" json:"locations"`
+	Locations     []*Location `gorm:"many2many:headline_locations;" json:"locations"`
 }
 
 type Clock struct {
-	ID         string   `gorm:"primarykey;not null"`
+	ID         uint     `gorm:"primarykey;not null" hash:"ignore"`
 	HeadlineID string   `gorm:"not null"`
 	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
 	Start      *time.Time

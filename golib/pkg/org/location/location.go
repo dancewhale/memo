@@ -11,6 +11,7 @@ type LocationType string
 var (
 	// mean the source of content copy from.
 	SourceType LocationType = "source"
+	BookMark   LocationType = "bookmark"
 )
 
 var pattern = regexp.MustCompile(`\[\[([^\]]+)\](?:\[([^\]]+)\])?\]`)
@@ -18,10 +19,16 @@ var pattern = regexp.MustCompile(`\[\[([^\]]+)\](?:\[([^\]]+)\])?\]`)
 type LocationApi interface {
 	Create() error
 	ParseLink() LocationApi
-	Get() storage.Location
+	Get() *storage.Location
 	String() string
 }
 
+// orgLink format is [[protocol:link::exlink][desctipion]]
+// protocol is the type of link, like ID, file, http, https, ftp, etc.
+// link is the real link.
+// :: is the separator between link and exlink, default is ::, but can be changed in different protocol.
+// exlink is the external info to help user location the position after open link.
+// description is the description of the link.
 func ParseLocation(orgLink string, lotype LocationType) LocationApi {
 	if orgLink == "" || lotype == "" {
 		return nil
@@ -44,8 +51,10 @@ func ParseLocation(orgLink string, lotype LocationType) LocationApi {
 	case "ID":
 		so := IDLocation{Location{content: orgLink, Location: s}}
 		return so.ParseLink()
-	default:
-		so := Location{content: orgLink, Location: s}
+	case "info":
+		so := InfoLocation{Location{content: orgLink, Location: s}}
 		return so.ParseLink()
+	default:
+		return nil
 	}
 }

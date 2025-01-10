@@ -28,9 +28,6 @@ func newClock(db *gorm.DB, opts ...gen.DOOption) clock {
 	tableName := _clock.clockDo.TableName()
 	_clock.ALL = field.NewAsterisk(tableName)
 	_clock.ID = field.NewUint(tableName, "id")
-	_clock.CreatedAt = field.NewTime(tableName, "created_at")
-	_clock.UpdatedAt = field.NewTime(tableName, "updated_at")
-	_clock.DeletedAt = field.NewField(tableName, "deleted_at")
 	_clock.HeadlineID = field.NewString(tableName, "headline_id")
 	_clock.Start = field.NewTime(tableName, "start")
 	_clock.End = field.NewTime(tableName, "end")
@@ -104,9 +101,6 @@ type clock struct {
 
 	ALL        field.Asterisk
 	ID         field.Uint
-	CreatedAt  field.Time
-	UpdatedAt  field.Time
-	DeletedAt  field.Field
 	HeadlineID field.String
 	Start      field.Time
 	End        field.Time
@@ -128,9 +122,6 @@ func (c clock) As(alias string) *clock {
 func (c *clock) updateTableName(table string) *clock {
 	c.ALL = field.NewAsterisk(table)
 	c.ID = field.NewUint(table, "id")
-	c.CreatedAt = field.NewTime(table, "created_at")
-	c.UpdatedAt = field.NewTime(table, "updated_at")
-	c.DeletedAt = field.NewField(table, "deleted_at")
 	c.HeadlineID = field.NewString(table, "headline_id")
 	c.Start = field.NewTime(table, "start")
 	c.End = field.NewTime(table, "end")
@@ -150,11 +141,8 @@ func (c *clock) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (c *clock) fillFieldMap() {
-	c.fieldMap = make(map[string]field.Expr, 8)
+	c.fieldMap = make(map[string]field.Expr, 5)
 	c.fieldMap["id"] = c.ID
-	c.fieldMap["created_at"] = c.CreatedAt
-	c.fieldMap["updated_at"] = c.UpdatedAt
-	c.fieldMap["deleted_at"] = c.DeletedAt
 	c.fieldMap["headline_id"] = c.HeadlineID
 	c.fieldMap["start"] = c.Start
 	c.fieldMap["end"] = c.End

@@ -16,6 +16,7 @@ type Location struct {
 
 func (l *Location) Create() error {
 	lo := dal.Use(storage.Engine).Location
+	// check if location is already created
 	if l.Location.ID != 0 {
 		return nil
 	} else {
@@ -47,7 +48,7 @@ func (l *Location) String() string {
 	return "[[" + l.Protocol + ":" + l.Location.Link + "::" + l.Location.ExLink + "]]"
 }
 
-func (l *Location) Get() storage.Location {
+func (l *Location) Get() *storage.Location {
 	l.Create()
-	return l.Location
+	return &l.Location
 }

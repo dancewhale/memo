@@ -30,8 +30,8 @@ func newLocation(db *gorm.DB, opts ...gen.DOOption) location {
 	_location.ID = field.NewUint(tableName, "id")
 	_location.Protocol = field.NewString(tableName, "protocol")
 	_location.Link = field.NewString(tableName, "link")
-	_location.Type = field.NewString(tableName, "type")
 	_location.ExLink = field.NewString(tableName, "ex_link")
+	_location.Type = field.NewString(tableName, "type")
 	_location.Headline = locationManyToManyHeadline{
 		db: db.Session(&gorm.Session{}),
 
@@ -104,8 +104,8 @@ type location struct {
 	ID       field.Uint
 	Protocol field.String
 	Link     field.String
-	Type     field.String
 	ExLink   field.String
+	Type     field.String
 	Headline locationManyToManyHeadline
 
 	fieldMap map[string]field.Expr
@@ -126,8 +126,8 @@ func (l *location) updateTableName(table string) *location {
 	l.ID = field.NewUint(table, "id")
 	l.Protocol = field.NewString(table, "protocol")
 	l.Link = field.NewString(table, "link")
-	l.Type = field.NewString(table, "type")
 	l.ExLink = field.NewString(table, "ex_link")
+	l.Type = field.NewString(table, "type")
 
 	l.fillFieldMap()
 
@@ -148,8 +148,8 @@ func (l *location) fillFieldMap() {
 	l.fieldMap["id"] = l.ID
 	l.fieldMap["protocol"] = l.Protocol
 	l.fieldMap["link"] = l.Link
-	l.fieldMap["type"] = l.Type
 	l.fieldMap["ex_link"] = l.ExLink
+	l.fieldMap["type"] = l.Type
 
 }
 
