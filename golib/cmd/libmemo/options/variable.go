@@ -72,6 +72,10 @@ func GetPropertySchedule() string {
 	return getStringValue("memo-prop-note-schedule", "MEMO_NOTE_SCHEDULE")
 }
 
+func GetPropertySource() string {
+	return getStringValue("memo-prop-note-source", "MEMO_NOTE_SOURCE")
+}
+
 func GetLogLevel() int {
 	return getIntValue("memo-log-level", 0)
 }

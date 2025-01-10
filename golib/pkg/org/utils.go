@@ -4,6 +4,7 @@ import (
 	"github.com/dancewhale/go-org/org"
 	"github.com/emirpasic/gods/stacks/arraystack"
 	"memo/pkg/org/db"
+	"memo/pkg/org/location"
 	"strconv"
 
 	"memo/cmd/libmemo/options"
@@ -47,6 +48,15 @@ func getWeightFromPropertyDrawer(pd *org.PropertyDrawer) int64 {
 	}
 }
 
+func getSourceFromPropertyDrawer(pd *org.PropertyDrawer) string {
+	source, exist := pd.Get(options.GetPropertySource())
+	if !exist {
+		return ""
+	} else {
+		return source
+	}
+}
+
 func getScheduleFromPropertyDrawer(pd *org.PropertyDrawer) string {
 	schedule, exist := pd.Get(options.GetPropertySchedule())
 	if !exist {
@@ -70,6 +80,10 @@ func getHeadlineProperty(headline *db.Headline, pd *org.PropertyDrawer) {
 		headline.Data.ID, _ = pd.Get(options.GetPropertyID())
 		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
 		headline.Data.ScheduledType = getScheduleFromPropertyDrawer(pd)
+		location := location.ParseLocation(getSourceFromPropertyDrawer(pd), location.SourceType)
+		if location != nil {
+			headline.Data.Locations = append(headline.Data.Locations, location.Get())
+		}
 	}
 }
 

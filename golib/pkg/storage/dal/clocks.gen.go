@@ -79,6 +79,19 @@ func newClock(db *gorm.DB, opts ...gen.DOOption) clock {
 				RelationField: field.NewRelation("Headline.LogBook.Headline", "storage.Headline"),
 			},
 		},
+		Locations: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headline.Locations", "storage.Location"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.Locations.Headline", "storage.Headline"),
+			},
+		},
 	}
 
 	_clock.fillFieldMap()
@@ -179,6 +192,12 @@ type clockBelongsToHeadline struct {
 		field.RelationField
 	}
 	LogBook struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
+	}
+	Locations struct {
 		field.RelationField
 		Headline struct {
 			field.RelationField

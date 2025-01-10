@@ -49,20 +49,24 @@ type Headline struct {
 	Fsrs          FsrsInfo    `hash:"ignore"`
 	ReviewLogs    []ReviewLog `hash:"ignore"`
 	LogBook       []*Clock    `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
+	Locations     []Location  `gorm:"many2many:headline_locations;" json:"locations"`
 }
 
 type Clock struct {
-	gorm.Model
+	ID         string   `gorm:"primarykey;not null"`
 	HeadlineID string   `gorm:"not null"`
 	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
 	Start      *time.Time
 	End        *time.Time
 }
 
-type Source struct {
-	Link        string
-	LinkType    string
-	Description string
+type Location struct {
+	ID       uint       `gorm:"primarykey"`
+	Headline []Headline `gorm:"many2many:headline_locations;" json:"headline"`
+	Protocol string
+	Link     string
+	ExLink   string
+	Type     string
 }
 
 func (c Clock) String() string {

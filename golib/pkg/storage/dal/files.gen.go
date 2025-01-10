@@ -78,6 +78,19 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 				RelationField: field.NewRelation("Headlines.LogBook.Headline", "storage.Headline"),
 			},
 		},
+		Locations: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headlines.Locations", "storage.Location"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headlines.Locations.Headline", "storage.Headline"),
+			},
+		},
 	}
 
 	_file.fillFieldMap()
@@ -175,6 +188,12 @@ type fileHasManyHeadlines struct {
 		field.RelationField
 	}
 	LogBook struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
+	}
+	Locations struct {
 		field.RelationField
 		Headline struct {
 			field.RelationField

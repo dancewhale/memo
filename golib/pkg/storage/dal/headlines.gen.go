@@ -95,6 +95,19 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 				RelationField: field.NewRelation("Children.LogBook.Headline", "storage.Headline"),
 			},
 		},
+		Locations: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Children.Locations", "storage.Location"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Children.Locations.Headline", "storage.Headline"),
+			},
+		},
 	}
 
 	_headline.ReviewLogs = headlineHasManyReviewLogs{
@@ -113,6 +126,12 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("File", "storage.File"),
+	}
+
+	_headline.Locations = headlineManyToManyLocations{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Locations", "storage.Location"),
 	}
 
 	_headline.fillFieldMap()
@@ -150,6 +169,8 @@ type headline struct {
 	LogBook headlineHasManyLogBook
 
 	File headlineBelongsToFile
+
+	Locations headlineManyToManyLocations
 
 	fieldMap map[string]field.Expr
 }
@@ -199,7 +220,7 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 22)
+	h.fieldMap = make(map[string]field.Expr, 23)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
@@ -322,6 +343,12 @@ type headlineHasManyChildren struct {
 		field.RelationField
 	}
 	LogBook struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
+	}
+	Locations struct {
 		field.RelationField
 		Headline struct {
 			field.RelationField
@@ -604,6 +631,77 @@ func (a headlineBelongsToFileTx) Clear() error {
 }
 
 func (a headlineBelongsToFileTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type headlineManyToManyLocations struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a headlineManyToManyLocations) Where(conds ...field.Expr) *headlineManyToManyLocations {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineManyToManyLocations) WithContext(ctx context.Context) *headlineManyToManyLocations {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineManyToManyLocations) Session(session *gorm.Session) *headlineManyToManyLocations {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineManyToManyLocations) Model(m *storage.Headline) *headlineManyToManyLocationsTx {
+	return &headlineManyToManyLocationsTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineManyToManyLocationsTx struct{ tx *gorm.Association }
+
+func (a headlineManyToManyLocationsTx) Find() (result []*storage.Location, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineManyToManyLocationsTx) Append(values ...*storage.Location) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineManyToManyLocationsTx) Replace(values ...*storage.Location) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineManyToManyLocationsTx) Delete(values ...*storage.Location) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineManyToManyLocationsTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineManyToManyLocationsTx) Count() int64 {
 	return a.tx.Count()
 }
 

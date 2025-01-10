@@ -21,6 +21,7 @@ var (
 	File      *file
 	FsrsInfo  *fsrsInfo
 	Headline  *headline
+	Location  *location
 	ReviewLog *reviewLog
 )
 
@@ -30,6 +31,7 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	File = &Q.File
 	FsrsInfo = &Q.FsrsInfo
 	Headline = &Q.Headline
+	Location = &Q.Location
 	ReviewLog = &Q.ReviewLog
 }
 
@@ -40,6 +42,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		File:      newFile(db, opts...),
 		FsrsInfo:  newFsrsInfo(db, opts...),
 		Headline:  newHeadline(db, opts...),
+		Location:  newLocation(db, opts...),
 		ReviewLog: newReviewLog(db, opts...),
 	}
 }
@@ -51,6 +54,7 @@ type Query struct {
 	File      file
 	FsrsInfo  fsrsInfo
 	Headline  headline
+	Location  location
 	ReviewLog reviewLog
 }
 
@@ -63,6 +67,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		File:      q.File.clone(db),
 		FsrsInfo:  q.FsrsInfo.clone(db),
 		Headline:  q.Headline.clone(db),
+		Location:  q.Location.clone(db),
 		ReviewLog: q.ReviewLog.clone(db),
 	}
 }
@@ -82,6 +87,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		File:      q.File.replaceDB(db),
 		FsrsInfo:  q.FsrsInfo.replaceDB(db),
 		Headline:  q.Headline.replaceDB(db),
+		Location:  q.Location.replaceDB(db),
 		ReviewLog: q.ReviewLog.replaceDB(db),
 	}
 }
@@ -91,6 +97,7 @@ type queryCtx struct {
 	File      *fileDo
 	FsrsInfo  *fsrsInfoDo
 	Headline  *headlineDo
+	Location  *locationDo
 	ReviewLog *reviewLogDo
 }
 
@@ -100,6 +107,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		File:      q.File.WithContext(ctx),
 		FsrsInfo:  q.FsrsInfo.WithContext(ctx),
 		Headline:  q.Headline.WithContext(ctx),
+		Location:  q.Location.WithContext(ctx),
 		ReviewLog: q.ReviewLog.WithContext(ctx),
 	}
 }

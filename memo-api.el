@@ -34,6 +34,9 @@ and used for backend to indentify memo head.")
 and used for backend to indentify memo head.")
 
 
+(defconst memo-prop-note-source  "MEMO_NOTE_SOURCE"
+  "Property used to store the cards SOURCE.")
+
 (defvar memo-log-level "0"
   "Setting dynamic module log level, -1 debug, 0 info, 1 warn, 2 error.")
 
