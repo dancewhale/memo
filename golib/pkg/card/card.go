@@ -2,6 +2,7 @@ package card
 
 import (
 	"context"
+	"memo/pkg/org/location"
 	"time"
 
 	"memo/pkg/logger"
@@ -86,7 +87,11 @@ func (api *CardApi) SkipCard(orgid string) bool {
 // Suspend the card.
 func (api *CardApi) SuspendCard(orgid string) bool {
 	h := api.Headline
-	_, err := h.WithContext(context.Background()).Where(h.ID.Eq(orgid)).UpdateSimple(h.ScheduledType.Value(storage.SUSPEND))
+
+	_, err := h.WithContext(context.Background()).
+		Where(h.ID.Eq(orgid)).
+		UpdateSimple(h.ScheduledType.Value(storage.SUSPEND))
+
 	if err != nil {
 		logger.Errorf("Suspend Card %s failed: %v", orgid, err)
 		return false
@@ -96,11 +101,17 @@ func (api *CardApi) SuspendCard(orgid string) bool {
 
 // 增加复习记录
 func (api *CardApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
+	n := api.Headline
 	card := &storage.Headline{}
 	log := &storage.ReviewLog{}
+
 	copier.Copy(log, rlog)
-	n := api.Headline
-	card, err := n.WithContext(context.Background()).Preload(n.ReviewLogs).Where(n.ID.Eq(orgid)).First()
+
+	card, err := n.WithContext(context.Background()).
+		Preload(n.ReviewLogs).
+		Where(n.ID.Eq(orgid)).
+		First()
+
 	if err != nil {
 		return logger.Errorf("Add review log in db failed: %v", err)
 	}
@@ -117,12 +128,19 @@ func (api *CardApi) CountCards() int {
 func (api *CardApi) DueCardsInDay(day int64) []*storage.Headline {
 	h := api.Headline
 	f := api.FsrsInfo
+	l := api.Location
+
 	china, _ := time.LoadLocation("Asia/Shanghai")
 	dueDay := time.Now().In(china).AddDate(0, 0, int(day))
 	dueDayStart := gotime.SoD(dueDay)
 	dueDayEnd := gotime.EoD(dueDay)
-	heads, err := h.WithContext(context.Background()).Join(f, h.ID.EqCol(f.HeadlineID)).
-		Order(h.Weight.Desc()).Order(f.Due.Asc()).Where(f.Due.Gte(dueDayStart)).Where(f.Due.Lte(dueDayEnd)).Find()
+
+	heads, err := h.WithContext(context.Background()).
+		Preload(h.Locations.On(l.Type.Eq(string(location.SourceType)))).Preload(h.File).
+		Join(f, h.ID.EqCol(f.HeadlineID)).
+		Order(h.Weight.Desc()).Order(f.Due.Asc()).Where(f.Due.Gte(dueDayStart)).
+		Where(f.Due.Lte(dueDayEnd)).Find()
+
 	if err != nil {
 		_ = logger.Errorf("Get due heads in %d day failed: %v", day, err)
 		return nil
@@ -134,6 +152,8 @@ func (api *CardApi) DueCardsInDay(day int64) []*storage.Headline {
 func (api *CardApi) DueCardsBeforeToday(stype string) []*storage.Headline {
 	h := api.Headline
 	f := api.FsrsInfo
+	l := api.Location
+
 	var err error
 	var heads []*storage.Headline
 
@@ -141,7 +161,9 @@ func (api *CardApi) DueCardsBeforeToday(stype string) []*storage.Headline {
 	today := time.Now().In(china)
 	todayStart := gotime.SoD(today)
 
-	headDo := h.WithContext(context.Background()).Join(f, h.ID.EqCol(f.HeadlineID)).
+	headDo := h.WithContext(context.Background()).
+		Preload(h.Locations.On(l.Type.Eq(string(location.SourceType)))).Preload(h.File).
+		Join(f, h.ID.EqCol(f.HeadlineID)).
 		Order(h.Weight.Desc()).Order(f.Due.Asc()).
 		Where(f.Due.Lte(todayStart))
 
@@ -164,6 +186,8 @@ func (api *CardApi) DueCardsBeforeToday(stype string) []*storage.Headline {
 func (api *CardApi) DueCardsInToday(stype string) []*storage.Headline {
 	h := api.Headline
 	f := api.FsrsInfo
+	l := api.Location
+
 	var err error
 	var heads []*storage.Headline
 
@@ -172,7 +196,9 @@ func (api *CardApi) DueCardsInToday(stype string) []*storage.Headline {
 	todayStart := gotime.SoD(today)
 	todayEnd := gotime.EoD(today)
 
-	headDo := h.WithContext(context.Background()).Join(f, h.ID.EqCol(f.HeadlineID)).
+	headDo := h.WithContext(context.Background()).
+		Preload(h.Locations.On(l.Type.Eq(string(location.SourceType)))).Preload(h.Fsrs).
+		Join(f, h.ID.EqCol(f.HeadlineID)).
 		Order(h.Weight.Desc()).Order(f.Due.Asc()).
 		Where(f.Due.Lte(todayEnd)).Where(f.Due.Gt(todayStart))
 
@@ -188,6 +214,7 @@ func (api *CardApi) DueCardsInToday(stype string) []*storage.Headline {
 		logger.Errorf("Get Headline due in today order by weight,duetime failed: %v", err)
 		return nil
 	}
+
 	return heads
 }
 
@@ -260,17 +287,22 @@ func (api *CardApi) ScanHeadlineInitFsrs() ([]*storage.Headline, error) {
 	logger.Infof("Start to scan org for headline init.")
 	headline := api.Headline
 	fsrsInfo := api.FsrsInfo
-	heads, err := headline.WithContext(context.Background()).LeftJoin(fsrsInfo, fsrsInfo.HeadlineID.EqCol(headline.ID)).Where(fsrsInfo.ID.IsNull()).Find()
+
+	heads, err := headline.WithContext(context.Background()).
+		LeftJoin(fsrsInfo, fsrsInfo.HeadlineID.EqCol(headline.ID)).
+		Where(fsrsInfo.ID.IsNull()).
+		Find()
+
 	if err != nil {
 		logger.Errorf("Search for headline to init failed in ScanHeadInitFsrs %s.", err.Error())
 		return nil, err
 	}
 	for _, head := range heads {
 		if head.Status == "" && head.Content != "" {
-			fsrsinfo := storage.FsrsInfo{}
+			fsrsinfo := &storage.FsrsInfo{}
 			fsrsinfo.Card = gfsrs.NewCard()
 			fsrsinfo.HeadlineID = head.ID
-			err = fsrsInfo.WithContext(context.Background()).Create(&fsrsinfo)
+			err = fsrsInfo.WithContext(context.Background()).Create(fsrsinfo)
 			if err != nil {
 				return nil, logger.Errorf("Create fsrs info for headline %s failed: %v", head.ID, err)
 			}

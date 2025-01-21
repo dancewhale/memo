@@ -76,7 +76,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 
 ;; get note for review.
 (cl-defstruct memo-note
-  id type content file)
+  id weight content file source)
 
 (defvar memo--review-note nil
   "The memo-note object which store note info wait for review.")
@@ -86,18 +86,15 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 memo-note is (orgid  type  content)."
   (memo--parse-result '(memo-api--get-next-review-note))
   (let* ((note-id (car memo-api-return-value))
-	 (note-type (cadr memo-api-return-value))
+	 (note-weight (cadr memo-api-return-value))
 	 (note-content (caddr memo-api-return-value))
-	 (note-file (cadddr memo-api-return-value)))
+	 (note-file (cadddr memo-api-return-value))
+         (note-source (car (cddddr memo-api-return-value))))
     (setq memo--review-note (make-memo-note :id note-id
-					     :type note-type
+					     :weight note-weight
 					     :content note-content
-					     :file note-file))))
-
-(defun memo--skip-review-note ()
-  (when memo--review-note
-    (memo-api--skip-note (memo-note-id memo--review-note)))
-)
+					     :file note-file
+					     :source note-source))))
 
 (defun memo-sync-db ()
 "Synchronize the db state with the current Org files on-disk."

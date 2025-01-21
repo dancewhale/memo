@@ -3,6 +3,7 @@ package emodule
 import (
 	"errors"
 	"memo/cmd/libmemo/options"
+	"memo/pkg/org/location"
 	"strings"
 
 	"memo/pkg/card"
@@ -91,20 +92,24 @@ func TempSkipNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 
 func GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	e := apiInit(ectx)
-	fcard := e.capi.GetReviewCardByWeightDueTime()
-	if fcard == nil {
+	l := ""
+	head := e.capi.GetReviewCardByWeightDueTime()
+	if head == nil {
 		err := logger.Errorf("There is no card wait for review tody.")
 		return e.EmacsReturn(err)
 	}
-	head, err := e.orgApi.GetHeadlineByOrgID(fcard.ID)
-	if err != nil {
-		return e.EmacsReturn(err, e.stdl.Nil())
+
+	if len(head.Locations) != 0 {
+		lo := location.ParseLocation(head.Locations[0])
+		l = lo.String()
 	}
-	if head == nil {
-		err = logger.Errorf("Get headline by orgid %s failed: %v", fcard.ID, err)
-		return e.EmacsReturn(err, e.env.String(fcard.ID), e.env.String(""), e.env.String(""), e.env.String(""))
-	}
-	return e.EmacsReturn(nil, e.env.String(fcard.ID), e.env.Int(int64(head.Weight)), e.env.String(head.Content), e.env.String(head.File.FilePath))
+
+	return e.EmacsReturn(nil, e.env.String(head.ID),
+		e.env.Int(int64(head.Weight)),
+		e.env.String(head.Content),
+		e.env.String(head.File.FilePath),
+		e.env.String(l),
+	)
 }
 
 func ReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {

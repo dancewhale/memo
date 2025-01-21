@@ -46,7 +46,7 @@ type Headline struct {
 	Children      []Headline  `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
 	FileID        *string     `gorm:"primaryKey"`
 	File          File        `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
-	Fsrs          FsrsInfo    `hash:"ignore"`
+	Fsrs          *FsrsInfo   `hash:"ignore"`
 	ReviewLogs    []ReviewLog `hash:"ignore"`
 	LogBook       []*Clock    `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
 	Locations     []*Location `gorm:"many2many:headline_locations;" json:"locations"`

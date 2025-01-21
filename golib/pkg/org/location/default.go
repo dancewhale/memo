@@ -11,7 +11,7 @@ import (
 
 type Location struct {
 	storage.Location
-	content string
+	Content string
 }
 
 func (l *Location) Create() error {

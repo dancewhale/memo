@@ -80,7 +80,7 @@ func getHeadlineProperty(headline *db.Headline, pd *org.PropertyDrawer) {
 		headline.Data.ID, _ = pd.Get(options.GetPropertyID())
 		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
 		headline.Data.ScheduledType = getScheduleFromPropertyDrawer(pd)
-		location := location.ParseLocation(getSourceFromPropertyDrawer(pd), location.SourceType)
+		location := location.ParseOrgLink(getSourceFromPropertyDrawer(pd), location.SourceType)
 		if location != nil {
 			headline.Data.Locations = append(headline.Data.Locations, location.Get())
 		}

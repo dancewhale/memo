@@ -26,11 +26,16 @@
 (defconst memo--review-buffer-name "*memo-review*"
   "The memo buffer for review note show and flip.")
 
+
+(defconst memo--source-buffer-name "*memo-source*"
+  "The memo buffer for review note show and flip.")
+
 (defun memo-skip-current-review-note ()
   "Skip current review note and review next note."
   (interactive)
-  (memo--skip-review-note)
-  (memo-review-note)
+  (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
+    (progn (memo-api--skip-note (memo-note-id memo--review-note))
+	   (memo-review-note)))
 )
 
 (defun memo-review-note()
@@ -105,6 +110,20 @@
       (org-fold-show-context)
       (memo-narrow-to-org-subtree-content)
       (org-tidy-mode 1)))
+
+
+;; jump to the source of node.
+(defun memo-goto-source ()
+  "Jump to source of node."
+  (interactive)
+  (if (not (memo-note-id memo--review-note))
+      (user-error "Review memo-note object is nil"))
+  (let* ((source (memo-note-source memo--review-note))
+	 (buf (get-buffer-create memo--source-buffer-name)))
+    (save-excursion
+      (with-current-buffer buf
+	(org-open-link-from-string source)))
+    (switch-to-buffer-other-window buf)))
 
 
 

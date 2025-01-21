@@ -29,7 +29,7 @@ type LocationApi interface {
 // :: is the separator between link and exlink, default is ::, but can be changed in different protocol.
 // exlink is the external info to help user location the position after open link.
 // description is the description of the link.
-func ParseLocation(orgLink string, lotype LocationType) LocationApi {
+func ParseOrgLink(orgLink string, lotype LocationType) LocationApi {
 	if orgLink == "" || lotype == "" {
 		return nil
 	}
@@ -49,12 +49,29 @@ func ParseLocation(orgLink string, lotype LocationType) LocationApi {
 	s := storage.Location{Link: linkUri, Protocol: linkProtocol, Type: string(lotype)}
 	switch linkProtocol {
 	case "ID":
-		so := IDLocation{Location{content: orgLink, Location: s}}
+		so := IDLocation{Location{Content: orgLink, Location: s}}
 		return so.ParseLink()
 	case "info":
-		so := InfoLocation{Location{content: orgLink, Location: s}}
+		so := InfoLocation{Location{Content: orgLink, Location: s}}
 		return so.ParseLink()
 	default:
 		return nil
+	}
+}
+
+func ParseLocation(location *storage.Location) LocationApi {
+	if location == nil {
+		return nil
+	}
+	switch location.Protocol {
+	case "ID":
+		so := IDLocation{Location{Location: *location}}
+		return &so
+	case "info":
+		so := InfoLocation{Location{Location: *location}}
+		return &so
+	default:
+		so := Location{Location: *location}
+		return &so
 	}
 }
