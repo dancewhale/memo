@@ -1,14 +1,13 @@
 package orgp
 
 import (
-	"github.com/dancewhale/go-org/org"
 	"github.com/emirpasic/gods/stacks/arraystack"
+	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/org/location"
 	"strconv"
 
 	"memo/cmd/libmemo/options"
-	"memo/pkg/logger"
 	"memo/pkg/storage"
 )
 
@@ -87,26 +86,29 @@ func getHeadlineProperty(headline *db.Headline, pd *PropertyDrawer) {
 	}
 }
 
-func getFileMeta(d *org.Document) (string, error) {
+func getFileID(d *OrgFile) (string, error) {
+	var ID string
 	if len(d.Nodes) != 0 {
 		for _, node := range d.Nodes {
 			switch n := node.(type) {
-			case org.Headline:
+			case Headline:
 				break
-			case org.PropertyDrawer:
+			case PropertyDrawer:
 				id, exist := n.Get(options.GetPropertyID())
-				if exist && id != "" {
+				if exist && ID != "" {
 					return "", FoundDupID
 				} else if exist {
-					logger.Warnf("No content in file %s.", d.Path)
-					return "", MissFileID
-				} else {
-					return id, nil
+					ID = id
 				}
 			}
 		}
 	}
-	return "", nil
+	if ID == "" {
+		logger.Warnf("No FileID found in file %s.", d.Path)
+		return "", MissFileID
+	} else {
+		return ID, nil
+	}
 }
 
 // Get the order of headline.

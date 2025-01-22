@@ -97,16 +97,19 @@ func GetDbLogLevel() log.LogLevel {
 }
 
 func GetDBPath() string {
+	defaultPath := GetCacheDirPath() + "/.memo.db"
+	dbPath := getStringValue("memo-db-path", defaultPath)
+	return dbPath
+}
+
+func GetCacheDirPath() string {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
-	defaultPath := dirname + "/.memo.db"
-	dbPath := getStringValue("memo-db-path", defaultPath)
-	info, err := os.Stat(dbPath)
-	if info.IsDir() {
-		return defaultPath
-	}
+	defaultPath := dirname + "/.mcache"
+	dbPath := getStringValue("memo-cache-path", defaultPath)
+	os.MkdirAll(dbPath, os.ModePerm)
 	return dbPath
 }
 

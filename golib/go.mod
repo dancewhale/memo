@@ -13,8 +13,8 @@ require (
 	github.com/jinzhu/copier v0.4.0
 	github.com/karrick/godirwalk v1.17.0
 	github.com/maniartech/gotime v1.1.0
-	github.com/nekomeowww/elapsing v1.3.0
 	github.com/open-spaced-repetition/go-fsrs/v3 v3.2.0
+	github.com/timshannon/badgerhold v1.0.0
 	go.uber.org/zap v1.26.0
 	gorm.io/driver/sqlite v1.5.5
 	gorm.io/gen v0.3.26
@@ -28,6 +28,7 @@ replace github.com/dancewhale/go-emacs v0.0.0-20241229094131-e094648946af => ./g
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/RoaringBitmap/roaring v0.4.23 // indirect
 	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
 	github.com/blevesearch/mmap-go v1.0.2 // indirect
@@ -40,30 +41,27 @@ require (
 	github.com/blevesearch/zap/v15 v15.0.3 // indirect
 	github.com/couchbase/vellum v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/dgraph-io/badger v1.6.0 // indirect
+	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
+	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/glycerine/go-unsnap-stream v0.0.0-20181221182339-f9677308dec2 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
-	github.com/gookit/color v1.5.2 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.4.3 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
+	github.com/pkg/errors v0.8.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/samber/lo v1.37.0 // indirect
 	github.com/steveyen/gtreap v0.1.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/willf/bitset v1.1.10 // indirect
-	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	go.etcd.io/bbolt v1.3.5 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect

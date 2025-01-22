@@ -5,21 +5,35 @@ import (
 	"errors"
 	"github.com/karrick/godirwalk"
 	"gorm.io/gorm"
+	"log"
+	orgp "memo/pkg/go-org"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+	"os"
+	"runtime/pprof"
 	"strings"
 )
 
 type OrgApi struct {
-	db   *gorm.DB
-	hash string
+	db *gorm.DB
 }
 
 func NewOrgApi() (*OrgApi, error) {
 	DB, err := storage.InitDBEngine()
 
-	return &OrgApi{db: DB, hash: ""}, err
+	return &OrgApi{db: DB}, err
+}
+
+func (o *OrgApi) UploadFileToCache(filePath string) error {
+	f, err := orgp.NewFileFromPath(filePath)
+	if err != nil {
+		return err
+	}
+	if err := f.Load(); err != nil {
+		return err
+	}
+	return f.Save()
 }
 
 // 文件是否更新，更新则删除file的hash记录和相关headline，直到创建headline后变更hash。
@@ -42,7 +56,14 @@ func (o *OrgApi) UploadFile(filePath string, force bool) error {
 }
 
 func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
-	err := godirwalk.Walk(dirPath, &godirwalk.Options{
+	f, err := os.Create("/tmp/cpu.prof")
+	if err != nil {
+		log.Fatal(err)
+	}
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+
+	err = godirwalk.Walk(dirPath, &godirwalk.Options{
 		Callback: func(osPathname string, de *godirwalk.Dirent) error {
 			// Following string operation is not most performant way
 			// of doing this, but common enough to warrant a simple
