@@ -3,16 +3,17 @@ package org
 import (
 	"context"
 	"errors"
-	"github.com/karrick/godirwalk"
-	"gorm.io/gorm"
 	"log"
-	orgp "memo/pkg/go-org"
 	"memo/pkg/logger"
+	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"os"
 	"runtime/pprof"
 	"strings"
+
+	"github.com/karrick/godirwalk"
+	"gorm.io/gorm"
 )
 
 type OrgApi struct {
@@ -26,17 +27,18 @@ func NewOrgApi() (*OrgApi, error) {
 }
 
 func (o *OrgApi) UploadFileToCache(filePath string) error {
-	f, err := orgp.NewFileFromPath(filePath)
+	f, err := NewFileFromPath(filePath)
 	if err != nil {
 		return err
 	}
-	if err := f.Load(); err != nil {
+	if err := f.LoadFromFile(); err != nil {
 		return err
 	}
-	return f.Save()
+	return f.SaveToKvDB()
 }
 
-// 文件是否更新，更新则删除file的hash记录和相关headline，直到创建headline后变更hash。
+// UploadFile first load hash and filePath from file in disk，
+// Then get nodes and fileId, first try to get from kv cache, second to parse file.
 // force mean alway update file even hash is same.
 func (o *OrgApi) UploadFile(filePath string, force bool) error {
 	f, err := NewFileFromPath(filePath)
@@ -45,14 +47,22 @@ func (o *OrgApi) UploadFile(filePath string, force bool) error {
 	} else if f == nil {
 		return nil
 	}
-	if err := f.Load(); err != nil {
+	err = f.LoadFromFile()
+	if !errors.Is(err, parser.FileExistInKv) {
 		return err
-	}
-	if f.Data.Hash != f.Hash || force {
-		return f.UpdateFile(force)
-	} else {
+	} else if errors.Is(err, parser.FileExistInKv) && !force {
 		return nil
+	} else {
+		err = f.SaveToKvDB()
+		if err != nil {
+			return err
+		}
+		err = f.SaveToSqlDB()
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
@@ -70,9 +80,9 @@ func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
 			// example here:
 			if strings.Contains(osPathname, ".org") && !de.IsDir() {
 				err := e.UploadFile(osPathname, needForce)
-				if errors.Is(err, MissFileID) {
+				if errors.Is(err, parser.MissFileID) {
 					return nil
-				} else if errors.Is(err, FoundDupID) {
+				} else if errors.Is(err, parser.FoundDupID) {
 					return nil
 				} else if err != nil {
 					return logger.Errorf("Upload file %s failed: %v", osPathname, err)

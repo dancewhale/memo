@@ -2,13 +2,14 @@ package emodule
 
 import (
 	"errors"
-	"memo/cmd/libmemo/options"
-	"memo/pkg/org/location"
 	"strings"
 
+	"memo/cmd/libmemo/options"
 	"memo/pkg/card"
 	"memo/pkg/logger"
 	"memo/pkg/org"
+	"memo/pkg/org/location"
+	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 
 	emacs "github.com/dancewhale/go-emacs"
@@ -217,9 +218,9 @@ func UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 			// example here:
 			if strings.Contains(osPathname, ".org") && !de.IsDir() {
 				err = e.orgApi.UploadFile(osPathname, needForce)
-				if errors.Is(err, org.MissFileID) {
+				if errors.Is(err, parser.MissFileID) {
 					return nil
-				} else if errors.Is(err, org.FoundDupID) {
+				} else if errors.Is(err, parser.FoundDupID) {
 					return nil
 				} else if err != nil {
 					return logger.Errorf("Upload file %s failed in upload file in dir: %v", osPathname, err)

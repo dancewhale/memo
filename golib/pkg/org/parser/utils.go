@@ -1,14 +1,13 @@
-package org
+package parser
 
 import (
-	"github.com/dancewhale/go-org/org"
-	"github.com/emirpasic/gods/stacks/arraystack"
 	"memo/pkg/org/db"
 	"memo/pkg/org/location"
 	"strconv"
 
+	"github.com/emirpasic/gods/stacks/arraystack"
+
 	"memo/cmd/libmemo/options"
-	"memo/pkg/logger"
 	"memo/pkg/storage"
 )
 
@@ -23,10 +22,10 @@ func Filter[T any](slice []T, predicate func(T) bool) []T {
 	return result
 }
 
-func FilterContentForHeadline(node org.Node) bool {
-	_, d := node.(org.Drawer)
-	_, p := node.(org.PropertyDrawer)
-	_, h := node.(org.Headline)
+func FilterContentForHeadline(node Node) bool {
+	_, d := node.(Drawer)
+	_, p := node.(PropertyDrawer)
+	_, h := node.(Headline)
 	if !d && !p && !h {
 		return true
 	} else {
@@ -34,7 +33,7 @@ func FilterContentForHeadline(node org.Node) bool {
 	}
 }
 
-func getWeightFromPropertyDrawer(pd *org.PropertyDrawer) int64 {
+func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
 	weight, exist := pd.Get(options.GetPropertyWeight())
 	if !exist {
 		return 50
@@ -48,7 +47,7 @@ func getWeightFromPropertyDrawer(pd *org.PropertyDrawer) int64 {
 	}
 }
 
-func getSourceFromPropertyDrawer(pd *org.PropertyDrawer) string {
+func getSourceFromPropertyDrawer(pd *PropertyDrawer) string {
 	source, exist := pd.Get(options.GetPropertySource())
 	if !exist {
 		return ""
@@ -57,7 +56,7 @@ func getSourceFromPropertyDrawer(pd *org.PropertyDrawer) string {
 	}
 }
 
-func getScheduleFromPropertyDrawer(pd *org.PropertyDrawer) string {
+func getScheduleFromPropertyDrawer(pd *PropertyDrawer) string {
 	schedule, exist := pd.Get(options.GetPropertySchedule())
 	if !exist {
 		return storage.NORMAL
@@ -75,7 +74,7 @@ func getScheduleFromPropertyDrawer(pd *org.PropertyDrawer) string {
 	}
 }
 
-func getHeadlineProperty(headline *db.Headline, pd *org.PropertyDrawer) {
+func getHeadlineProperty(headline *db.Headline, pd *PropertyDrawer) {
 	if pd != nil {
 		headline.Data.ID, _ = pd.Get(options.GetPropertyID())
 		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
@@ -84,31 +83,6 @@ func getHeadlineProperty(headline *db.Headline, pd *org.PropertyDrawer) {
 		if location != nil {
 			headline.Data.Locations = append(headline.Data.Locations, location.Get())
 		}
-	}
-}
-
-func getFileMeta(d *org.Document) (*MetaInfo, error) {
-	meta := MetaInfo{}
-	if len(d.Nodes) != 0 {
-		for _, node := range d.Nodes {
-			switch n := node.(type) {
-			case org.Headline:
-				break
-			case org.PropertyDrawer:
-				id, exist := n.Get(options.GetPropertyID())
-				if exist && meta.ID != "" {
-					return nil, FoundDupID
-				} else if exist {
-					meta.ID = id
-				}
-			}
-		}
-	}
-	if meta.ID == "" {
-		logger.Warnf("No content in file %s.", d.Path)
-		return nil, MissFileID
-	} else {
-		return &meta, nil
 	}
 }
 

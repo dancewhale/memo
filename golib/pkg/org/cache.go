@@ -1,4 +1,4 @@
-package orgp
+package org
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 	"github.com/timshannon/badgerhold"
 )
 
-func kvInit(defaultDir string) *fileStructCache {
+func KvInit(defaultDir string) *fileStructCache {
 	options := badgerhold.DefaultOptions
 	options.Dir = defaultDir
 	options.ValueDir = defaultDir

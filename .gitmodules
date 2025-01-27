@@ -1,6 +1,3 @@
-[submodule "go-org"]
-	path = golib/go-org
-	url = git@github.com:dancewhale/go-org.git
 [submodule "go-emacs"]
 	path = golib/go-emacs
 	url = git@github.com:dancewhale/go-emacs.git

@@ -8,7 +8,6 @@ require (
 	github.com/blevesearch/bleve v1.0.14
 	github.com/creker/hashstructure v1.0.0
 	github.com/dancewhale/go-emacs v0.0.0-20241229094131-e094648946af
-	github.com/dancewhale/go-org v0.0.0-20241220095456-9099a6162e03
 	github.com/emirpasic/gods v1.18.1
 	github.com/jinzhu/copier v0.4.0
 	github.com/karrick/godirwalk v1.17.0
@@ -21,8 +20,6 @@ require (
 	gorm.io/gorm v1.25.10
 	gorm.io/plugin/dbresolver v1.5.1
 )
-
-replace github.com/dancewhale/go-org v0.0.0-20241220095456-9099a6162e03 => ./go-org
 
 replace github.com/dancewhale/go-emacs v0.0.0-20241229094131-e094648946af => ./go-emacs
 

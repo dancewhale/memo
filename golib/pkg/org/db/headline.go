@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"github.com/creker/hashstructure"
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"gorm.io/gorm"
 	"memo/pkg/logger"
 	"memo/pkg/org/location"
@@ -16,7 +18,7 @@ type Headline struct {
 }
 
 // 修改保存依靠双键，ID和FileID都必须存在
-func (h *Headline) updateByIDFile() error {
+func (h *Headline) UpdateByIDFile() error {
 	head := dal.Use(storage.Engine).Headline
 	loc := dal.Use(storage.Engine).Location
 	clock := dal.Use(storage.Engine).Clock
@@ -39,9 +41,9 @@ func (h *Headline) updateByIDFile() error {
 	return nil
 }
 
-// create headline record.
+// Create headline record.
 // need to deal with situation that headline unattach from file，then fileid of file is 为null
-func (h *Headline) createOrUpdate() error {
+func (h *Headline) Create() error {
 	headline := dal.Use(storage.Engine).Headline
 	result, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(h.Data.ID)).UpdateSimple(headline.FileID.Value(*h.Data.FileID))
 	if err != nil {
@@ -56,11 +58,33 @@ func (h *Headline) createOrUpdate() error {
 	return nil
 }
 
-func (h *Headline) unattachFromFile() error {
+func (h *Headline) UnattachFromFile() error {
 	headline := dal.Use(storage.Engine).Headline
 	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(h.Data.ID)).UpdateSimple(headline.FileID.Null(), headline.ParentID.Null())
 	if err != nil {
 		return logger.Errorf("Delete logbook of head %s error: %v", h.Data.ID, err)
 	}
 	return nil
+}
+
+// Load all headline attach to id from database.
+func LoadHeadFromDB(fileID string) (*linkedhashmap.Map, error) {
+	headlinesDBCache := linkedhashmap.New()
+	headline := dal.Use(storage.Engine).Headline
+	headlines, err := headline.WithContext(context.Background()).Where(headline.FileID.Eq(fileID)).Find()
+	if err != nil {
+		return nil, logger.Errorf("Headlines load for file %s error: %v", fileID, err)
+	}
+	if len(headlines) != 0 {
+		for _, headline := range headlines {
+			options := hashstructure.HashOptions{IgnoreZeroValue: true, ZeroNil: true}
+			hash, err := hashstructure.Hash(*headline, hashstructure.FormatV2, &options)
+			if err != nil {
+				return nil, logger.Errorf("Hash headline struct error: %v", err)
+			}
+			head := Headline{Data: *headline, Hash: hash}
+			headlinesDBCache.Put(headline.ID, head)
+		}
+	}
+	return headlinesDBCache, nil
 }

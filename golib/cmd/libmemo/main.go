@@ -5,11 +5,9 @@ import (
 	"github.com/dancewhale/go-emacs"
 	_ "github.com/dancewhale/go-emacs/gpl-compatible"
 	"memo/cmd/libmemo/options"
-	"memo/pkg/card"
 	"memo/pkg/emodule"
 	"memo/pkg/logger"
 	memorg "memo/pkg/org"
-	"memo/pkg/org/location"
 )
 
 func init() {
@@ -37,22 +35,23 @@ func main() {
 	//err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2024-10-22.org", true)
 	//err := api.UploadFile("/Users/whale/Seafile/Dropbox/roam/20200402150453-记忆力的几个本质要点.org", true)
 	//err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2021-01-05.org", false)
-	err := api.UploadFilesUnderDir("/Users/whale/Dropbox/memo/resource", true)
+	//err := api.UploadFilesUnderDir("/Users/whale/Dropbox/memo/resource", true)
 	//err := api.UploadFile("/Users/whale/Dropbox/memo/tasks.org", false)
+	err := api.UploadFileToCache("/tmp/elisp-manual.org")
 	if err != nil {
 		fmt.Println(err)
 	}
-	capi, _ := card.NewCardApi()
-	capi.ScanHeadlineInitFsrs()
-	card := capi.GetReviewCardByWeightDueTime()
-	fmt.Println(card)
-
-	if len(card.Locations) != 0 {
-		lo := location.ParseLocation(card.Locations[0])
-		l := lo.String()
-		fmt.Println(l)
-
-	}
+	//capi, _ := card.NewCardApi()
+	//capi.ScanHeadlineInitFsrs()
+	//card := capi.GetReviewCardByWeightDueTime()
+	//fmt.Println(card)
+	//
+	//if len(card.Locations) != 0 {
+	//	lo := location.ParseLocation(card.Locations[0])
+	//	l := lo.String()
+	//	fmt.Println(l)
+	//
+	//}
 	//fcard := capi.GetReviewCardByDueTime()
 	//_, err := api.GetHeadlineByOrgID("752ee978-d160-4228-a545-a2967b2c7772")
 	//if err != nil {

@@ -3,21 +3,35 @@ package org
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/gob"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/dancewhale/go-org/org"
+	"memo/cmd/libmemo/options"
 	"memo/pkg/logger"
-	"memo/pkg/org/db"
+	"memo/pkg/org/parser"
 )
 
-// 分为两种操作，File 类中数据由文件查询加载， File.Data 由类由数据库查询加载。
-// 数据库操作函数放在storage 中做为底层操作函数。
-func NewFileFromPath(filePath string) (*File, error) {
+// prepare for struct to be stored in kv database.
+// if not registered, kv database will not be able to store the struct.
+func init() {
+	gob.Register(OrgFile{})
+	gob.Register(parser.PropertyDrawer{})
+	gob.Register(parser.Headline{})
+	gob.Register(parser.Paragraph{})
+	gob.Register(parser.Text{})
+	gob.Register(parser.RegularLink{})
+}
+
+// NewFileFromPath creates a new OrgFile from a file path.
+// It checks if the file exists, if it is a regular file, and if it is a .org file.
+// If the file is a .org file, it reads the file content, calculates the hash.
+func NewFileFromPath(filePath string) (*OrgFile, error) {
 	if filepath.Ext(filePath) != ".org" {
-		logger.Infof("The file %s is not a org file, skip this file.", filePath)
+		logger.Infof("The file %s is not a org fileHandler, skip this file.", filePath)
 		return nil, nil
 	}
 	info, err := os.Stat(filePath)
@@ -30,160 +44,155 @@ func NewFileFromPath(filePath string) (*File, error) {
 
 	// Check if it is a regular file
 	if !info.Mode().IsRegular() {
-		return nil, logger.Errorf("The file %s is not a regular file.", filePath)
+		return nil, logger.Errorf("The fileHandler %s is not a regular file.", filePath)
 	}
-
 	// Try to open the file for reading
-	file, err := os.Open(filePath)
+	fileHandler, err := os.Open(filePath)
 	if err != nil {
 		return nil, logger.Errorf("Open file %s failed: %v", filePath, err)
 	}
-	defer file.Close()
-
-	return &File{
-		FilePath: filePath,
-	}, nil
-}
-
-// store the meta info of the file from org file parse.
-type MetaInfo struct {
-	ID string
-}
-
-type File struct {
-	// store the data for file from database.
-	Data *db.File
-	// store the data parse from file in disk.
-	Content   string
-	FilePath  string
-	Hash      string
-	Meta      *MetaInfo
-	doc       *org.Document
-	HeadCache *HeadlineCacheMap
-}
-
-// getHash returns the md5 hash of the file content
-func (f *File) getHash() error {
-	fileHandler, _ := os.Open(f.FilePath)
 	defer fileHandler.Close()
 
 	hash := md5.New()
-	_, err := io.Copy(hash, fileHandler)
+	_, err = io.Copy(hash, fileHandler)
 	if err != nil {
-		return logger.Errorf("Copy file content to buffer failed: %v", err.Error())
+		return nil, logger.Errorf("Copy file content to buffer failed: %v", err.Error())
 	}
-	f.Hash = hex.EncodeToString(hash.Sum(nil))
+	hashSting := hex.EncodeToString(hash.Sum(nil))
+	return &OrgFile{
+		Path: filePath,
+		Hash: hashSting,
+	}, nil
+}
+
+// 目标是用来，解析file 文件然后存储在kv 数据库中
+// 提供接口用来加载文件，然后存储到kv数据库中
+// 提供接口用于修改，然后存储到kv数据库中，同时写入文件
+type OrgFile struct {
+	ID    string
+	Path  string
+	Hash  string
+	Nodes []parser.Node
+}
+
+func (f *OrgFile) getFileID(d *OrgFile) (string, error) {
+	var ID string
+	if len(d.Nodes) != 0 {
+		for _, node := range d.Nodes {
+			switch n := node.(type) {
+			case parser.Headline:
+				break
+			case parser.PropertyDrawer:
+				id, exist := n.Get(options.GetPropertyID())
+				if exist && ID != "" {
+					return "", parser.FoundDupID
+				} else if exist {
+					ID = id
+				}
+			}
+		}
+	}
+	if ID == "" {
+		logger.Warnf("No FileID found in file %s.", d.Path)
+		return "", parser.MissFileID
+	} else {
+		return ID, nil
+	}
+}
+
+func (f *OrgFile) String() (out string, err error) {
+	var er error
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			er = fmt.Errorf("could not write output: %s", recovered)
+		}
+	}()
+
+	if er != nil {
+		return "", er
+	} else if f.Nodes == nil {
+		return "", fmt.Errorf("File is empty.")
+	} else if f.Path == "" {
+		return "", fmt.Errorf("File path is empty.")
+	}
+
+	return parser.NodesToString(f.Nodes...), nil
+}
+
+// LoadFromFile parse file to File object.
+// It first check if the file with same hash is already in the cache,
+// If exist it returns the Nodes and ID from the cache.
+// If the file with same hash is not in the cache, it parses the file content and returns the file.
+func (f *OrgFile) LoadFromFile() error {
+	fileCache := KvInit(options.GetCacheDirPath())
+	file, err := fileCache.LoadFromHash(f.Hash)
+	defer fileCache.Close()
+	if err != nil {
+		return logger.Errorf("Load file By hash from cache %s failed: %v", f.Hash, err)
+	}
+	if file == nil {
+		return f.parseDocument()
+	} else {
+		f.Nodes = file.Nodes
+		f.ID = file.ID
+		return parser.FileExistInKv
+	}
+}
+
+// SaveToKvDB save orgfile to kv database.
+func (f *OrgFile) SaveToKvDB() error {
+	fileCache := KvInit(options.GetCacheDirPath())
+	err := fileCache.Save(f)
+	defer fileCache.Close()
+	return err
+}
+
+func (f *OrgFile) SaveToSqlDB() error {
+	w := parser.NewSqlWriter(f.ID)
+	headlines := w.ParseNodes(f.Nodes...)
+
+	HeadCache, err := NewHeadlineCache(headlines, f.ID, f.Path, f.Hash)
+	if err != nil {
+		return err
+	}
+
+	return HeadCache.UpdateHeadlineToDB(false)
+}
+
+func (f *OrgFile) SaveToDiskFile() error {
+	// Open the file with write-only, create if not exists, and truncate it if it exists
+	file, err := os.OpenFile(f.Path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("Failed to open file when save file: %w", err)
+	}
+	defer file.Close()
+
+	content, err := f.String()
+	if err != nil {
+		return fmt.Errorf("Failed to get file content: %w", err)
+	}
+	// Write the content to the file
+	_, err = file.WriteString(content + "\n")
+	if err != nil {
+		return fmt.Errorf("failed to write to file: %w", err)
+	}
 	return nil
 }
 
-// LoadContent reads the file content and stores it in the Content field
-func (f *File) loadContent() error {
-	content, err := os.ReadFile(f.FilePath)
+func (f *OrgFile) parseDocument() error {
+	content, err := os.ReadFile(f.Path)
+	reader := bytes.NewReader(content)
+
 	if err != nil {
 		return logger.Errorf("Read file content failed: %v", err)
 	} else if len(content) == 0 {
-		return logger.Errorf("File %s is empty.", f.FilePath)
-	}
-	f.Content = string(content)
-	return nil
-}
-
-// 解析获取Document
-func (f *File) parseContent() error {
-	if err := f.loadContent(); err != nil {
-		return err
+		return logger.Errorf("File %s is empty.", f.Path)
 	}
 
-	// Parse content, create an io.Reader from the byte slice first.
-	c := []byte(f.Content)
-	reader := bytes.NewReader(c)
-	f.doc = org.New().Parse(reader, f.FilePath)
-	if f.doc.Error != nil {
-		return logger.Errorf("Parse file %s failed: %s", f.FilePath, f.doc.Error)
+	f.Nodes = parser.New().Parse(reader, f.Path)
+	f.ID, err = f.getFileID(f)
+	if err != nil {
+		return logger.Errorf("Parse Document and get id failed: %v", err)
 	}
 	return nil
-}
-
-// 解析获取Document 的所有数据.
-// TODO:  增加File 类型描述字段。
-func (f *File) parseDocument() error {
-	if err := f.parseContent(); err != nil {
-		return err
-	} else {
-		f.Meta, err = getFileMeta(f.doc)
-		if err != nil {
-			return err
-		}
-	}
-	if f.Meta == nil {
-		return logger.Errorf("File %s has no id Property.", f.FilePath)
-	}
-	sql := NewSqlWriter()
-	sql.fileId = f.Meta.ID
-	_, err := f.doc.Write(sql)
-	if err != nil {
-		return logger.Errorf("Parse Document use org writer failed: %v", err)
-	}
-	f.HeadCache, err = NewHeadlineCache(sql.Headlines, f.Meta.ID, f.FilePath)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (f *File) Load() error {
-	if err := f.getHash(); err != nil {
-		return err
-	}
-	if err := f.parseDocument(); err != nil {
-		return err
-	}
-	filedb, err := db.LoadFileFromDB(f.Meta.ID)
-	if err != nil {
-		return err
-	} else if filedb != nil {
-		f.Data = filedb
-	}
-	return nil
-}
-
-// check if file not exist in db or changed after last update to db.
-func (f *File) ifNeedUpdate() (bool, error) {
-	// Check if the file content has changed
-	if f.Data == nil {
-		return false, logger.Errorf("File Data init error when load file.")
-	}
-	if f.Hash != f.Data.Hash {
-		// The file content has changed
-		f.Data.Hash = f.Hash
-		logger.Infof("File %s content has changed, updating hash to %s.", f.FilePath, f.Hash)
-		return true, nil
-	} else {
-		// The file content has not changed
-		logger.Infof("File %s content has not changed.", f.FilePath)
-		return false, nil
-	}
-}
-
-func (f *File) UpdateFile(force bool) error {
-	// Check if the file content has changed
-	needUpdate, err := f.ifNeedUpdate()
-	if err != nil {
-		return err
-	}
-	if !needUpdate && !force {
-		return nil
-	} else {
-		// create file record if id not exist.
-		if f.Data.ID == "" {
-			err = f.Data.Create(f.Meta.ID, f.Hash, f.FilePath, f.HeadCache.HeadlinesFileCache)
-		} else {
-			err = f.Data.Update(f.Meta.ID, f.Hash, f.FilePath, f.HeadCache.HeadlinesFileCache, force)
-		}
-		if err != nil {
-			return err
-		} else {
-			return nil
-		}
-	}
 }
