@@ -31,7 +31,7 @@ func (f *fileStructCache) Close() {
 	f.store.Close()
 }
 
-func (f *fileStructCache) Save(orgFile *OrgFile) error {
+func (f *fileStructCache) Save(orgFile *OrgFile, force bool) error {
 	var file *OrgFile
 	if orgFile == nil {
 		return logger.Errorf("The orgFile is nil or the hash or id is empty.")
@@ -50,10 +50,10 @@ func (f *fileStructCache) Save(orgFile *OrgFile) error {
 		if err != nil {
 			return logger.Errorf("Insert file with id %s error: %v", orgFile.ID, err)
 		}
-	} else if file.Hash == orgFile.Hash && file.Path == orgFile.Path {
+	} else if file.Hash == orgFile.Hash && file.Path == orgFile.Path && !force {
 		logger.Debugf("File with id %s is already in the cache and content is no change.", orgFile.ID)
 	} else {
-		err = f.store.Update(file.Path, orgFile)
+		err = f.store.Update(orgFile.ID, orgFile)
 		if err != nil {
 			return logger.Errorf("Update file with id %s error: %v", orgFile.ID, err)
 		}
@@ -61,9 +61,9 @@ func (f *fileStructCache) Save(orgFile *OrgFile) error {
 	return nil
 }
 
-func (f *fileStructCache) LoadFromID(id string) (*OrgFile, error) {
+func (f *fileStructCache) LoadFromFileID(id string) (*OrgFile, error) {
 	var file *OrgFile
-	err := f.store.Get(id, file)
+	err := f.store.Get(id, &file)
 	if err != nil {
 		return nil, logger.Errorf("Find file with ID %s error: %v", id, err)
 	}

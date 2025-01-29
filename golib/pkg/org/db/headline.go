@@ -68,7 +68,7 @@ func (h *Headline) UnattachFromFile() error {
 }
 
 // Load all headline attach to id from database.
-func LoadHeadFromDB(fileID string) (*linkedhashmap.Map, error) {
+func LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, error) {
 	headlinesDBCache := linkedhashmap.New()
 	headline := dal.Use(storage.Engine).Headline
 	headlines, err := headline.WithContext(context.Background()).Where(headline.FileID.Eq(fileID)).Find()
@@ -87,4 +87,17 @@ func LoadHeadFromDB(fileID string) (*linkedhashmap.Map, error) {
 		}
 	}
 	return headlinesDBCache, nil
+}
+
+func GetFileIDByHeadlineID(headlineID string) (string, error) {
+	headline := dal.Use(storage.Engine).Headline
+	h, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).First()
+	if err != nil {
+		return "", logger.Errorf("Get headline by id %s error: %v", headlineID, err)
+	}
+	if h.FileID == nil {
+		return "", logger.Errorf("Headline %s has no file attach to it.", headlineID)
+	} else {
+		return *h.FileID, nil
+	}
 }

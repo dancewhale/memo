@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"memo/pkg/logger"
+	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
@@ -26,17 +27,6 @@ func NewOrgApi() (*OrgApi, error) {
 	return &OrgApi{db: DB}, err
 }
 
-func (o *OrgApi) UploadFileToCache(filePath string) error {
-	f, err := NewFileFromPath(filePath)
-	if err != nil {
-		return err
-	}
-	if err := f.LoadFromFile(); err != nil {
-		return err
-	}
-	return f.SaveToKvDB()
-}
-
 // UploadFile first load hash and filePath from file in disk，
 // Then get nodes and fileId, first try to get from kv cache, second to parse file.
 // force mean alway update file even hash is same.
@@ -47,17 +37,21 @@ func (o *OrgApi) UploadFile(filePath string, force bool) error {
 	} else if f == nil {
 		return nil
 	}
-	err = f.LoadFromFile()
-	if !errors.Is(err, parser.FileExistInKv) {
+	err = f.LoadFromFile(force)
+	if err != nil {
 		return err
-	} else if errors.Is(err, parser.FileExistInKv) && !force {
-		return nil
-	} else {
-		err = f.SaveToKvDB()
-		if err != nil {
-			return err
-		}
-		err = f.SaveToSqlDB()
+	}
+	err = f.SaveToKvDB(force)
+	if err != nil {
+		return err
+	}
+	needUpdate, err := db.IfFileDBNeedUpdate(f.ID, f.Path, f.Hash)
+	if err != nil {
+		return err
+	}
+
+	if needUpdate || force {
+		err = f.SaveToSqlDB(force)
 		if err != nil {
 			return err
 		}
@@ -111,4 +105,16 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	} else {
 		return nil, logger.Errorf("The orgid %s has more than one headline attach to it.", orgid)
 	}
+}
+
+func (o *OrgApi) ExportOrgFileToDisk(orgid string, filePath string) error {
+	f, err := GetFileFromFileID(orgid)
+	if err != nil {
+		return err
+	}
+	err = f.ExportToDiskFile(filePath)
+	if err != nil {
+		return err
+	}
+	return nil
 }

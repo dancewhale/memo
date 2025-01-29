@@ -6,10 +6,7 @@ import (
 
 func NodesToString(nodes ...Node) string {
 	w := NewOrgWriter()
-	for i, n := range nodes {
-		if i != 0 {
-			w.WriteString("\n")
-		}
+	for _, n := range nodes {
 		switch n := n.(type) {
 		case PropertyDrawer:
 			w.WritePropertyDrawer(n)
@@ -36,16 +33,21 @@ type OrgWriter struct {
 
 func (w *OrgWriter) WriteHeadline(h Headline) {
 	w.WriteString(h.String())
+	for _, head := range h.Children {
+		if h, ok := head.(Headline); ok {
+			w.WriteHeadline(h)
+		}
+	}
 }
 
 func (w *OrgWriter) WriteText(t Text) {
-	w.WriteString(t.Content)
+	w.WriteString(t.String())
 }
 
 func (w *OrgWriter) WritePropertyDrawer(d PropertyDrawer) {
-	w.WriteString(d.Content)
+	w.WriteString(d.String())
 }
 
 func (w *OrgWriter) WriteParagraph(p Paragraph) {
-	w.WriteString(p.Content)
+	w.WriteString(p.String())
 }

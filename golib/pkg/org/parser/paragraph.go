@@ -30,22 +30,18 @@ func (d *Document) parseParagraph(i int, parentStop stopFn) (int, Node) {
 	}
 	consumed := i - start
 
-	for j := start + 1; j < start+consumed; j++ {
+	for j := start; j < start+consumed; j++ {
 		content := d.tokens[j].matches[0]
 		para.Content += "\n" + content
 	}
+	//if len(lines) == 1 && lines[0] == "" {
+	//	para.Content = "\n"
+	//}
 	para.Children = d.parseInline(strings.Join(lines, "\n"))
 
 	return consumed, para
 }
 
 func (p Paragraph) String() string {
-	if len(p.Children) == 0 {
-		return "\n"
-	}
-	var result string
-	for _, p := range p.Children {
-		result += p.String()
-	}
 	return p.Content
 }

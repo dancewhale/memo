@@ -25,7 +25,7 @@ func NewHeadlineCache(headlines []db.Headline, fileID, filePath, hash string) (*
 	if err != nil {
 		return nil, err
 	}
-	cache.HeadlinesDBCache, err = db.LoadHeadFromDB(fileID)
+	cache.HeadlinesDBCache, err = db.LoadFileHeadFromDB(fileID)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"memo/pkg/org/db"
 	"os"
 	"path/filepath"
 
@@ -24,6 +25,31 @@ func init() {
 	gob.Register(parser.Paragraph{})
 	gob.Register(parser.Text{})
 	gob.Register(parser.RegularLink{})
+}
+
+func GetFileFromHeadID(headID string) (*OrgFile, error) {
+	fileID, err := db.GetFileIDByHeadlineID(headID)
+	if err != nil {
+		return nil, err
+	}
+
+	fileCache := KvInit(options.GetCacheDirPath())
+	file, err := fileCache.LoadFromFileID(fileID)
+	defer fileCache.Close()
+	if err != nil || file == nil {
+		return nil, logger.Errorf("Load file By file id %s from kvcache failed: %v", fileID, err)
+	}
+	return file, nil
+}
+
+func GetFileFromFileID(fileID string) (*OrgFile, error) {
+	fileCache := KvInit(options.GetCacheDirPath())
+	file, err := fileCache.LoadFromFileID(fileID)
+	defer fileCache.Close()
+	if err != nil || file == nil {
+		return nil, logger.Errorf("Load file By file id %s from kvcache failed: %v", fileID, err)
+	}
+	return file, nil
 }
 
 // NewFileFromPath creates a new OrgFile from a file path.
@@ -123,31 +149,31 @@ func (f *OrgFile) String() (out string, err error) {
 // It first check if the file with same hash is already in the cache,
 // If exist it returns the Nodes and ID from the cache.
 // If the file with same hash is not in the cache, it parses the file content and returns the file.
-func (f *OrgFile) LoadFromFile() error {
+func (f *OrgFile) LoadFromFile(force bool) error {
 	fileCache := KvInit(options.GetCacheDirPath())
 	file, err := fileCache.LoadFromHash(f.Hash)
 	defer fileCache.Close()
 	if err != nil {
-		return logger.Errorf("Load file By hash from cache %s failed: %v", f.Hash, err)
+		return logger.Errorf("Load file By hash from kvcache %s failed: %v", f.Hash, err)
 	}
-	if file == nil {
+	if file == nil || force {
 		return f.parseDocument()
 	} else {
 		f.Nodes = file.Nodes
 		f.ID = file.ID
-		return parser.FileExistInKv
+		return nil
 	}
 }
 
 // SaveToKvDB save orgfile to kv database.
-func (f *OrgFile) SaveToKvDB() error {
+func (f *OrgFile) SaveToKvDB(force bool) error {
 	fileCache := KvInit(options.GetCacheDirPath())
-	err := fileCache.Save(f)
+	err := fileCache.Save(f, force)
 	defer fileCache.Close()
 	return err
 }
 
-func (f *OrgFile) SaveToSqlDB() error {
+func (f *OrgFile) SaveToSqlDB(force bool) error {
 	w := parser.NewSqlWriter(f.ID)
 	headlines := w.ParseNodes(f.Nodes...)
 
@@ -156,12 +182,32 @@ func (f *OrgFile) SaveToSqlDB() error {
 		return err
 	}
 
-	return HeadCache.UpdateHeadlineToDB(false)
+	return HeadCache.UpdateHeadlineToDB(force)
 }
 
 func (f *OrgFile) SaveToDiskFile() error {
 	// Open the file with write-only, create if not exists, and truncate it if it exists
 	file, err := os.OpenFile(f.Path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("Failed to open file when save file: %w", err)
+	}
+	defer file.Close()
+
+	content, err := f.String()
+	if err != nil {
+		return fmt.Errorf("Failed to get file content: %w", err)
+	}
+	// Write the content to the file
+	_, err = file.WriteString(content + "\n")
+	if err != nil {
+		return fmt.Errorf("failed to write to file: %w", err)
+	}
+	return nil
+}
+
+func (f *OrgFile) ExportToDiskFile(path string) error {
+	// Open the file with write-only, create if not exists, and truncate it if it exists
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return fmt.Errorf("Failed to open file when save file: %w", err)
 	}

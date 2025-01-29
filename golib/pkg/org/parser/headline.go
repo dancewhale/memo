@@ -29,11 +29,12 @@ type Headline struct {
 	Title        []Node
 	Tags         []string
 	Children     []Node
+	MeteContent  string
 	TitleContent string
 	BodyContent  string
 }
 
-var headlineRegexp = regexp.MustCompile(`^([*]+)(\s+.*)`)
+var headlineRegexp = regexp.MustCompile(`^([*]+\s)(\s*.*)`)
 var tagRegexp = regexp.MustCompile(`(.*?)\s+(:[\p{L}0-9_@#%:]+:\s*$)`)
 
 func lexHeadline(line string) (token, bool) {
@@ -47,7 +48,7 @@ func (d *Document) parseHeadline(i int, parentStop stopFn) (int, Node) {
 	t, headline := d.tokens[i], Headline{}
 
 	headline.TitleContent = t.matches[0]
-	headline.Lvl = len(t.matches[1])
+	headline.Lvl = len(t.matches[1]) - 1
 	text := strings.TrimLeftFunc(t.content, unicode.IsSpace)
 
 	todoKeywords := trimFastTags(
@@ -74,29 +75,30 @@ func (d *Document) parseHeadline(i int, parentStop stopFn) (int, Node) {
 	headline.Title = d.parseInline(text)
 
 	stop := func(d *Document, i int) bool {
-		return parentStop(d, i) || d.tokens[i].kind == "headline" && len(d.tokens[i].matches[1]) <= headline.Lvl
+		return parentStop(d, i) || d.tokens[i].kind == "headline" && len(d.tokens[i].matches[1]) <= headline.Lvl+1
 	}
 	consumed, nodes := d.parseMany(i+1, stop)
 	for i, node := range nodes {
 		if d, ok := node.(PropertyDrawer); ok {
 			headline.Properties = &d
+			headline.MeteContent += d.Content
 			continue
 		} else if t, ok := node.(TaskTime); ok {
 			headline.TaskTime = t
+			headline.MeteContent += t.Content
 			continue
 		} else if l, ok := node.(LogBookDrawer); ok {
 			headline.LogBook = &l
+			headline.MeteContent += l.Content
 			continue
+		} else if p, ok := node.(Paragraph); ok {
+			headline.BodyContent += p.Content
 		} else {
 			nodes = nodes[i:]
 			break
 		}
 	}
 	headline.Children = nodes
-	for j := i + 1; j <= i+consumed; j++ {
-		content := d.tokens[j].matches[0]
-		headline.BodyContent += "\n" + content
-	}
 	return consumed + 1, headline
 }
 
@@ -132,5 +134,5 @@ func (parent *Section) add(current *Section) {
 }
 
 func (h Headline) String() string {
-	return h.TitleContent + h.BodyContent
+	return "\n" + h.TitleContent + h.MeteContent + h.BodyContent
 }

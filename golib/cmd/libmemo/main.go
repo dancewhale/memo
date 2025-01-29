@@ -37,7 +37,12 @@ func main() {
 	//err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2021-01-05.org", false)
 	//err := api.UploadFilesUnderDir("/Users/whale/Dropbox/memo/resource", true)
 	//err := api.UploadFile("/Users/whale/Dropbox/memo/tasks.org", false)
-	err := api.UploadFileToCache("/tmp/elisp-manual.org")
+	err := api.UploadFile("/tmp/elisp-manual.org", true)
+	if err != nil {
+		fmt.Println(err)
+	}
+	_, err = memorg.GetFileFromHeadID("4ABF840C-3E73-42EA-805E-A616C331DFE8")
+	err = api.ExportOrgFileToDisk("1ad3025f-c304-4227-9765-ba88905380e2", "/tmp/elisp-export.org")
 	if err != nil {
 		fmt.Println(err)
 	}
