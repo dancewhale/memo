@@ -1,12 +1,15 @@
 package parser
 
 import (
+	"memo/pkg/util/gods/lists/arraylist"
 	"strings"
 )
 
-func NodesToString(nodes ...Node) string {
+func NodesToString(nodes *arraylist.List) string {
 	w := NewOrgWriter()
-	for _, n := range nodes {
+	it := nodes.Iterator()
+	for it.Next() {
+		n := it.Value()
 		switch n := n.(type) {
 		case PropertyDrawer:
 			w.WritePropertyDrawer(n)
@@ -33,7 +36,9 @@ type OrgWriter struct {
 
 func (w *OrgWriter) WriteHeadline(h Headline) {
 	w.WriteString(h.String())
-	for _, head := range h.Children {
+	it := h.Children.Iterator()
+	for it.Next() {
+		head := it.Value()
 		if h, ok := head.(Headline); ok {
 			w.WriteHeadline(h)
 		}

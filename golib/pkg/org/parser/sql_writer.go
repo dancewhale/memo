@@ -4,7 +4,8 @@ import (
 	"memo/pkg/org/db"
 	"memo/pkg/storage"
 
-	"github.com/emirpasic/gods/stacks/arraystack"
+	"memo/pkg/util/gods/lists/arraylist"
+	"memo/pkg/util/gods/stacks/arraystack"
 )
 
 // SqlWriter an org document into database.
@@ -22,8 +23,10 @@ func NewSqlWriter(id string) *SqlWriter {
 	}
 }
 
-func (s *SqlWriter) ParseNodes(nodes ...Node) []db.Headline {
-	for _, n := range nodes {
+func (s *SqlWriter) ParseNodes(nodes *arraylist.List) []db.Headline {
+	it := nodes.Iterator()
+	for it.Next() {
+		n := it.Value()
 		switch n := n.(type) {
 		case Headline:
 			s.ParseHeadline(n)
@@ -37,7 +40,7 @@ func (s *SqlWriter) ParseNodes(nodes ...Node) []db.Headline {
 // WriteHeadline 构建headline 结构体用于后续数据库存储。
 func (s *SqlWriter) ParseHeadline(h Headline) {
 	if h.Children != nil {
-		s.ParseNodes(h.Children...)
+		s.ParseNodes(h.Children)
 	}
 	headline := db.Headline{
 		Data: storage.Headline{Level: h.Lvl, Title: h.TitleContent, Status: h.Status,

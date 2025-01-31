@@ -7,13 +7,14 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"memo/pkg/org/db"
 	"os"
 	"path/filepath"
 
 	"memo/cmd/libmemo/options"
 	"memo/pkg/logger"
+	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
+	"memo/pkg/util/gods/lists/arraylist"
 )
 
 // prepare for struct to be stored in kv database.
@@ -25,6 +26,7 @@ func init() {
 	gob.Register(parser.Paragraph{})
 	gob.Register(parser.Text{})
 	gob.Register(parser.RegularLink{})
+	gob.Register(arraylist.List{})
 }
 
 func GetFileFromHeadID(headID string) (*OrgFile, error) {
@@ -98,13 +100,15 @@ type OrgFile struct {
 	ID    string
 	Path  string
 	Hash  string
-	Nodes []parser.Node
+	Nodes *arraylist.List
 }
 
 func (f *OrgFile) getFileID(d *OrgFile) (string, error) {
 	var ID string
-	if len(d.Nodes) != 0 {
-		for _, node := range d.Nodes {
+	if d.Nodes.Size() != 0 {
+		it := d.Nodes.Iterator()
+		for it.Next() {
+			node := it.Value()
 			switch n := node.(type) {
 			case parser.Headline:
 				break
@@ -142,7 +146,7 @@ func (f *OrgFile) String() (out string, err error) {
 		return "", fmt.Errorf("File path is empty.")
 	}
 
-	return parser.NodesToString(f.Nodes...), nil
+	return parser.NodesToString(f.Nodes), nil
 }
 
 // LoadFromFile parse file to File object.
@@ -175,7 +179,7 @@ func (f *OrgFile) SaveToKvDB(force bool) error {
 
 func (f *OrgFile) SaveToSqlDB(force bool) error {
 	w := parser.NewSqlWriter(f.ID)
-	headlines := w.ParseNodes(f.Nodes...)
+	headlines := w.ParseNodes(f.Nodes)
 
 	HeadCache, err := NewHeadlineCache(headlines, f.ID, f.Path, f.Hash)
 	if err != nil {

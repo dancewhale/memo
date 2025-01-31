@@ -1,14 +1,13 @@
 package parser
 
 import (
-	"memo/pkg/org/db"
-	"memo/pkg/org/location"
 	"strconv"
 
-	"github.com/emirpasic/gods/stacks/arraystack"
-
 	"memo/cmd/libmemo/options"
+	"memo/pkg/org/db"
+	"memo/pkg/org/location"
 	"memo/pkg/storage"
+	"memo/pkg/util/gods/stacks/arraystack"
 )
 
 // 用于对[]org.Nodes 过滤

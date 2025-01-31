@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"memo/pkg/util/gods/lists/arraylist"
 	"os"
 )
 
@@ -60,7 +61,7 @@ func New() *Configuration {
 
 // Parse parses the input into an AST (and some other helpful fields like Outline).
 // To allow method chaining, errors are stored in document.Error rather than being returned.
-func (c *Configuration) Parse(input io.Reader, path string) []Node {
+func (c *Configuration) Parse(input io.Reader, path string) *arraylist.List {
 	outlineSection := &Section{}
 	d := &Document{
 		Configuration:  c,
@@ -134,12 +135,12 @@ func (d *Document) parseOne(i int, stop stopFn) (consumed int, node Node) {
 	return d.parseOne(i, stop)
 }
 
-func (d *Document) parseMany(i int, stop stopFn) (int, []Node) {
-	start, nodes := i, []Node{}
+func (d *Document) parseMany(i int, stop stopFn) (int, *arraylist.List) {
+	start, nodes := i, arraylist.New()
 	for i < len(d.tokens) && !stop(d, i) {
 		consumed, node := d.parseOne(i, stop)
 		i += consumed
-		nodes = append(nodes, node)
+		nodes.Add(node)
 	}
 	return i - start, nodes
 }

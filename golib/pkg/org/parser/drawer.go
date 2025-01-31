@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"github.com/emirpasic/gods/lists/arraylist"
 	"regexp"
 	"strings"
 	"time"
@@ -8,7 +9,7 @@ import (
 
 type Drawer struct {
 	Name     string
-	Children []Node
+	Children *arraylist.List
 	Content  string
 }
 
@@ -61,10 +62,10 @@ func (d *Document) parseDrawer(i int, parentStop stopFn) (int, Node) {
 	for {
 		consumed, nodes := d.parseMany(i, stop)
 		i += consumed
-		drawer.Children = append(drawer.Children, nodes...)
+		drawer.Children.Add(nodes)
 		if i < len(d.tokens) && d.tokens[i].kind == "beginDrawer" {
 			p := Paragraph{Children: []Node{Text{":" + d.tokens[i].content + ":", false}}}
-			drawer.Children = append(drawer.Children, p)
+			drawer.Children.Add(p)
 			i++
 		} else {
 			break

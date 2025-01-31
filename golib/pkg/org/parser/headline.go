@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"memo/pkg/util/gods/lists/arraylist"
 	"regexp"
 	"strings"
 	"unicode"
@@ -28,7 +29,7 @@ type Headline struct {
 	TaskTime     TaskTime
 	Title        []Node
 	Tags         []string
-	Children     []Node
+	Children     *arraylist.List
 	MeteContent  string
 	TitleContent string
 	BodyContent  string
@@ -78,24 +79,32 @@ func (d *Document) parseHeadline(i int, parentStop stopFn) (int, Node) {
 		return parentStop(d, i) || d.tokens[i].kind == "headline" && len(d.tokens[i].matches[1]) <= headline.Lvl+1
 	}
 	consumed, nodes := d.parseMany(i+1, stop)
-	for i, node := range nodes {
+	it := nodes.Iterator()
+	for it.Next() {
+		index := it.Index()
+		node := it.Value()
 		if d, ok := node.(PropertyDrawer); ok {
 			headline.Properties = &d
 			headline.MeteContent += d.Content
+			it.Prev()
+			nodes.Remove(index)
 			continue
 		} else if t, ok := node.(TaskTime); ok {
 			headline.TaskTime = t
 			headline.MeteContent += t.Content
+			it.Prev()
+			nodes.Remove(index)
 			continue
 		} else if l, ok := node.(LogBookDrawer); ok {
 			headline.LogBook = &l
 			headline.MeteContent += l.Content
+			it.Prev()
+			nodes.Remove(index)
 			continue
 		} else if p, ok := node.(Paragraph); ok {
 			headline.BodyContent += p.Content
-		} else {
-			nodes = nodes[i:]
-			break
+			it.Prev()
+			nodes.Remove(index)
 		}
 	}
 	headline.Children = nodes
