@@ -30,7 +30,35 @@ func init() {
 }
 
 func GetFileFromHeadID(headID string) (*OrgFile, error) {
-	fileID, err := db.GetFileIDByHeadlineID(headID)
+	File, err := db.GetFileByHeadlineID(headID)
+	if err != nil {
+		return nil, err
+	}
+
+	fileCache := KvInit(options.GetCacheDirPath())
+	file, err := fileCache.LoadFromFileID(File.ID)
+	defer fileCache.Close()
+	if err != nil && file == nil {
+		return nil, logger.Errorf("Load file By file id %s from kvcache failed: %v", File.ID, err)
+	} else if err == nil && file == nil {
+		// 如果kv 缓存被删除无记录，则直接从硬盘读取文件
+		file, err := NewFileFromPath(File.FilePath)
+		if err != nil {
+			return nil, err
+		} else if file == nil {
+			return nil, logger.Errorf("The file %s is not a org file.", File.FilePath)
+		}
+		err = file.LoadFromFile(false)
+		if err != nil {
+			return nil, err
+		}
+		return file, nil
+	}
+	return file, nil
+}
+
+func GetFileFromFileID(fileID string) (*OrgFile, error) {
+	File, err := db.GetFileByID(fileID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,18 +66,21 @@ func GetFileFromHeadID(headID string) (*OrgFile, error) {
 	fileCache := KvInit(options.GetCacheDirPath())
 	file, err := fileCache.LoadFromFileID(fileID)
 	defer fileCache.Close()
-	if err != nil || file == nil {
-		return nil, logger.Errorf("Load file By file id %s from kvcache failed: %v", fileID, err)
-	}
-	return file, nil
-}
-
-func GetFileFromFileID(fileID string) (*OrgFile, error) {
-	fileCache := KvInit(options.GetCacheDirPath())
-	file, err := fileCache.LoadFromFileID(fileID)
-	defer fileCache.Close()
-	if err != nil || file == nil {
-		return nil, logger.Errorf("Load file By file id %s from kvcache failed: %v", fileID, err)
+	if err != nil && file == nil {
+		return nil, logger.Errorf("Load file By file id %s from kvcache failed: %v", File.ID, err)
+	} else if err == nil && file == nil {
+		// 如果kv 缓存被删除无记录，则直接从硬盘读取文件
+		file, err := NewFileFromPath(File.FilePath)
+		if err != nil {
+			return nil, err
+		} else if file == nil {
+			return nil, logger.Errorf("The file %s is not a org file.", File.FilePath)
+		}
+		err = file.LoadFromFile(false)
+		if err != nil {
+			return nil, err
+		}
+		return file, nil
 	}
 	return file, nil
 }
@@ -146,13 +177,14 @@ func (f *OrgFile) String() (out string, err error) {
 		return "", fmt.Errorf("File path is empty.")
 	}
 
-	return parser.NodesToString(f.Nodes), nil
+	return parser.NodesToString(f.Nodes) + "\n", nil
 }
 
 // LoadFromFile parse file to File object.
 // It first check if the file with same hash is already in the cache,
 // If exist it returns the Nodes and ID from the cache.
 // If the file with same hash is not in the cache, it parses the file content and returns the file.
+// if force, it will always parse the file content even file hash not change.
 func (f *OrgFile) LoadFromFile(force bool) error {
 	fileCache := KvInit(options.GetCacheDirPath())
 	file, err := fileCache.LoadFromHash(f.Hash)
@@ -189,27 +221,7 @@ func (f *OrgFile) SaveToSqlDB(force bool) error {
 	return HeadCache.UpdateHeadlineToDB(force)
 }
 
-func (f *OrgFile) SaveToDiskFile() error {
-	// Open the file with write-only, create if not exists, and truncate it if it exists
-	file, err := os.OpenFile(f.Path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf("Failed to open file when save file: %w", err)
-	}
-	defer file.Close()
-
-	content, err := f.String()
-	if err != nil {
-		return fmt.Errorf("Failed to get file content: %w", err)
-	}
-	// Write the content to the file
-	_, err = file.WriteString(content + "\n")
-	if err != nil {
-		return fmt.Errorf("failed to write to file: %w", err)
-	}
-	return nil
-}
-
-func (f *OrgFile) ExportToDiskFile(path string) error {
+func (f *OrgFile) SaveToDiskFile(path string) error {
 	// Open the file with write-only, create if not exists, and truncate it if it exists
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -222,9 +234,37 @@ func (f *OrgFile) ExportToDiskFile(path string) error {
 		return fmt.Errorf("Failed to get file content: %w", err)
 	}
 	// Write the content to the file
-	_, err = file.WriteString(content + "\n")
+	_, err = file.WriteString(content)
 	if err != nil {
 		return fmt.Errorf("failed to write to file: %w", err)
+	}
+	hash := md5.New()
+	hash.Write([]byte(content))
+	f.Hash = hex.EncodeToString(hash.Sum(nil))
+	f.Path = path
+	return nil
+}
+
+func (f *OrgFile) SaveDB(force bool) error {
+	err := f.SaveToKvDB(force)
+	if err != nil {
+		return err
+	}
+	needUpdate, err := db.IfFileDBNeedUpdate(f.ID, f.Hash)
+	if err != nil {
+		return err
+	}
+
+	err = db.FileDBUpdate(f.ID, f.Path, f.Hash)
+	if err != nil {
+		return err
+	}
+
+	if needUpdate || force {
+		err = f.SaveToSqlDB(force)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -245,4 +285,18 @@ func (f *OrgFile) parseDocument() error {
 		return logger.Errorf("Parse Document and get id failed: %v", err)
 	}
 	return nil
+}
+
+func (f *OrgFile) parseString(content string) (*arraylist.List, error) {
+	reader := bytes.NewReader([]byte(content))
+	nodes := parser.New().Parse(reader, f.Path)
+	return nodes, nil
+}
+
+func (f *OrgFile) GetHeadlineByID(id string) (*arraylist.List, int) {
+	list, index := parser.FindHeadByID(f.Nodes, id)
+	if list == nil {
+		return nil, -1
+	}
+	return list, index
 }

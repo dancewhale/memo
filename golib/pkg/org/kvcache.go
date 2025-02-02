@@ -1,7 +1,9 @@
 package org
 
 import (
+	"errors"
 	"log"
+
 	"memo/pkg/logger"
 
 	"github.com/timshannon/badgerhold"
@@ -64,7 +66,9 @@ func (f *fileStructCache) Save(orgFile *OrgFile, force bool) error {
 func (f *fileStructCache) LoadFromFileID(id string) (*OrgFile, error) {
 	var file *OrgFile
 	err := f.store.Get(id, &file)
-	if err != nil {
+	if err != nil && errors.Is(err, badgerhold.ErrNotFound) {
+		return nil, nil
+	} else if err != nil {
 		return nil, logger.Errorf("Find file with ID %s error: %v", id, err)
 	}
 	return file, nil

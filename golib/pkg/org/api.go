@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"memo/pkg/logger"
-	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
@@ -41,22 +40,7 @@ func (o *OrgApi) UploadFile(filePath string, force bool) error {
 	if err != nil {
 		return err
 	}
-	err = f.SaveToKvDB(force)
-	if err != nil {
-		return err
-	}
-	needUpdate, err := db.IfFileDBNeedUpdate(f.ID, f.Path, f.Hash)
-	if err != nil {
-		return err
-	}
-
-	if needUpdate || force {
-		err = f.SaveToSqlDB(force)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return f.SaveDB(force)
 }
 
 func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
@@ -107,12 +91,44 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	}
 }
 
-func (o *OrgApi) ExportOrgFileToDisk(orgid string, filePath string) error {
-	f, err := GetFileFromFileID(orgid)
+func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
+	f, err := GetFileFromFileID(fileid)
 	if err != nil {
 		return err
 	}
-	err = f.ExportToDiskFile(filePath)
+	err = f.SaveToDiskFile(filePath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) error {
+	file, err := GetFileFromHeadID(orgid)
+	if err != nil {
+		return err
+	}
+	err = file.LoadFromFile(false)
+	if err != nil {
+		return err
+	}
+	list, index := file.GetHeadlineByID(orgid)
+	if list == nil {
+		return logger.Errorf("Can not find headline by orgid %s in file Nodes.", orgid)
+	}
+
+	head, _ := list.Get(index)
+	if h, ok := head.(parser.Headline); ok {
+		h.BodyContent = "\n" + bodyContent
+		list.Set(index, h)
+	} else {
+		return logger.Errorf("Get headline by orgid %s failed.", orgid)
+	}
+	err = file.SaveToDiskFile(file.Path)
+	if err != nil {
+		return err
+	}
+	err = file.SaveDB(false)
 	if err != nil {
 		return err
 	}
