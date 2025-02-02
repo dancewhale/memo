@@ -12,4 +12,7 @@ clean:
 gen:
 	make -C gen run
 
-so: clean gen libmemo.so
+tidy:
+	$(GO) mod tidy
+
+so: clean gen tidy libmemo.so

@@ -22,7 +22,7 @@ func initModule(env emacs.Environment) {
 	env.RegisterFunction("memo-api--skip-note", emodule.TempSkipNote, 1, "Skip note temporary, ARG1 is card orgid string.", nil)
 	env.RegisterFunction("memo-api--review-note", emodule.ReviewNote, 2, "Review note, ARG1 is card orgid string, ARG2 is review options in Good, Easy, Hard, Again.", nil)
 	env.RegisterFunction("memo-api--get-next-review-note", emodule.GetNextReviewNote, 0, "Get next review note, return (orgid, weight, content, filepath, source).", nil)
-	env.RegisterFunction("memo-api--progress", emodule.UploadFilesUnderDir, 1, "Upload org file under dir, ARG1 is dir path.", nil)
+	env.RegisterFunction("memo-api--update-content", emodule.UpdateCardContent, 1, "Upload content of card with id, ARG1 is id and ARG2 is content.", nil)
 
 	env.ProvideFeature("memo")
 }
@@ -41,11 +41,13 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	_, err = memorg.GetFileFromHeadID("4ABF840C-3E73-42EA-805E-A616C331DFE8")
+	//_, err = memorg.GetFileFromHeadID("4ABF840C-3E73-42EA-805E-A616C331DFE8")
 	err = api.ExportOrgFileToDisk("1ad3025f-c304-4227-9765-ba88905380e2", "/tmp/elisp-export.org")
 	if err != nil {
 		fmt.Println(err)
 	}
+	content := "ceshiyixai\nnojbk\njasfj;luwpr"
+	err = api.UpdateOrgHeadContent("4ABF840C-3E73-42EA-805E-A616C331DFE8", content)
 	//capi, _ := card.NewCardApi()
 	//capi.ScanHeadlineInitFsrs()
 	//card := capi.GetReviewCardByWeightDueTime()

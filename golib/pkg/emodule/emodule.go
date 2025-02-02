@@ -253,3 +253,18 @@ func UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	}
 	return e.EmacsReturn(nil)
 }
+
+func UpdateCardContent(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	e := apiInit(ectx)
+	orgid, err := ectx.GoStringArg(0)
+	if err != nil {
+		err = logger.Errorf("Pass arg orgid from emacs in update content failed: %v", err)
+		return e.EmacsReturn(err)
+	}
+	content, err := ectx.GoStringArg(1)
+	if err != nil {
+		err = logger.Errorf("Pass arg content from emacs in udpate content failed: %v", err)
+	}
+	err = e.orgApi.UpdateOrgHeadContent(orgid, content)
+	return e.EmacsReturn(err)
+}

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"memo/pkg/util/gods/lists/arraylist"
 	"strconv"
 
 	"memo/cmd/libmemo/options"
@@ -101,4 +102,25 @@ func getHeadOrder(stack *arraystack.Stack, currentHead db.Headline) int {
 		}
 	}
 	return order
+}
+
+func FindHeadByID(list *arraylist.List, id string) (*arraylist.List, int) {
+	if list == nil {
+		return nil, -1
+	}
+	it := list.Iterator()
+	for it.Next() {
+		if h, ok := it.Value().(Headline); ok {
+			if h.ID() == id {
+				return list, it.Index()
+			}
+			hl, index := FindHeadByID(h.Children, id)
+			if hl == nil {
+				continue
+			} else {
+				return hl, index
+			}
+		}
+	}
+	return nil, -1
 }

@@ -43,7 +43,7 @@ func (s *SqlWriter) ParseHeadline(h Headline) {
 		s.ParseNodes(h.Children)
 	}
 	headline := db.Headline{
-		Data: storage.Headline{Level: h.Lvl, Title: h.TitleContent, Status: h.Status,
+		Data: storage.Headline{Level: h.Lvl, Title: h.Title, Status: h.Status,
 			Content: h.BodyContent, Priority: h.Priority,
 			FileID:    &s.fileId,
 			Scheduled: h.TaskTime.GetScheduled(),

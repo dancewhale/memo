@@ -7,7 +7,21 @@ import (
 	"memo/pkg/storage/dal"
 )
 
-func CheckFileDBRecord(id, filePath, hash string) error {
+func GetFileByID(id string) (*storage.File, error) {
+	db, err := storage.InitDBEngine()
+	if err != nil {
+		return nil, logger.Errorf("Init db engine error: %v", err)
+	}
+	f := dal.Use(db).File
+
+	file, err := f.WithContext(context.Background()).Where(f.ID.Eq(id)).First()
+	if err != nil {
+		return nil, logger.Errorf("Get file record in sql db error: %v", err)
+	}
+	return file, nil
+}
+
+func FileDBUpdate(id, filePath, hash string) error {
 	db, err := storage.InitDBEngine()
 	if err != nil {
 		return logger.Errorf("Init db engine error: %v", err)
@@ -29,7 +43,7 @@ func CheckFileDBRecord(id, filePath, hash string) error {
 	return nil
 }
 
-func IfFileDBNeedUpdate(id, filePath, hash string) (bool, error) {
+func IfFileDBNeedUpdate(id, hash string) (bool, error) {
 	db, err := storage.InitDBEngine()
 	if err != nil {
 		return false, logger.Errorf("Init db engine error: %v", err)
@@ -42,7 +56,7 @@ func IfFileDBNeedUpdate(id, filePath, hash string) (bool, error) {
 	}
 	if len(file) == 0 {
 		return true, nil
-	} else if file[0].FilePath == filePath && file[0].Hash == hash {
+	} else if file[0].Hash == hash {
 		return false, nil
 	}
 	return true, nil

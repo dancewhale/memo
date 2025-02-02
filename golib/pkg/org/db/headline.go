@@ -89,15 +89,20 @@ func LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, error) {
 	return headlinesDBCache, nil
 }
 
-func GetFileIDByHeadlineID(headlineID string) (string, error) {
+func GetFileByHeadlineID(headlineID string) (*storage.File, error) {
 	headline := dal.Use(storage.Engine).Headline
 	h, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).First()
 	if err != nil {
-		return "", logger.Errorf("Get headline by id %s error: %v", headlineID, err)
+		return nil, logger.Errorf("Get headline by id %s error: %v", headlineID, err)
 	}
 	if h.FileID == nil {
-		return "", logger.Errorf("Headline %s has no file attach to it.", headlineID)
+		return nil, logger.Errorf("Headline %s has no file attach to it.", headlineID)
 	} else {
-		return *h.FileID, nil
+		file := dal.Use(storage.Engine).File
+		f, err := file.WithContext(context.Background()).Where(file.ID.Eq(*h.FileID)).First()
+		if err != nil {
+			return nil, logger.Errorf("Get file by id %s in db error: %v", *h.FileID, err)
+		}
+		return f, nil
 	}
 }

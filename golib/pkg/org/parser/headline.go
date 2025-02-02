@@ -20,19 +20,18 @@ type Section struct {
 }
 
 type Headline struct {
-	Index        int
-	Lvl          int
-	Status       string
-	Priority     string
-	Properties   *PropertyDrawer
-	LogBook      *LogBookDrawer
-	TaskTime     TaskTime
-	Title        []Node
-	Tags         []string
-	Children     *arraylist.List
-	MeteContent  string
-	TitleContent string
-	BodyContent  string
+	Index       int
+	Lvl         int
+	Status      string
+	Priority    string
+	Properties  *PropertyDrawer
+	LogBook     *LogBookDrawer
+	TaskTime    TaskTime
+	Tags        []string
+	Children    *arraylist.List
+	Title       string
+	MeteContent string
+	BodyContent string
 }
 
 var headlineRegexp = regexp.MustCompile(`^([*]+\s)(\s*.*)`)
@@ -48,7 +47,7 @@ func lexHeadline(line string) (token, bool) {
 func (d *Document) parseHeadline(i int, parentStop stopFn) (int, Node) {
 	t, headline := d.tokens[i], Headline{}
 
-	headline.TitleContent = t.matches[0]
+	headline.Title = t.matches[2]
 	headline.Lvl = len(t.matches[1]) - 1
 	text := strings.TrimLeftFunc(t.content, unicode.IsSpace)
 
@@ -73,7 +72,6 @@ func (d *Document) parseHeadline(i int, parentStop stopFn) (int, Node) {
 		headline.Tags = strings.FieldsFunc(m[2], func(r rune) bool { return r == ':' })
 	}
 	headline.Index = d.addHeadline(&headline)
-	headline.Title = d.parseInline(text)
 
 	stop := func(d *Document, i int) bool {
 		return parentStop(d, i) || d.tokens[i].kind == "headline" && len(d.tokens[i].matches[1]) <= headline.Lvl+1
@@ -143,5 +141,5 @@ func (parent *Section) add(current *Section) {
 }
 
 func (h Headline) String() string {
-	return "\n" + h.TitleContent + h.MeteContent + h.BodyContent
+	return "\n" + strings.Repeat("*", h.Lvl) + " " + h.Title + h.MeteContent + h.BodyContent
 }
