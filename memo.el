@@ -36,13 +36,6 @@
   (concat memo--root "libmemo.so")
   "The path to the dynamic module.")
 
-(defvar memo--db-path  (concat  memo--root ".memo.db")
-  "Memo server db path, default is under package dir.")
-
-(defvar memo--log-level  "-1"
-  "Memo server log level, -1 is debug, 0 is info, 1 is warn, 2 is error.")
-
-  
 (defun memo-compile-module ()
   "Compile dynamic module."
   (interactive)
@@ -58,12 +51,6 @@
       (error "Dynamic module not exist")
     (load-file memo--module-path)
     (setq memo--lib-loaded t)))
-
-(defun memo--set-server-env ()
-  "Set memo server env, For example port,host,dbpath,loglevel."
-  (setenv "dbpath"   memo--db-path)
-  (setenv "loglevel" memo--log-level))
-
 
 ;;;###autoload
 (defun memo-activate ()

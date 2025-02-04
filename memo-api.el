@@ -48,8 +48,8 @@ and used for backend to indentify memo head.")
   "Property used to store the cards type;
 and used for backend to indentify memo head.")
 
-(defvar memo-db-path nil
-"Setting memo db dir path to store database;
+(defvar memo-db-directory nil
+"Setting memo db dir to store database;
 if nil will default use user home dir.")
 
 (defvar memo-org-directory nil
@@ -72,7 +72,6 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
     (if (stringp result)
         (progn (setq memo-api-return-err result) (setq memo-api-return-value nil) (user-error result))
         (progn (setq memo-api-return-err nil) (setq memo-api-return-value result)))))
-
 
 ;; get note for review.
 (cl-defstruct memo-note

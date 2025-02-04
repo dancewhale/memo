@@ -35,7 +35,7 @@ func GetFileFromHeadID(headID string) (*OrgFile, error) {
 		return nil, err
 	}
 
-	fileCache := KvInit(options.GetCacheDirPath())
+	fileCache := KvInit(options.GetDBDirPath())
 	file, err := fileCache.LoadFromFileID(File.ID)
 	defer fileCache.Close()
 	if err != nil && file == nil {
@@ -63,7 +63,7 @@ func GetFileFromFileID(fileID string) (*OrgFile, error) {
 		return nil, err
 	}
 
-	fileCache := KvInit(options.GetCacheDirPath())
+	fileCache := KvInit(options.GetDBDirPath())
 	file, err := fileCache.LoadFromFileID(fileID)
 	defer fileCache.Close()
 	if err != nil && file == nil {
@@ -136,7 +136,7 @@ type OrgFile struct {
 
 func (f *OrgFile) getFileID(d *OrgFile) (string, error) {
 	var ID string
-	if d.Nodes.Size() != 0 {
+	if d.Nodes != nil && d.Nodes.Size() != 0 {
 		it := d.Nodes.Iterator()
 		for it.Next() {
 			node := it.Value()
@@ -186,7 +186,7 @@ func (f *OrgFile) String() (out string, err error) {
 // If the file with same hash is not in the cache, it parses the file content and returns the file.
 // if force, it will always parse the file content even file hash not change.
 func (f *OrgFile) LoadFromFile(force bool) error {
-	fileCache := KvInit(options.GetCacheDirPath())
+	fileCache := KvInit(options.GetDBDirPath())
 	file, err := fileCache.LoadFromHash(f.Hash)
 	defer fileCache.Close()
 	if err != nil {
@@ -203,7 +203,7 @@ func (f *OrgFile) LoadFromFile(force bool) error {
 
 // SaveToKvDB save orgfile to kv database.
 func (f *OrgFile) SaveToKvDB(force bool) error {
-	fileCache := KvInit(options.GetCacheDirPath())
+	fileCache := KvInit(options.GetDBDirPath())
 	err := fileCache.Save(f, force)
 	defer fileCache.Close()
 	return err

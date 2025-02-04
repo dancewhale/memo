@@ -193,13 +193,10 @@ func UploadFilesUnderDir(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	count, err := GetOrgFileCountInDir(dirPath)
 	logger.Infof("Get org file count %d in dirPath %s", count, dirPath)
 	if err != nil {
-		logger.Infof("test1")
 		err = logger.Errorf("Get org file count in dirPath %s failed: %v", dirPath, err)
 		return e.EmacsReturn(err)
 	}
-	logger.Infof("test2")
 	makeProgressReporter := e.stdl.Intern("make-progress-reporter")
-	logger.Infof("test3")
 	progressMess := "Start to upload org file under dir " + dirPath
 	logger.Infof(progressMess)
 	progressReporter, err := e.stdl.Funcall(makeProgressReporter, e.env.String(progressMess), e.env.Int(-1), e.env.Int(int64(count)))
