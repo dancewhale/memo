@@ -3,13 +3,10 @@ package org
 import (
 	"context"
 	"errors"
-	"log"
 	"memo/pkg/logger"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
-	"os"
-	"runtime/pprof"
 	"strings"
 
 	"github.com/karrick/godirwalk"
@@ -37,21 +34,24 @@ func (o *OrgApi) UploadFile(filePath string, force bool) error {
 		return nil
 	}
 	err = f.LoadFromFile(force)
-	if err != nil {
+	if err != nil && !errors.Is(err, parser.MissFileID) {
 		return err
+	} else if err != nil && errors.Is(err, parser.MissFileID) {
+		logger.Warnf("Miss file id in file %s.", filePath)
+		return nil
 	}
 	return f.SaveDB(force)
 }
 
 func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
-	f, err := os.Create("/tmp/cpu.prof")
-	if err != nil {
-		log.Fatal(err)
-	}
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
+	//f, err := os.Create("/tmp/cpu.prof")
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//pprof.StartCPUProfile(f)
+	//defer pprof.StopCPUProfile()
 
-	err = godirwalk.Walk(dirPath, &godirwalk.Options{
+	err := godirwalk.Walk(dirPath, &godirwalk.Options{
 		Callback: func(osPathname string, de *godirwalk.Dirent) error {
 			// Following string operation is not most performant way
 			// of doing this, but common enough to warrant a simple

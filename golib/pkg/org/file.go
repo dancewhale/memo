@@ -282,7 +282,7 @@ func (f *OrgFile) parseDocument() error {
 	f.Nodes = parser.New().Parse(reader, f.Path)
 	f.ID, err = f.getFileID(f)
 	if err != nil {
-		return logger.Errorf("Parse Document and get id failed: %v", err)
+		return err
 	}
 	return nil
 }
