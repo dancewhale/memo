@@ -3,7 +3,9 @@ package org
 import (
 	"context"
 	"errors"
+	"memo/cmd/libmemo/options"
 	"memo/pkg/logger"
+	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
@@ -44,12 +46,6 @@ func (o *OrgApi) UploadFile(filePath string, force bool) error {
 }
 
 func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce bool) error {
-	//f, err := os.Create("/tmp/cpu.prof")
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//pprof.StartCPUProfile(f)
-	//defer pprof.StopCPUProfile()
 
 	err := godirwalk.Walk(dirPath, &godirwalk.Options{
 		Callback: func(osPathname string, de *godirwalk.Dirent) error {
@@ -128,7 +124,11 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) error {
 	if err != nil {
 		return err
 	}
-	err = file.SaveDB(false)
+	err = file.SaveToKvDB(false)
+	if err != nil {
+		return err
+	}
+	err = db.UpdateHeadContentByID(orgid, bodyContent)
 	if err != nil {
 		return err
 	}
@@ -160,9 +160,15 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) error {
 	if err != nil {
 		return err
 	}
-	err = file.SaveDB(false)
+	err = file.SaveToKvDB(false)
 	if err != nil {
 		return err
+	}
+	if key == options.GetPropertySchedule() {
+		err = db.UpdateHeadScheduleTypeByID(orgid, value)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

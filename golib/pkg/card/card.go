@@ -73,32 +73,6 @@ func (api *CardApi) RemoveCard(orgid string) error {
 	return error
 }
 
-// skip the card and move card to the latest in queue.
-func (api *CardApi) SkipCard(orgid string) bool {
-	h := api.Headline
-	_, err := h.WithContext(context.Background()).Where(h.ID.Eq(orgid)).UpdateSimple(h.ScheduledType.Value(storage.POSTPONE))
-	if err != nil {
-		logger.Errorf("Skip Card and move card to the latest in queue failed: %v", err)
-		return false
-	}
-	return true
-}
-
-// Suspend the card.
-func (api *CardApi) SuspendCard(orgid string) bool {
-	h := api.Headline
-
-	_, err := h.WithContext(context.Background()).
-		Where(h.ID.Eq(orgid)).
-		UpdateSimple(h.ScheduledType.Value(storage.SUSPEND))
-
-	if err != nil {
-		logger.Errorf("Suspend Card %s failed: %v", orgid, err)
-		return false
-	}
-	return true
-}
-
 // 增加复习记录
 func (api *CardApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
 	n := api.Headline

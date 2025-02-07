@@ -18,16 +18,21 @@ func initModule(env emacs.Environment) {
 
 	env.RegisterFunction("memo-api--sync-file", emodule.UploadFile, 2, "Upload file to database, ARG1 is filePath string, ARG2 is true/false if need force upload file.", nil)
 	env.RegisterFunction("memo-api--sync-dir", emodule.UploadFilesUnderDir, 2, "Upload file under diretory to database, ARG1 is dirPath string, ARG2 is  true/false if need force upload files.", nil)
-	env.RegisterFunction("memo-api--suspend-note", emodule.SuspendNote, 1, "Suspend note, ARG1 is card orgid string.", nil)
-	env.RegisterFunction("memo-api--skip-note", emodule.TempSkipNote, 1, "Skip note temporary, ARG1 is card orgid string.", nil)
 	env.RegisterFunction("memo-api--review-note", emodule.ReviewNote, 2, "Review note, ARG1 is card orgid string, ARG2 is review options in Good, Easy, Hard, Again.", nil)
 	env.RegisterFunction("memo-api--get-next-review-note", emodule.GetNextReviewNote, 0, "Get next review note, return (orgid, weight, content, filepath, source).", nil)
-	env.RegisterFunction("memo-api--update-content", emodule.UpdateCardContent, 1, "Upload content of card with id, ARG1 is id and ARG2 is content.", nil)
+	env.RegisterFunction("memo-api--update-content", emodule.UpdateCardContent, 2, "Upload content of card with id, ARG1 is id and ARG2 is content.", nil)
+	env.RegisterFunction("memo-api--update-property", emodule.UpdateCardProperty, 3, "Upload property of card with id, ARG1 is id and ARG2 is property key and ARG3 is property value.", nil)
 
 	env.ProvideFeature("memo")
 }
 
 func main() {
+	f, err := os.Create("/tmp/cpu.prof")
+	if err != nil {
+		log.Fatal(err)
+	}
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
 	options.Evariable = options.Variable{}
 	logger.Init()
 	api, _ := memorg.NewOrgApi()

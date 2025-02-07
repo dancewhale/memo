@@ -51,46 +51,6 @@ func (e *EApi) EmacsReturn(err error, result ...emacs.Value) (emacs.Value, error
 	}
 }
 
-func SuspendNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
-	e := apiInit(ectx)
-	orgid, err := ectx.GoStringArg(0)
-	if err != nil {
-		err = logger.Errorf("Pass arg orgid from emacs in suspend note failed: %v", err)
-	}
-	if orgid == "" {
-		err = logger.Errorf("Orgid in args from emacs call  is empty.")
-		return e.EmacsReturn(err)
-	}
-
-	result := e.capi.SuspendCard(orgid)
-	if result {
-		return e.EmacsReturn(nil, e.env.StdLib().T())
-	} else {
-		return e.EmacsReturn(nil)
-	}
-}
-
-// temp change card status to postpone and move to the end of the review queue
-// After review this card, it will be recovered to normal status.
-func TempSkipNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
-	e := apiInit(ectx)
-	orgid, err := ectx.GoStringArg(0)
-	if err != nil {
-		err = logger.Errorf("Pass arg orgid from emacs in skip note failed: %v", err)
-	}
-	if orgid == "" {
-		err = logger.Errorf("Orgid in args from emacs call  is empty.")
-		return e.EmacsReturn(err)
-	}
-
-	result := e.capi.SkipCard(orgid)
-	if result {
-		return e.EmacsReturn(nil, e.env.StdLib().T())
-	} else {
-		return e.EmacsReturn(nil)
-	}
-}
-
 func GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	e := apiInit(ectx)
 	l := ""

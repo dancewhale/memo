@@ -106,3 +106,28 @@ func GetFileByHeadlineID(headlineID string) (*storage.File, error) {
 		return f, nil
 	}
 }
+
+func UpdateHeadContentByID(headlineID, bodyContent string) error {
+	headline := dal.Use(storage.Engine).Headline
+	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).UpdateSimple(headline.Content.Value(bodyContent))
+	if err != nil {
+		return logger.Errorf("Update headline %s body content error: %v", headlineID, err)
+	}
+	return nil
+}
+
+func UpdateHeadScheduleTypeByID(headlineID, stype string) error {
+	headline := dal.Use(storage.Engine).Headline
+	if stype == storage.POSTPONE || stype == storage.NORMAL || stype == storage.SUSPEND {
+		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).
+			UpdateSimple(headline.ScheduledType.Value(stype))
+
+		if err != nil {
+			return logger.Errorf("Update headline %s body content error: %v", headlineID, err)
+		}
+		return nil
+	} else {
+		return logger.Errorf("Update headline %s type %s error: Only %s, %s, %s is allowed",
+			headlineID, stype, storage.NORMAL, storage.POSTPONE, storage.SUSPEND)
+	}
+}

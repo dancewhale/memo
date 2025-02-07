@@ -34,13 +34,6 @@
   "Skip current review note and review next note."
   (interactive)
   (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
-    (progn (memo-api--skip-note (memo-note-id memo--review-note))
-	   (memo-review-note))))
-
-(defun memo-skip-current-review-note-2 ()
-  "Skip current review note and review next note."
-  (interactive)
-  (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
     (progn (memo-api--update-property (memo-note-id memo--review-note) "MEMO_NOTE_SCHEDULE" "postpone")
 	   (memo-review-note))))
 
