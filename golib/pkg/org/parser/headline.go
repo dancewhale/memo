@@ -79,30 +79,21 @@ func (d *Document) parseHeadline(i int, parentStop stopFn) (int, Node) {
 	consumed, nodes := d.parseMany(i+1, stop)
 	it := nodes.Iterator()
 	for it.Next() {
-		index := it.Index()
 		node := it.Value()
 		if d, ok := node.(PropertyDrawer); ok {
 			headline.Properties = &d
-			headline.MeteContent += d.Content
-			it.Prev()
-			nodes.Remove(index)
+			headline.MeteContent = d.String()
 			continue
 		} else if t, ok := node.(TaskTime); ok {
 			headline.TaskTime = t
-			headline.MeteContent += t.Content
-			it.Prev()
-			nodes.Remove(index)
+			headline.MeteContent = t.String()
 			continue
 		} else if l, ok := node.(LogBookDrawer); ok {
 			headline.LogBook = &l
-			headline.MeteContent += l.Content
-			it.Prev()
-			nodes.Remove(index)
+			headline.MeteContent += l.String()
 			continue
 		} else if p, ok := node.(Paragraph); ok {
-			headline.BodyContent += p.Content
-			it.Prev()
-			nodes.Remove(index)
+			headline.BodyContent += p.String()
 		}
 	}
 	headline.Children = nodes
@@ -141,5 +132,18 @@ func (parent *Section) add(current *Section) {
 }
 
 func (h Headline) String() string {
-	return "\n" + strings.Repeat("*", h.Lvl) + " " + h.Title + h.MeteContent + h.BodyContent
+	content := strings.Repeat("*", h.Lvl) + " " + h.Title + "\n"
+	if h.TaskTime.String() != "" {
+		content += h.TaskTime.String()
+	}
+	if h.Properties != nil {
+		content += h.Properties.String()
+	}
+	if h.LogBook != nil {
+		content += h.LogBook.String()
+	}
+	if h.BodyContent != "" {
+		content += h.BodyContent
+	}
+	return content
 }

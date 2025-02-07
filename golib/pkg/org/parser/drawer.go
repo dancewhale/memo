@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/emirpasic/gods/lists/arraylist"
 	"regexp"
 	"strings"
@@ -15,7 +16,6 @@ type Drawer struct {
 
 type PropertyDrawer struct {
 	Properties [][]string
-	Content    string
 }
 
 type LogBookDrawer struct {
@@ -74,14 +74,6 @@ func (d *Document) parseDrawer(i int, parentStop stopFn) (int, Node) {
 	if i < len(d.tokens) && d.tokens[i].kind == "endDrawer" {
 		i++
 	}
-	for j := start; j < i; j++ {
-		content := d.tokens[j].matches[0]
-		if j == 0 {
-			drawer.Content += content
-		} else {
-			drawer.Content += "\n" + content
-		}
-	}
 	return i - start, drawer
 }
 
@@ -103,14 +95,6 @@ func (d *Document) parsePropertyDrawer(i int, parentStop stopFn) (int, Node) {
 		i++
 	} else {
 		return 0, nil
-	}
-	for j := start; j < i; j++ {
-		content := d.tokens[j].matches[0]
-		if j == 0 {
-			drawer.Content += content
-		} else {
-			drawer.Content += "\n" + content
-		}
 	}
 	return i - start, drawer
 }
@@ -137,7 +121,7 @@ func (d *Document) parseLogBookClock(i int, parentStop stopFn) (int, Node) {
 
 	for j := start; j < i; j++ {
 		content := d.tokens[j].matches[0]
-		drawer.Content += "\n" + content
+		drawer.Content += content + "\n"
 	}
 	return i - start, drawer
 }
@@ -152,6 +136,23 @@ func (d *PropertyDrawer) Get(key string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func (d *PropertyDrawer) Set(key, value string) {
+	property := []string{key, value}
+	if d != nil {
+		for _, kvPair := range d.Properties {
+			if kvPair[0] == key {
+				kvPair[1] = value
+				return
+			}
+		}
+		d.Properties = append(d.Properties, property)
+		return
+	} else {
+		d = &PropertyDrawer{Properties: [][]string{property}}
+		return
+	}
 }
 
 func (n Clock) GetStart() *time.Time {
@@ -177,11 +178,19 @@ func (n Clock) GetEnd() *time.Time {
 }
 
 func (p PropertyDrawer) String() string {
-	return p.Content
+	property := ":PROPERTIES:\n"
+	for _, kv := range p.Properties {
+		key := ":" + kv[0] + ":"
+		value := kv[1]
+		formatString := fmt.Sprintf("%-10s %s", key, value)
+		property += formatString + "\n"
+	}
+	property += ":END:\n"
+	return property
 }
 
-func (p LogBookDrawer) String() string {
-	return p.Content
+func (l LogBookDrawer) String() string {
+	return l.Content
 }
 
 func (d Drawer) String() string {

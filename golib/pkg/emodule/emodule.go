@@ -265,3 +265,22 @@ func UpdateCardContent(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	err = e.orgApi.UpdateOrgHeadContent(orgid, content)
 	return e.EmacsReturn(err)
 }
+
+func UpdateCardProperty(ectx emacs.FunctionCallContext) (emacs.Value, error) {
+	e := apiInit(ectx)
+	orgid, err := ectx.GoStringArg(0)
+	if err != nil {
+		err = logger.Errorf("Pass arg orgid from emacs in update property failed: %v", err)
+		return e.EmacsReturn(err)
+	}
+	key, err := ectx.GoStringArg(1)
+	if err != nil {
+		err = logger.Errorf("Pass arg key from emacs in udpate property failed: %v", err)
+	}
+	value, err := ectx.GoStringArg(2)
+	if err != nil {
+		err = logger.Errorf("Pass arg value from emacs in udpate property failed: %v", err)
+	}
+	err = e.orgApi.UpdateOrgHeadProperty(orgid, key, value)
+	return e.EmacsReturn(err)
+}

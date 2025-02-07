@@ -119,7 +119,39 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) error {
 
 	head, _ := list.Get(index)
 	if h, ok := head.(parser.Headline); ok {
-		h.BodyContent = "\n" + bodyContent
+		h.BodyContent = bodyContent
+		list.Set(index, h)
+	} else {
+		return logger.Errorf("Get headline by orgid %s failed.", orgid)
+	}
+	err = file.SaveToDiskFile(file.Path)
+	if err != nil {
+		return err
+	}
+	err = file.SaveDB(false)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) error {
+	file, err := GetFileFromHeadID(orgid)
+	if err != nil {
+		return err
+	}
+	err = file.LoadFromFile(false)
+	if err != nil {
+		return err
+	}
+	list, index := file.GetHeadlineByID(orgid)
+	if list == nil {
+		return logger.Errorf("Can not find headline by orgid %s in file Nodes.", orgid)
+	}
+
+	head, _ := list.Get(index)
+	if h, ok := head.(parser.Headline); ok {
+		h.Properties.Set(key, value)
 		list.Set(index, h)
 	} else {
 		return logger.Errorf("Get headline by orgid %s failed.", orgid)

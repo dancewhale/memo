@@ -31,6 +31,7 @@ func (d *Document) parseTaskTime(i int, parentStop stopFn) (int, Node) {
 	timeContent := d.tokens[i].content
 	i++
 	taskTime := TaskTime{}
+	taskTime.Content = timeContent
 
 	if m := scheduledRegexp.FindStringSubmatch(timeContent); m != nil {
 		taskTime.Scheduled = m[1]

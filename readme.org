@@ -5,3 +5,12 @@ For supermemo in emacs.
 使用如下配置文件在config 中.
 (straight-use-package '(memo :type git :host github
                              :repo "dancewhale/memo" :files (:defaults "golib")))
+
+                             
+* card property
+| property           | mean                                    |
+|--------------------+-----------------------------------------|
+| ID                 | card identity                           |
+| MEMO_NOTE_WEIGHT   | define the sort of card in review quene |
+| MEMO_NOTE_SCHEDULE | postpone,suspend,normal                 |
+| MEMO_NOTE_SOURCE   | link refer to the source of card        |

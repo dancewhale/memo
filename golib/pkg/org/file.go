@@ -165,7 +165,7 @@ func (f *OrgFile) String() (out string, err error) {
 	var er error
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			er = fmt.Errorf("could not write output: %s", recovered)
+			er = logger.Errorf("Could not export file, Because error happend: %s", recovered)
 		}
 	}()
 
@@ -177,7 +177,7 @@ func (f *OrgFile) String() (out string, err error) {
 		return "", fmt.Errorf("File path is empty.")
 	}
 
-	return parser.NodesToString(f.Nodes) + "\n", nil
+	return parser.NodesToString(f.Nodes), nil
 }
 
 // LoadFromFile parse file to File object.

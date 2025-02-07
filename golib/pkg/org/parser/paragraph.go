@@ -20,24 +20,28 @@ func lexText(line string) (token, bool) {
 }
 
 func (d *Document) parseParagraph(i int, parentStop stopFn) (int, Node) {
+	var consumed int
 	var para = Paragraph{}
 	lines, start := []string{d.tokens[i].content}, i
-	stop := func(d *Document, i int) bool {
-		return parentStop(d, i) || d.tokens[i].kind != "text" || d.tokens[i].content == ""
+	if lines[0] == "" {
+		para.Content = "\n"
+		stop := func(d *Document, i int) bool {
+			return parentStop(d, i) || d.tokens[i].kind != "text" || d.tokens[i].content != ""
+		}
+		for i += 1; !stop(d, i); i++ {
+			para.Content += "\n"
+		}
+		consumed = i - start
+	} else {
+		stop := func(d *Document, i int) bool {
+			return parentStop(d, i) || d.tokens[i].kind != "text" || d.tokens[i].content == ""
+		}
+		for i += 1; !stop(d, i); i++ {
+			lines = append(lines, d.tokens[i].content)
+		}
+		para.Content = strings.Join(lines, "\n") + "\n"
+		consumed = i - start
 	}
-	for i += 1; !stop(d, i); i++ {
-		lines = append(lines, d.tokens[i].content)
-	}
-	consumed := i - start
-
-	for j := start; j < start+consumed; j++ {
-		content := d.tokens[j].matches[0]
-		para.Content += "\n" + content
-	}
-	//if len(lines) == 1 && lines[0] == "" {
-	//	para.Content = "\n"
-	//}
-	para.Children = d.parseInline(strings.Join(lines, "\n"))
 
 	return consumed, para
 }
