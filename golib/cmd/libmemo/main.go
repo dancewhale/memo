@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"github.com/dancewhale/go-emacs"
 	_ "github.com/dancewhale/go-emacs/gpl-compatible"
+	"log"
 	"memo/cmd/libmemo/options"
 	"memo/pkg/emodule"
 	"memo/pkg/logger"
 	memorg "memo/pkg/org"
+	"os"
+	"runtime/pprof"
 )
 
 func init() {
@@ -41,18 +44,21 @@ func main() {
 	//err := api.UploadFile("/Users/whale/Seafile/Dropbox/roam/20200402150453-记忆力的几个本质要点.org", true)
 	//err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2021-01-05.org", false)
 	//err := api.UploadFilesUnderDir("/Users/whale/Dropbox/memo/resource", true)
+	err = api.UploadFile("/Users/whale/Dropbox/memo/resource/elisp-manual.org", true)
 	//err := api.UploadFile("/Users/whale/Dropbox/memo/tasks.org", false)
-	err := api.UploadFile("/tmp/elisp-manual.org", true)
+	//err := api.UploadFile("/Users/whale/elisp-manual.org", true)
+	//err := api.UploadFile("/tmp/elisp-manual.org", true)
 	if err != nil {
 		fmt.Println(err)
 	}
 	//_, err = memorg.GetFileFromHeadID("4ABF840C-3E73-42EA-805E-A616C331DFE8")
-	err = api.ExportOrgFileToDisk("1ad3025f-c304-4227-9765-ba88905380e2", "/tmp/elisp-export.org")
-	if err != nil {
-		fmt.Println(err)
-	}
-	content := "ceshiyixai\nnojbk\njasfj;luwpr"
-	err = api.UpdateOrgHeadContent("4ABF840C-3E73-42EA-805E-A616C331DFE8", content)
+	//err = api.ExportOrgFileToDisk("1ad3025f-c304-4227-9765-ba88905380e2", "/tmp/elisp-export.org")
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//content := "ceshiyixai\nnojbk\njasfj;luwpr"
+	//err = api.UpdateOrgHeadContent("4ABF840C-3E73-42EA-805E-A616C331DFE8", content)
+	err = api.UpdateOrgHeadProperty("4ABF840C-3E73-42EA-805E-A616C331DFE8", "MEMO_NOTE_TEST", "jjjxsjj")
 	//capi, _ := card.NewCardApi()
 	//capi.ScanHeadlineInitFsrs()
 	//card := capi.GetReviewCardByWeightDueTime()
@@ -75,6 +81,7 @@ func main() {
 	//
 	//fmt.Println("=======================================================\n", elapsing2.Stats(), "\n=======================================================")
 	//fmt.Println(result)
+	fmt.Println("jkljresult")
 
 	//index.Index()
 }

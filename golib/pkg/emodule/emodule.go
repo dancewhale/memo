@@ -8,7 +8,6 @@ import (
 	"memo/pkg/card"
 	"memo/pkg/logger"
 	"memo/pkg/org"
-	"memo/pkg/org/location"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 
@@ -53,23 +52,17 @@ func (e *EApi) EmacsReturn(err error, result ...emacs.Value) (emacs.Value, error
 
 func GetNextReviewNote(ectx emacs.FunctionCallContext) (emacs.Value, error) {
 	e := apiInit(ectx)
-	l := ""
 	head := e.capi.GetReviewCardByWeightDueTime()
 	if head == nil {
 		err := logger.Errorf("There is no card wait for review tody.")
 		return e.EmacsReturn(err)
 	}
 
-	if len(head.Locations) != 0 {
-		lo := location.ParseLocation(head.Locations[0])
-		l = lo.String()
-	}
-
 	return e.EmacsReturn(nil, e.env.String(head.ID),
 		e.env.Int(int64(head.Weight)),
 		e.env.String(head.Content),
 		e.env.String(head.File.FilePath),
-		e.env.String(l),
+		e.env.String(head.Source),
 	)
 }
 

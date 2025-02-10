@@ -30,6 +30,7 @@ type Headline struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
 	Weight  int64  `json:"weight"`
+	Source  string `json:"source"`
 	// Scheduled Type
 	// Suspend: hang up card, not review until set to normal.
 	// Normal: normal schedule.

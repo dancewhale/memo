@@ -37,6 +37,14 @@
     (progn (memo-api--update-property (memo-note-id memo--review-note) "MEMO_NOTE_SCHEDULE" "postpone")
 	   (memo-review-note))))
 
+(defun memo-update-current-note-content ()
+  "Skip current review note and review next note."
+  (interactive)
+  (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
+    (progn (memo-api--update-content (memo-note-id memo--review-note)
+				     (buffer-substring-no-properties (point-min) (point-max))))))
+
+
 (defun memo-review-note()
   "Get next review note in review buffer."
   (interactive)
@@ -46,15 +54,13 @@
   (let* ((buf (get-buffer-create memo--review-buffer-name))
 	 answer-start answer-end)
     (with-current-buffer buf
-	(read-only-mode -1)
 	(memo-card-remove-overlays)
 	(erase-buffer)
 	(insert (memo-note-content memo--review-note))
 	(memo-card-hidden)
 	(memo-cloze-hidden)
 	(switch-to-buffer buf)
-	(org-mode)
-	(read-only-mode))))
+	(org-mode))))
 
 
 (defun memo-review-easy()
@@ -112,7 +118,7 @@
 
 
 ;; jump to the source of node.
-(defun memo-goto-source ()
+(defun memo-goto-source-direct ()
   "Jump to source of node."
   (interactive)
   (if (not (memo-note-id memo--review-note))
@@ -121,8 +127,22 @@
 	 (buf (get-buffer-create memo--source-buffer-name)))
     (save-excursion
       (with-current-buffer buf
-	(org-open-link-from-string source)))
-    (switch-to-buffer-other-window buf)))
+	(org-link-open-from-string source)))))
+
+;; wait for use.
+(defun memo-goto-source ()
+"Open an org-mode LINK in a new buffer on the right side."
+  (interactive)
+  (if (not (memo-note-id memo--review-note))
+      (user-error "Review memo-note object is nil"))
+  (let ((source (memo-note-source memo--review-note))
+	(buffer (get-buffer-create memo--source-buffer-name)))
+    (display-buffer-in-side-window buffer '((side . right) (window-width . 0.5)))
+    (set-window-dedicated-p (get-buffer-window buffer) t)  
+    (with-current-buffer buffer
+      (org-link-open-from-string source)
+      (org-mode)
+      (goto-char (point-min)))))
 
 
 

@@ -6,7 +6,6 @@ import (
 
 	"memo/cmd/libmemo/options"
 	"memo/pkg/org/db"
-	"memo/pkg/org/location"
 	"memo/pkg/storage"
 	"memo/pkg/util/gods/stacks/arraystack"
 )
@@ -79,10 +78,7 @@ func getHeadlineProperty(headline *db.Headline, pd *PropertyDrawer) {
 		headline.Data.ID, _ = pd.Get(options.GetPropertyID())
 		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
 		headline.Data.ScheduledType = getScheduleFromPropertyDrawer(pd)
-		location := location.ParseOrgLink(getSourceFromPropertyDrawer(pd), location.SourceType)
-		if location != nil {
-			headline.Data.Locations = append(headline.Data.Locations, location.Get())
-		}
+		headline.Data.Source = getSourceFromPropertyDrawer(pd)
 	}
 }
 
