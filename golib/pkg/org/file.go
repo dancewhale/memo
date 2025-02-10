@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"memo/cmd/libmemo/options"
+	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
@@ -35,7 +35,7 @@ func GetFileFromHeadID(headID string) (*OrgFile, error) {
 		return nil, err
 	}
 
-	fileCache := KvInit(options.GetDBDirPath())
+	fileCache := KvInit(options.Config.DBDirPath)
 	file, err := fileCache.LoadFromFileID(File.ID)
 	defer fileCache.Close()
 	if err != nil && file == nil {
@@ -63,7 +63,7 @@ func GetFileFromFileID(fileID string) (*OrgFile, error) {
 		return nil, err
 	}
 
-	fileCache := KvInit(options.GetDBDirPath())
+	fileCache := KvInit(options.Config.DBDirPath)
 	file, err := fileCache.LoadFromFileID(fileID)
 	defer fileCache.Close()
 	if err != nil && file == nil {
@@ -144,7 +144,7 @@ func (f *OrgFile) getFileID(d *OrgFile) (string, error) {
 			case parser.Headline:
 				break
 			case parser.PropertyDrawer:
-				id, exist := n.Get(options.GetPropertyID())
+				id, exist := n.Get(options.EmacsPropertyID)
 				if exist && ID != "" {
 					return "", parser.FoundDupID
 				} else if exist {
@@ -186,7 +186,7 @@ func (f *OrgFile) String() (out string, err error) {
 // If the file with same hash is not in the cache, it parses the file content and returns the file.
 // if force, it will always parse the file content even file hash not change.
 func (f *OrgFile) LoadFromFile(force bool) error {
-	fileCache := KvInit(options.GetDBDirPath())
+	fileCache := KvInit(options.Config.DBDirPath)
 	file, err := fileCache.LoadFromHash(f.Hash)
 	defer fileCache.Close()
 	if err != nil {
@@ -203,7 +203,7 @@ func (f *OrgFile) LoadFromFile(force bool) error {
 
 // SaveToKvDB save orgfile to kv database.
 func (f *OrgFile) SaveToKvDB(force bool) error {
-	fileCache := KvInit(options.GetDBDirPath())
+	fileCache := KvInit(options.Config.DBDirPath)
 	err := fileCache.Save(f, force)
 	defer fileCache.Close()
 	return err

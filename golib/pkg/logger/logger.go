@@ -3,7 +3,7 @@ package logger
 import (
 	"errors"
 	"fmt"
-	"memo/cmd/libmemo/options"
+	"memo/cmd/options"
 	"os"
 	"sync"
 
@@ -38,7 +38,14 @@ func NewLogger() {
 func getStdCore() zapcore.Core {
 	stdEncoder := getEncoder()
 	consoleWriter := zapcore.Lock(os.Stdout)
-	LogLevel := zapcore.Level(options.GetLogLevel())
+	logList := [7]int64{-1, 0, 1, 2, 3, 4, 5}
+	for _, logLevel := range logList {
+		if logLevel == options.Config.LogLevel {
+			LogLevel := zapcore.Level(logLevel)
+			return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
+		}
+	}
+	LogLevel := zapcore.InfoLevel
 	return zapcore.NewCore(stdEncoder, consoleWriter, LogLevel)
 }
 

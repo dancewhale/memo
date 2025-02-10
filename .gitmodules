@@ -1,3 +1,0 @@
-[submodule "go-emacs"]
-	path = golib/go-emacs
-	url = git@github.com:dancewhale/go-emacs.git

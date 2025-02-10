@@ -1,44 +1,107 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"github.com/dancewhale/go-emacs"
-	_ "github.com/dancewhale/go-emacs/gpl-compatible"
 	"log"
-	"memo/cmd/libmemo/options"
-	"memo/pkg/emodule"
-	"memo/pkg/logger"
-	memorg "memo/pkg/org"
+	"memo/cmd/options"
+	"memo/pkg/card"
 	"os"
 	"runtime/pprof"
+
+	"memo/pkg/logger"
+	"memo/pkg/org"
+
+	"github.com/kiwanami/go-elrpc"
+	"github.com/urfave/cli/v3"
 )
 
-func init() {
-	emacs.Register(initModule)
-}
-
-func initModule(env emacs.Environment) {
-
-	env.RegisterFunction("memo-api--sync-file", emodule.UploadFile, 2, "Upload file to database, ARG1 is filePath string, ARG2 is true/false if need force upload file.", nil)
-	env.RegisterFunction("memo-api--sync-dir", emodule.UploadFilesUnderDir, 2, "Upload file under diretory to database, ARG1 is dirPath string, ARG2 is  true/false if need force upload files.", nil)
-	env.RegisterFunction("memo-api--review-note", emodule.ReviewNote, 2, "Review note, ARG1 is card orgid string, ARG2 is review options in Good, Easy, Hard, Again.", nil)
-	env.RegisterFunction("memo-api--get-next-review-note", emodule.GetNextReviewNote, 0, "Get next review note, return (orgid, weight, content, filepath, source).", nil)
-	env.RegisterFunction("memo-api--update-content", emodule.UpdateCardContent, 2, "Upload content of card with id, ARG1 is id and ARG2 is content.", nil)
-	env.RegisterFunction("memo-api--update-property", emodule.UpdateCardProperty, 3, "Upload property of card with id, ARG1 is id and ARG2 is property key and ARG3 is property value.", nil)
-
-	env.ProvideFeature("memo")
-}
-
 func main() {
+	con := options.ConfigInit()
+
+	app := &cli.Command{
+		Commands: []*cli.Command{
+			{
+				Name:    "daemon",
+				Aliases: []string{"d"},
+				Usage:   "start the daemon",
+				Action:  appstart,
+			},
+		},
+		Flags: []cli.Flag{
+			&cli.IntFlag{
+				Name:        "port",
+				Value:       23456,
+				Usage:       "Port for the grpc server",
+				Sources:     cli.EnvVars("MEMO_PORT"),
+				Destination: &con.Port,
+			},
+			&cli.StringFlag{
+				Name:        "host",
+				Value:       "0.0.0.0",
+				Usage:       "Host for the grpc server",
+				Sources:     cli.EnvVars("MEMO_HOST"),
+				Destination: &con.Host,
+			},
+			&cli.StringFlag{
+				Name:        "dbpath",
+				Usage:       "Directory for the memo db.",
+				Sources:     cli.EnvVars("MEMO_DB_PATH"),
+				Destination: &con.DBDirPath,
+			},
+			&cli.IntFlag{
+				Name:        "loglevel",
+				Value:       0,
+				Usage:       "Log level for server, -1 is debug, 0 is info, 1 is warn, 2 is error, 3 is dpanic, 4 is panic, 5 is fatal",
+				Sources:     cli.EnvVars("MEMO_LOG_LEVEL"),
+				Destination: &con.LogLevel,
+			},
+		},
+	}
+
+	if err := app.Run(context.Background(), os.Args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func appstart(ctx context.Context, cmd *cli.Command) error {
+	logger.Init()
+	// construct epc server
+	s, err := elrpc.StartServerWithPort(nil, int(options.Config.Port))
+	if err != nil {
+		fmt.Printf(err.Error())
+		return err
+	}
+
+	// register org method
+	orgApi, err := org.NewOrgApi()
+	if err != nil {
+		logger.Errorf("Failed to create org api: %v", err)
+		os.Exit(2)
+	}
+	orgApi.RegistryEpcMethod(s)
+
+	// register card method
+	cardApi, err := card.NewCardApi()
+	if err != nil {
+		logger.Errorf("Failed to create card api: %v", err)
+		os.Exit(2)
+	}
+	cardApi.RegistryEpcMethod(s)
+
+	s.Wait()
+	return nil
+}
+
+func test() {
 	f, err := os.Create("/tmp/cpu.prof")
 	if err != nil {
 		log.Fatal(err)
 	}
 	pprof.StartCPUProfile(f)
 	defer pprof.StopCPUProfile()
-	options.Evariable = options.Variable{}
 	logger.Init()
-	api, _ := memorg.NewOrgApi()
+	api, _ := org.NewOrgApi()
 
 	//err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2024-10-22.org", true)
 	//err := api.UploadFile("/Users/whale/Seafile/Dropbox/roam/20200402150453-记忆力的几个本质要点.org", true)

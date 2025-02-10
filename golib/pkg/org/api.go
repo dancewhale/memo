@@ -3,7 +3,7 @@ package org
 import (
 	"context"
 	"errors"
-	"memo/cmd/libmemo/options"
+	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/karrick/godirwalk"
+	epc "github.com/kiwanami/go-elrpc"
 	"gorm.io/gorm"
 )
 
@@ -23,6 +24,15 @@ func NewOrgApi() (*OrgApi, error) {
 	DB, err := storage.InitDBEngine()
 
 	return &OrgApi{db: DB}, err
+}
+
+func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
+	service.RegisterMethod(epc.MakeMethod("UploadFile", o.UploadFile, "string", "Upload org file to database"))
+	service.RegisterMethod(epc.MakeMethod("UploadFilesUnderDir", o.UploadFilesUnderDir, "string", "Upload org files under dir to database"))
+	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadContent", o.UpdateOrgHeadContent, "string", "Update org head content"))
+	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
+	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
+	return service
 }
 
 // UploadFile first load hash and filePath from file in disk，
@@ -164,7 +174,7 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) error {
 	if err != nil {
 		return err
 	}
-	if key == options.GetPropertySchedule() {
+	if key == options.EmacsPropertySchedule {
 		err = db.UpdateHeadScheduleTypeByID(orgid, value)
 		if err != nil {
 			return err

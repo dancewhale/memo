@@ -2,7 +2,9 @@ package card
 
 import (
 	"context"
+	epc "github.com/kiwanami/go-elrpc"
 	"memo/pkg/org/location"
+	"strconv"
 	"time"
 
 	"memo/pkg/logger"
@@ -31,6 +33,32 @@ type CardApi struct {
 	dal.Query
 	db        *gorm.DB
 	scheduler gfsrs.FSRS
+}
+
+func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
+	service.RegisterMethod(epc.MakeMethod("GetNextReviewNote", api.GetNextReviewNote, "string", "Get next review note"))
+	service.RegisterMethod(epc.MakeMethod("ReviewNote", api.ReviewNote, "string", "Review note"))
+	return service
+}
+
+// function to export to emacs rpc.
+func (api *CardApi) GetNextReviewNote() ([]string, error) {
+	head := api.GetReviewCardByWeightDueTime()
+	if head == nil {
+		return nil, logger.Errorf("There is no card wait for review today.")
+	}
+	weight := strconv.Itoa(int(head.Weight))
+	return []string{head.ID, weight, head.Content, head.File.FilePath, head.Source}, nil
+}
+
+func (api *CardApi) ReviewNote(orgID string, rating string) error {
+	if orgID == "" {
+		return logger.Errorf("orgID is empty When review note.")
+	}
+	fsrsRate := storage.StringToRate(rating)
+	r := api.ReviewCard(orgID, fsrsRate)
+	logger.Debugf("Review note success, orgID: %s, rating: %s", r.ID, rating)
+	return nil
 }
 
 // GetCard 获取一张卡片。
@@ -257,7 +285,7 @@ func (api *CardApi) ifCardIsDue(orgid string) (bool, error) {
 	}
 }
 
-func (api *CardApi) ScanHeadlineInitFsrs() ([]*storage.Headline, error) {
+func (api *CardApi) scanHeadlineInitFsrs() ([]*storage.Headline, error) {
 	logger.Infof("Start to scan org for headline init.")
 	headline := api.Headline
 	fsrsInfo := api.FsrsInfo

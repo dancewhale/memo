@@ -1,13 +1,12 @@
 package storage
 
 import (
-	"memo/cmd/libmemo/options"
-	mlog "memo/pkg/logger"
-	"time"
-
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"memo/cmd/options"
+
+	mlog "memo/pkg/logger"
 )
 
 var Engine *gorm.DB
@@ -17,10 +16,12 @@ func InitDBEngine() (*gorm.DB, error) {
 		return Engine, nil
 	}
 	var err error
-	mlog.Infof("Current memo log level is %d, db log level is %d, dbpath is %s", options.GetLogLevel(), options.GetDbLogLevel(), options.GetDBFilePath())
+	con := options.ConfigInit()
+	mlog.Infof("Current memo log level is %d, db log level is %d, dbdir is %s", con.GetLogLevel(), con.GetDBLogLevel(), con.GetDBPath())
 	if Engine == nil {
-		Engine, err = gorm.Open(sqlite.Open(options.GetDBFilePath()), &gorm.Config{
-			Logger: logger.Default.LogMode(options.GetDbLogLevel()),
+		dbPath := con.GetDBPath() + "/memo.sqlite"
+		Engine, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+			Logger: logger.Default.LogMode(options.Config.GetDBLogLevel()),
 		})
 		// TODO retry
 		if err != nil {
@@ -36,9 +37,9 @@ func InitDBEngine() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	sqlDB.SetMaxIdleConns(options.GetDBMaxIdleConn())
-	sqlDB.SetMaxOpenConns(options.GetDBMaxOpenConn())
-	sqlDB.SetConnMaxLifetime(1 * time.Hour)
+	sqlDB.SetMaxIdleConns(options.Config.DBMaxIdleConn)
+	sqlDB.SetMaxOpenConns(options.Config.DBMaxOpenConn)
+	sqlDB.SetConnMaxLifetime(options.Config.DBConnMaxLifetime)
 
 	return Engine, err
 }

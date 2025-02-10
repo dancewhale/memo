@@ -1,10 +1,10 @@
 package parser
 
 import (
+	"memo/cmd/options"
 	"memo/pkg/util/gods/lists/arraylist"
 	"strconv"
 
-	"memo/cmd/libmemo/options"
 	"memo/pkg/org/db"
 	"memo/pkg/storage"
 	"memo/pkg/util/gods/stacks/arraystack"
@@ -33,7 +33,7 @@ func FilterContentForHeadline(node Node) bool {
 }
 
 func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
-	weight, exist := pd.Get(options.GetPropertyWeight())
+	weight, exist := pd.Get(options.EmacsPropertyWeight)
 	if !exist {
 		return 50
 	} else {
@@ -47,7 +47,7 @@ func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
 }
 
 func getSourceFromPropertyDrawer(pd *PropertyDrawer) string {
-	source, exist := pd.Get(options.GetPropertySource())
+	source, exist := pd.Get(options.EmacsPropertySource)
 	if !exist {
 		return ""
 	} else {
@@ -56,7 +56,7 @@ func getSourceFromPropertyDrawer(pd *PropertyDrawer) string {
 }
 
 func getScheduleFromPropertyDrawer(pd *PropertyDrawer) string {
-	schedule, exist := pd.Get(options.GetPropertySchedule())
+	schedule, exist := pd.Get(options.EmacsPropertySchedule)
 	if !exist {
 		return storage.NORMAL
 	} else {
@@ -75,7 +75,7 @@ func getScheduleFromPropertyDrawer(pd *PropertyDrawer) string {
 
 func getHeadlineProperty(headline *db.Headline, pd *PropertyDrawer) {
 	if pd != nil {
-		headline.Data.ID, _ = pd.Get(options.GetPropertyID())
+		headline.Data.ID, _ = pd.Get(options.EmacsPropertyID)
 		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
 		headline.Data.ScheduledType = getScheduleFromPropertyDrawer(pd)
 		headline.Data.Source = getSourceFromPropertyDrawer(pd)
