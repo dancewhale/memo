@@ -18,39 +18,55 @@
 ;;
 ;;; Code:
 
+(require 'epc)
 (require 'cl-lib)
 (require 'org-element)
 
+;; Core env setting.
+(defconst memo-prop-note-source  "MEMO_NOTE_SOURCE"
+  "Property used to store the cards SOURCE.")
+
+(defvar memo-log-level "0"
+  "Setting dynamic module log level, -1 debug, 0 info, 1 warn, 2 error.")
+
+(defvar memo-db-max-idle-conn  "10"
+  "Property used to store the cards type;
+and used for backend to indentify memo head.")
+
+(defvar memo-db-max-open-conn  "100"
+  "Property used to store the cards type;
+and used for backend to indentify memo head.")
+
+(defvar memo-db-directory nil
+"Setting memo db dir to store database;
+if nil will default use user home dir.")
+
+(defvar memo-org-directory nil
+"Setting memo dir to scan org file.")
+
+
 ;;; Core primitives
 
-(defvar memo--lib-loaded nil
-  "If dynamic module is loaded.")
-
-(defvar memo--root (file-name-directory (or load-file-name buffer-file-name))
-  "The path to the root of memo package.")
+(defvar memo--root (if load-file-name (file-name-directory load-file-name)
+		     default-directory)
+"The path to the root of memo package.")
 
 (defvar memo--go-root (concat memo--root  "golib")
   "The path to the root of memo go src file.")
 
-(defvar memo--module-path
-  (concat memo--root "libmemo.so")
-  "The path to the dynamic module.")
+(defconst memo-server-path (concat memo--root "server"))
 
-(defun memo-compile-module ()
+(defvar  memo-epc nil
+  "Store memo server session information.")
+
+(defun memo-compile-server ()
   "Compile dynamic module."
   (interactive)
   (let ((default-directory (concat memo--root "golib") ))
-    (message "Start to compile memo library, Please wait...")
-    (if (zerop (shell-command "make so"))
+    (message "Start to compile memo server")
+    (if (zerop (shell-command "make server"))
         (message "Compile module succeed!")
-      (error "Compile Memo dynamic module failed"))))
-
-(defun memo--load-dynamic-module ()
-  "Load dynamic module."
-  (if (not (file-exists-p memo--module-path))
-      (error "Dynamic module not exist")
-    (load-file memo--module-path)
-    (setq memo--lib-loaded t)))
+      (error "Compile Memo dynamic server failed"))))
 
 ;;;###autoload
 (defun memo-activate ()
@@ -62,10 +78,7 @@
   (require 'memo-card)
   (require 'memo-cloze)
   (require 'memo-fast)
-  (unless memo--lib-loaded
-    (unless (file-exists-p memo--module-path)
-      (memo-compile-module))
-    (memo--load-dynamic-module)))
+  (memo-compile-server))
 
 (provide 'memo)
 ;;; memo.el ends here

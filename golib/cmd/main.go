@@ -6,6 +6,7 @@ import (
 	"log"
 	"memo/cmd/options"
 	"memo/pkg/card"
+	"memo/pkg/util"
 	"os"
 	"runtime/pprof"
 
@@ -30,11 +31,18 @@ func main() {
 		},
 		Flags: []cli.Flag{
 			&cli.IntFlag{
-				Name:        "port",
-				Value:       23456,
-				Usage:       "Port for the grpc server",
-				Sources:     cli.EnvVars("MEMO_PORT"),
-				Destination: &con.Port,
+				Name:        "emacs-port",
+				Usage:       "Port for the emacs grpc server.",
+				Required:    true,
+				Sources:     cli.EnvVars("MEMO_EMACS_PORT"),
+				Destination: &con.EmacsPort,
+			},
+			&cli.IntFlag{
+				Name:        "go-port",
+				Value:       0,
+				Usage:       "Port for the go grpc server.",
+				Sources:     cli.EnvVars("MEMO_GO_PORT"),
+				Destination: &con.GoPort,
 			},
 			&cli.StringFlag{
 				Name:        "host",
@@ -66,28 +74,46 @@ func main() {
 
 func appstart(ctx context.Context, cmd *cli.Command) error {
 	logger.Init()
+
+	var err error
+	con := options.ConfigInit()
+
 	// construct epc server
-	s, err := elrpc.StartServerWithPort(nil, int(options.Config.Port))
+	if con.GoPort == 0 {
+		con.GoPort, err = util.QueryFreePort()
+	}
+
 	if err != nil {
-		fmt.Printf(err.Error())
-		return err
+		return logger.Errorf("Failed to query free port: %v", err)
+	}
+	s, err := elrpc.StartServerWithPort(nil, int(con.GoPort))
+	if err != nil {
+		return logger.Errorf("Failed to start server: %v", err)
 	}
 
 	// register org method
 	orgApi, err := org.NewOrgApi()
 	if err != nil {
-		logger.Errorf("Failed to create org api: %v", err)
-		os.Exit(2)
+		return logger.Errorf("Failed to create org api: %v", err)
 	}
 	orgApi.RegistryEpcMethod(s)
 
 	// register card method
 	cardApi, err := card.NewCardApi()
 	if err != nil {
-		logger.Errorf("Failed to create card api: %v", err)
-		os.Exit(2)
+		return logger.Errorf("Failed to create card api: %v", err)
 	}
 	cardApi.RegistryEpcMethod(s)
+
+	cs, err := elrpc.StartClient(int(con.EmacsPort), nil)
+	if err != nil {
+		return logger.Errorf("Failed to start epc client: %v", err)
+	}
+	startCommand := fmt.Sprintf("(memo-bridge--first-start %d)", con.GoPort)
+	r, err := cs.Call("eval-in-emacs", startCommand)
+	if r != nil || err != nil {
+		return logger.Errorf("Failed to create epc server for go in emacs: %v", err)
+	}
 
 	s.Wait()
 	return nil

@@ -3,11 +3,11 @@ EMACS ?= emacs
 
 .PTHON: gen
 
-libmemo.so: cmd/libmemo/main.go
-	$(GO) build -buildmode=c-shared -ldflags -s -o ../$@ $<
+server: cmd/main.go
+	$(GO) build -o ../$@ $<
 
 clean:
-	rm -f  ../libmemo.so
+	rm -f  ../server
 
 gen:
 	make -C gen run
@@ -15,4 +15,4 @@ gen:
 tidy:
 	$(GO) mod tidy
 
-so: clean gen tidy libmemo.so
+build: clean gen tidy server

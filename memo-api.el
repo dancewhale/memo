@@ -19,6 +19,8 @@
 
 (require 'cl-lib)
 (require 'org-element)
+(require 'memo-bridge-epc)
+(require 'memo-bridge)
 
 ;;; Properties and Value setting.
 (defconst memo-prop-note-schedule  "MEMO_NOTE_SCHEDULE"
@@ -34,30 +36,6 @@ and used for backend to indentify memo head.")
 and used for backend to indentify memo head.")
 
 
-(defconst memo-prop-note-source  "MEMO_NOTE_SOURCE"
-  "Property used to store the cards SOURCE.")
-
-(defvar memo-log-level "0"
-  "Setting dynamic module log level, -1 debug, 0 info, 1 warn, 2 error.")
-
-(defvar memo-db-max-idle-conn  "10"
-  "Property used to store the cards type;
-and used for backend to indentify memo head.")
-
-(defvar memo-db-max-open-conn  "100"
-  "Property used to store the cards type;
-and used for backend to indentify memo head.")
-
-(defvar memo-db-directory nil
-"Setting memo db dir to store database;
-if nil will default use user home dir.")
-
-(defvar memo-org-directory nil
-"Setting memo dir to scan org file.")
-
-
-
-
 ;;; parse api call result; store value and throught err.
 (defvar  memo-api-return-err  nil
 "Store err message of result return from memo-api call.")
@@ -65,13 +43,13 @@ if nil will default use user home dir.")
 (defvar  memo-api-return-value  nil
 "Store value of result return from memo-api call.")
 
-(defun memo--parse-result (api-call)
+(defun memo--parse-result (result)
 "To parse value return from 'API-CALL;
 catch error to  memo-api-return-err, value to memo-api-return-value"
-  (let ((result (catch 'error (eval api-call))))
-    (if (stringp result)
-        (progn (setq memo-api-return-err result) (setq memo-api-return-value nil) (user-error result))
-        (progn (setq memo-api-return-err nil) (setq memo-api-return-value result)))))
+  (setq memo-api-return-value (cdr (assoc 'Data result)))
+  (setq memo-api-return-err (cdr (assoc 'Err result)))
+  (unless (eq memo-api-return-err "")
+        (user-error memo-api-return-err)))
 
 ;; get note for review.
 (cl-defstruct memo-note
@@ -80,43 +58,42 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 (defvar memo--review-note nil
   "The memo-note object which store note info wait for review.")
 
+(defun memo--set-review-note (x)
+ (setq memo--review-note (make-memo-note :id (nth 0 x)
+					  :weight (nth 1 x)
+					  :content (nth 2 x)
+					  :file (nth 3 x)
+					  :source (nth 4 x))))
+
 (defun memo--get-review-note-object ()
   "Return memo-note object which need review from server;
 memo-note is (orgid  type  content)."
-  (memo--parse-result '(memo-api--get-next-review-note))
-  (let* ((note-id (car memo-api-return-value))
-	 (note-weight (cadr memo-api-return-value))
-	 (note-content (caddr memo-api-return-value))
-	 (note-file (cadddr memo-api-return-value))
-         (note-source (car (cddddr memo-api-return-value))))
-    (setq memo--review-note (make-memo-note :id note-id
-					     :weight note-weight
-					     :content note-content
-					     :file note-file
-					     :source note-source))))
+  (let ((result (memo-bridge-call-sync "GetNextReviewNote")))
+    (memo--parse-result result)
+    (memo--set-review-note memo-api-return-value)))
 
+;; sync org file under dir.
 (defun memo-sync-db ()
-"Synchronize the db state with the current Org files on-disk."
+  "Synchronize the db state with the current Org files on-disk."
   (interactive)
-  (memo--parse-result '(memo-api--sync-dir memo-org-directory "false"))
-  (if (not  memo-api-return-err)
-      (message "Sync dir is success complete.")))
+  (let ((result (memo-bridge-call-sync "SyncOrgDir" memo-org-directory "false")))
+    (memo--parse-result result)
+    (message "Push all org file under dir complete.")))
 
 (defun memo-sync-db-force ()
 "Synchronize the db state with the current Org files on-disk."
   (interactive)
-  (memo--parse-result '(memo-api--sync-dir memo-org-directory "true"))
-  (if (not  memo-api-return-err)
-      (message "Sync dir is success complete.")))
-
+  (let ((result (memo-bridge-call-sync "SyncOrgDir" memo-org-directory "true")))
+    (memo--parse-result result)
+    (message "Force Push all org file under dir complete.")))
 
 (defun memo-sync-file ()
 "Synchronize current org-file to db."
   (interactive)
   (save-buffer)
-  (memo--parse-result '(memo-api--sync-file (buffer-file-name) "false"))
-  (if (not  memo-api-return-err)
-      (message "Push file is success complete.")))
+  (let ((result (memo-bridge-call-sync "SyncFile" "false")))
+    (memo--parse-result result)
+    (message "Push file is success complete.")))
 
 ;; auto sync file after save buffer.
 (defun memo-sync-file-after-save ()

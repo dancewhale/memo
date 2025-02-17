@@ -37,7 +37,8 @@ type config struct {
 	DBConnMaxLifetime time.Duration
 	LogLevel          int64
 	Host              string
-	Port              int64
+	GoPort            int64
+	EmacsPort         int64
 }
 
 func (c *config) GetDBLogLevel() log.LogLevel {

@@ -2,16 +2,17 @@ package card
 
 import (
 	"context"
-	epc "github.com/kiwanami/go-elrpc"
-	"memo/pkg/org/location"
 	"strconv"
 	"time"
 
 	"memo/pkg/logger"
+	"memo/pkg/org/location"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+	"memo/pkg/util"
 
 	"github.com/jinzhu/copier"
+	epc "github.com/kiwanami/go-elrpc"
 	"github.com/maniartech/gotime"
 	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 	"gorm.io/gen/field"
@@ -42,13 +43,13 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 }
 
 // function to export to emacs rpc.
-func (api *CardApi) GetNextReviewNote() ([]string, error) {
+func (api *CardApi) GetNextReviewNote() util.NoteResult {
 	head := api.GetReviewCardByWeightDueTime()
 	if head == nil {
-		return nil, logger.Errorf("There is no card wait for review today.")
+		return util.NoteResult{Data: nil, Err: "There is no card need review."}
 	}
 	weight := strconv.Itoa(int(head.Weight))
-	return []string{head.ID, weight, head.Content, head.File.FilePath, head.Source}, nil
+	return util.NoteResult{[]string{head.ID, weight, head.Content, head.File.FilePath, head.Source}, ""}
 }
 
 func (api *CardApi) ReviewNote(orgID string, rating string) error {
