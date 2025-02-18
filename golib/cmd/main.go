@@ -133,11 +133,11 @@ func test() {
 	//err := api.UploadFile("/Users/whale/Seafile/Dropbox/roam/20200402150453-记忆力的几个本质要点.org", true)
 	//err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2021-01-05.org", false)
 	//err := api.UploadFilesUnderDir("/Users/whale/Dropbox/memo/resource", true)
-	err = api.UploadFile("/Users/whale/Dropbox/memo/resource/elisp-manual.org", true)
+	result := api.UploadFile("/Users/whale/Dropbox/memo/resource/elisp-manual.org", 1)
 	//err := api.UploadFile("/Users/whale/Dropbox/memo/tasks.org", false)
 	//err := api.UploadFile("/Users/whale/elisp-manual.org", true)
 	//err := api.UploadFile("/tmp/elisp-manual.org", true)
-	if err != nil {
+	if result.Err != nil {
 		fmt.Println(err)
 	}
 	//_, err = memorg.GetFileFromHeadID("4ABF840C-3E73-42EA-805E-A616C331DFE8")
@@ -147,7 +147,7 @@ func test() {
 	//}
 	//content := "ceshiyixai\nnojbk\njasfj;luwpr"
 	//err = api.UpdateOrgHeadContent("4ABF840C-3E73-42EA-805E-A616C331DFE8", content)
-	err = api.UpdateOrgHeadProperty("4ABF840C-3E73-42EA-805E-A616C331DFE8", "MEMO_NOTE_TEST", "jjjxsjj")
+	result = api.UpdateOrgHeadProperty("4ABF840C-3E73-42EA-805E-A616C331DFE8", "MEMO_NOTE_TEST", "jjjxsjj")
 	//capi, _ := card.NewCardApi()
 	//capi.ScanHeadlineInitFsrs()
 	//card := capi.GetReviewCardByWeightDueTime()

@@ -2,6 +2,7 @@ package card
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -43,13 +44,22 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 }
 
 // function to export to emacs rpc.
-func (api *CardApi) GetNextReviewNote() util.NoteResult {
+func (api *CardApi) GetNextReviewNote() util.Result {
 	head := api.GetReviewCardByWeightDueTime()
 	if head == nil {
-		return util.NoteResult{Data: nil, Err: "There is no card need review."}
+		return util.Result{Data: nil, Err: errors.New("There is no card need review.")}
 	}
 	weight := strconv.Itoa(int(head.Weight))
-	return util.NoteResult{[]string{head.ID, weight, head.Content, head.File.FilePath, head.Source}, ""}
+
+	note := util.Note{
+		ID:      head.ID,
+		Weight:  weight,
+		Content: head.Content,
+		File:    head.File.FilePath,
+		Source:  head.Source,
+	}
+
+	return util.Result{note, nil}
 }
 
 func (api *CardApi) ReviewNote(orgID string, rating string) error {

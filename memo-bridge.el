@@ -93,7 +93,7 @@
 	     (let ((mngr mngr))
 	       (memo-bridge-epc-define-method mngr "eval-in-emacs"  'memo-bridge--eval-in-emacs-func)
 	       (memo-bridge-epc-define-method mngr "get-emacs-vars" 'memo-bridge--get-emacs-vars-func)
-	    ))))
+	    ))  memo-bridge-server-port ))
     (if memo-bridge-server
         (setq memo-bridge-server-port (process-contact memo-bridge-server :service))
       (error "[Memo-Bridge] memo-bridge-server failed to start")))
@@ -164,21 +164,6 @@
 
   (message "[Memo-Bridge] Process restarted."))
 
-
-(defun memo-bridge-debug-start ()
-  "Call `memo-bridge--open-internal' upon receiving `start_finish' signal from server."
-  (interactive)
-  ;; Make EPC process.
-  (setq memo-bridge-golang-epc-server-mgr (make-memo-bridge-epc-manager
-                                :server-process nil
-                                :commands (cons "[DEBUG]" nil)
-                                :title "Debug-Session"
-                                :port memo-bridge-server-port
-                                :connection (memo-bridge-epc-connect "127.0.0.1" memo-bridge-server-port)
-                                ))
-  (memo-bridge-epc-init-epc-layer memo-bridge-golang-epc-server-mgr))
-
-
 (defun memo-bridge--first-start (memo-bridge-golang-epc-port)
   "Call `memo-bridge--open-internal' upon receiving `start_finish' signal from server."
   ;; Make EPC process.
@@ -240,14 +225,12 @@
 (defun memo-bridge--kill-golang-process ()
   "Kill Memo-Bridge background golang process."
   (when (memo-bridge-process-live-p)
-    ;; Cleanup before exit Memo-Bridge server process.
-    (memo-bridge-call-async "cleanup")
     ;; Delete Memo-Bridge server process.
-    (memo-bridge-epc-stop-epc memo-bridge-epc-server-mgr)
+    (memo-bridge-epc-stop-epc memo-bridge-golang-epc-server-mgr)
     ;; Kill *memo-bridge* buffer.
     (when (get-buffer memo-bridge-name)
       (kill-buffer memo-bridge-name))
-    (setq memo-bridge-epc-server-mgr nil)
+    (setq memo-bridge-golang-epc-server-mgr nil)
     (message "[Memo-Bridge] Process terminated.")))
 
 

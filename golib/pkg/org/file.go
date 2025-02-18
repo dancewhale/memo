@@ -26,16 +26,19 @@ func init() {
 	gob.Register(parser.Paragraph{})
 	gob.Register(parser.Text{})
 	gob.Register(parser.RegularLink{})
+	gob.Register(parser.TaskTime{})
+	gob.Register(parser.LogBookDrawer{})
 	gob.Register(arraylist.List{})
 }
 
 func GetFileFromHeadID(headID string) (*OrgFile, error) {
+	con := options.ConfigInit()
 	File, err := db.GetFileByHeadlineID(headID)
 	if err != nil {
 		return nil, err
 	}
 
-	fileCache := KvInit(options.Config.DBDirPath)
+	fileCache := KvInit(con.GetDBPath())
 	file, err := fileCache.LoadFromFileID(File.ID)
 	defer fileCache.Close()
 	if err != nil && file == nil {
@@ -58,12 +61,13 @@ func GetFileFromHeadID(headID string) (*OrgFile, error) {
 }
 
 func GetFileFromFileID(fileID string) (*OrgFile, error) {
+	con := options.ConfigInit()
 	File, err := db.GetFileByID(fileID)
 	if err != nil {
 		return nil, err
 	}
 
-	fileCache := KvInit(options.Config.DBDirPath)
+	fileCache := KvInit(con.GetDBPath())
 	file, err := fileCache.LoadFromFileID(fileID)
 	defer fileCache.Close()
 	if err != nil && file == nil {
@@ -186,7 +190,9 @@ func (f *OrgFile) String() (out string, err error) {
 // If the file with same hash is not in the cache, it parses the file content and returns the file.
 // if force, it will always parse the file content even file hash not change.
 func (f *OrgFile) LoadFromFile(force bool) error {
-	fileCache := KvInit(options.Config.DBDirPath)
+	con := options.ConfigInit()
+	fileCache := KvInit(con.GetDBPath())
+
 	file, err := fileCache.LoadFromHash(f.Hash)
 	defer fileCache.Close()
 	if err != nil {
@@ -203,7 +209,9 @@ func (f *OrgFile) LoadFromFile(force bool) error {
 
 // SaveToKvDB save orgfile to kv database.
 func (f *OrgFile) SaveToKvDB(force bool) error {
-	fileCache := KvInit(options.Config.DBDirPath)
+	con := options.ConfigInit()
+	fileCache := KvInit(con.GetDBPath())
+
 	err := fileCache.Save(f, force)
 	defer fileCache.Close()
 	return err

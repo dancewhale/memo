@@ -22,6 +22,11 @@
 (require 'memo-bridge-epc)
 (require 'memo-bridge)
 
+;;; util function
+(defun memo-alist-get (x key)
+  "Function to get value from alist X by KEY."
+  (cdr (assoc (read key) x)))
+
 ;;; Properties and Value setting.
 (defconst memo-prop-note-schedule  "MEMO_NOTE_SCHEDULE"
   "Property used to store the cards type;
@@ -46,10 +51,12 @@ and used for backend to indentify memo head.")
 (defun memo--parse-result (result)
 "To parse value return from 'API-CALL;
 catch error to  memo-api-return-err, value to memo-api-return-value"
-  (setq memo-api-return-value (cdr (assoc 'Data result)))
-  (setq memo-api-return-err (cdr (assoc 'Err result)))
-  (unless (eq memo-api-return-err "")
-        (user-error memo-api-return-err)))
+  (unless (eq (plist-get result 'epc-error) nil)
+    (user-error (plist-get result 'epc-error)))
+  (setq memo-api-return-value (memo-alist-get result "Data"))
+  (setq memo-api-return-err (memo-alist-get result "Err"))
+  (unless (eq memo-api-return-err 'null)
+    (user-error (memo-alist-get memo-api-return-err "s"))))
 
 ;; get note for review.
 (cl-defstruct memo-note
@@ -59,11 +66,11 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   "The memo-note object which store note info wait for review.")
 
 (defun memo--set-review-note (x)
- (setq memo--review-note (make-memo-note :id (nth 0 x)
-					  :weight (nth 1 x)
-					  :content (nth 2 x)
-					  :file (nth 3 x)
-					  :source (nth 4 x))))
+ (setq memo--review-note (make-memo-note :id (memo-alist-get x "ID")
+					  :weight (memo-alist-get x "Weight")
+					  :content (memo-alist-get x "Content")
+					  :file (memo-alist-get x "File")
+					  :source (memo-alist-get x "Source"))))
 
 (defun memo--get-review-note-object ()
   "Return memo-note object which need review from server;
@@ -72,26 +79,38 @@ memo-note is (orgid  type  content)."
     (memo--parse-result result)
     (memo--set-review-note memo-api-return-value)))
 
+(defun memo-api--update-content (id content)
+  "Update the content of head."
+  (let ((result (memo-bridge-call-sync "UpdateOrgHeadContent" id content)))
+    (memo--parse-result result))
+  (message "Content Update finish."))
+
+(defun memo-api--update-property (id key value)
+  "Update the content of head."
+  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" id key value)))
+    (memo--parse-result result))
+  (message "Content Update finish."))
+
 ;; sync org file under dir.
 (defun memo-sync-db ()
   "Synchronize the db state with the current Org files on-disk."
   (interactive)
-  (let ((result (memo-bridge-call-sync "SyncOrgDir" memo-org-directory "false")))
+  (let ((result (memo-bridge-call-sync "SyncOrgDir" memo-org-directory 0)))
     (memo--parse-result result)
-    (message "Push all org file under dir complete.")))
+    (message "Push all org file under %s complete." memo-org-directory)))
 
 (defun memo-sync-db-force ()
 "Synchronize the db state with the current Org files on-disk."
   (interactive)
-  (let ((result (memo-bridge-call-sync "SyncOrgDir" memo-org-directory "true")))
+  (let ((result (memo-bridge-call-sync "SyncOrgDir" memo-org-directory 1)))
     (memo--parse-result result)
-    (message "Force Push all org file under dir complete.")))
+    (message "Force Push all org file under %s complete." memo-org-directory)))
 
-(defun memo-sync-file ()
+(defun memo-api-sync-file (filePath)
 "Synchronize current org-file to db."
   (interactive)
   (save-buffer)
-  (let ((result (memo-bridge-call-sync "SyncFile" "false")))
+  (let ((result (memo-bridge-call-sync "UploadFile" filePath  0)))
     (memo--parse-result result)
     (message "Push file is success complete.")))
 
@@ -100,7 +119,7 @@ memo-note is (orgid  type  content)."
   "Sync file to database after save file."
   (let ((path (buffer-file-name)))
     (if (and  (f-ext-p path "org") (f-ancestor-of-p memo-org-directory path))
-	(memo--parse-result `(memo-api--sync-file ,path "false")))))
+	(memo-api-sync-file path))))
 
 
 (provide 'memo-api)

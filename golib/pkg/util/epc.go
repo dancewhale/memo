@@ -5,9 +5,17 @@ import (
 	"net"
 )
 
-type NoteResult struct {
-	Data []string
-	Err  string
+type Note struct {
+	ID      string
+	Weight  string
+	Content string
+	File    string
+	Source  string
+}
+
+type Result struct {
+	Data interface{}
+	Err  error
 }
 
 func QueryFreePort() (int64, error) {
