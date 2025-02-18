@@ -58,7 +58,7 @@ func main() {
 				Destination: &con.DBDirPath,
 			},
 			&cli.IntFlag{
-				Name:        "loglevel",
+				Name:        "log-level",
 				Value:       0,
 				Usage:       "Log level for server, -1 is debug, 0 is info, 1 is warn, 2 is error, 3 is dpanic, 4 is panic, 5 is fatal",
 				Sources:     cli.EnvVars("MEMO_LOG_LEVEL"),
@@ -89,6 +89,9 @@ func appstart(ctx context.Context, cmd *cli.Command) error {
 	s, err := elrpc.StartServerWithPort(nil, int(con.GoPort))
 	if err != nil {
 		return logger.Errorf("Failed to start server: %v", err)
+	}
+	if con.LogLevel == -1 {
+		s.SetDebug(true)
 	}
 
 	// register org method

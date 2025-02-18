@@ -186,18 +186,23 @@
     (memo-bridge--start-epc-server)
     (let* ((memo-bridge-args (append
                                (list "daemon")
-			       (list "--emacs-port" (number-to-string memo-bridge-server-port)))))
+			       (list "--emacs-port" (number-to-string memo-bridge-server-port))
+			       (list "--log-level" memo-log-level))))
       
       ;; Set process arguments.
       (setq memo-bridge-internal-process-prog memo-bridge-golang-file)
       (setq memo-bridge-internal-process-args memo-bridge-args)
 
+      (with-current-buffer (get-buffer-create  memo-bridge-name)
+	(ansi-color-for-comint-mode-on)
+	(comint-mode))
       ;; Start server process.
       (let ((process-connection-type (not (memo-bridge--called-from-wsl-on-windows-p))))
         (setq memo-bridge-internal-process
               (apply 'start-process
                      memo-bridge-name memo-bridge-name
                      memo-bridge-internal-process-prog memo-bridge-internal-process-args)))
+      (set-process-filter memo-bridge-internal-process 'comint-output-filter)
       (set-process-query-on-exit-flag memo-bridge-internal-process nil))))
 
 (defun memo-bridge--called-from-wsl-on-windows-p ()
