@@ -90,6 +90,8 @@ func appstart(ctx context.Context, cmd *cli.Command) error {
 	if err != nil {
 		return logger.Errorf("Failed to start server: %v", err)
 	}
+	defer s.Close()
+
 	if con.LogLevel == -1 {
 		s.SetDebug(true)
 	}
@@ -116,6 +118,9 @@ func appstart(ctx context.Context, cmd *cli.Command) error {
 	r, err := cs.Call("eval-in-emacs", startCommand)
 	if r != nil || err != nil {
 		return logger.Errorf("Failed to create epc server for go in emacs: %v", err)
+	}
+	if cs.Stop() != nil {
+		return logger.Errorf("Failed to stop epc client: %v", err)
 	}
 
 	s.Wait()

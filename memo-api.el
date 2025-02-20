@@ -53,6 +53,8 @@ and used for backend to indentify memo head.")
 catch error to  memo-api-return-err, value to memo-api-return-value"
   (unless (eq (plist-get result 'epc-error) nil)
     (user-error (plist-get result 'epc-error)))
+  (unless (eq (plist-get result 'application-error) nil)
+    (user-error (plist-get result 'application-error)))
   (setq memo-api-return-value (memo-alist-get result "Data"))
   (setq memo-api-return-err (memo-alist-get result "Err"))
   (unless (eq memo-api-return-err 'null)

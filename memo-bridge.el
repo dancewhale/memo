@@ -84,6 +84,9 @@
 (defvar memo-bridge-golang-file (concat memo--root "server")
   "The Memo-Bridge golang server binary file path.")
 
+(defvar memo-bridge-golang-dlv-file "dlv"
+  "The file path of  golang debug file dlv.")
+
 (defun memo-bridge--start-epc-server ()
   "Function to start the EPC server."
   (unless (process-live-p memo-bridge-server)
@@ -127,13 +130,31 @@
 
 (defun memo-bridge-call-async (method &rest args)
   "Call Golang EPC function METHOD and ARGS asynchronously."
-  (memo-bridge-deferred-chain
-    (memo-bridge-epc-call-deferred memo-bridge-golang-epc-server-mgr (read method) args)))
+  (if (memo-bridge-process-live-p)
+      (memo-bridge-deferred-chain
+	(memo-bridge-epc-call-deferred memo-bridge-golang-epc-server-mgr (read method) args))
+    (user-error "Memo server not Start")))
+
+(defun memo-bridge-call-wait (response)
+"Wait for Call response."
+  (let ((it response))
+     (while (eq nil (memo-bridge-deferred-object-status it))
+       (sleep-for 0.1))
+     it))
 
 (defun memo-bridge-call-sync (method &rest args)
   "Call Golang EPC function METHOD and ARGS synchronously."
-  (memo-bridge-deferred-chain
-    (memo-bridge-epc-call-sync memo-bridge-golang-epc-server-mgr (read method) args)))
+  (let ((result nil))
+    (unless (memo-bridge-process-live-p)
+      (user-error "Memo server not Start"))
+    (memo-bridge-deferred-chain
+      (memo-bridge-epc-call-deferred memo-bridge-golang-epc-server-mgr (read method) args)
+      (memo-bridge-call-wait it)
+      (memo-bridge-deferred-nextc it
+        (lambda (x) (progn  (setq result x))))
+      (memo-bridge-deferred-error it
+        (lambda (er) (progn  (setq result er)))))
+    result))
 
 (defun memo-bridge-process-live-p ()
   (memo-bridge-epc-live-p memo-bridge-golang-epc-server-mgr))
@@ -176,6 +197,34 @@
                                 ))
   (memo-bridge-epc-init-epc-layer memo-bridge-golang-epc-server-mgr))
 
+(defun memo-bridge-start-process-debug ()
+  "Start Memo-Bridge process if it isn't started."
+  (interactive)
+  (if (memo-bridge-process-live-p)
+      (message "Memo server is already start.")
+    ;; start epc server and set `memo-bridge-server-port'
+    (memo-bridge--start-epc-server)
+    (let* ((memo-bridge-debug-args (append
+				    (list "--check-go-version=false" "--listen=:2345"  "--log-dest=/private/tmp/log" "--headless=true" "--api-version=2" "exec")
+                                    (list memo-bridge-golang-file "--" "daemon")
+			            (list "--emacs-port" (number-to-string memo-bridge-server-port))
+			            (list "--log-level" memo-log-level))))
+
+      ;; Set process arguments.
+      (setq memo-bridge-internal-process-prog memo-bridge-golang-dlv-file)
+      (setq memo-bridge-internal-process-args memo-bridge-debug-args)
+
+      (with-current-buffer (get-buffer-create  memo-bridge-name)
+	(ansi-color-for-comint-mode-on)
+	(comint-mode))
+      ;; Start server process.
+      (let ((process-connection-type (not (memo-bridge--called-from-wsl-on-windows-p))))
+        (setq memo-bridge-internal-process
+              (apply 'start-process
+                     memo-bridge-name memo-bridge-name
+                     memo-bridge-internal-process-prog memo-bridge-internal-process-args)))
+      (set-process-filter memo-bridge-internal-process 'comint-output-filter)
+      (set-process-query-on-exit-flag memo-bridge-internal-process nil))))
 
 (defun memo-bridge-start-process ()
   "Start Memo-Bridge process if it isn't started."
