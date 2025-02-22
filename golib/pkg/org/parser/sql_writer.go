@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"memo/pkg/org/db"
 	"memo/pkg/storage"
 
 	"memo/pkg/util/gods/lists/arraylist"
@@ -12,7 +11,7 @@ import (
 type SqlWriter struct {
 	// 用于存储headline 结构体的堆栈
 	stack     *arraystack.Stack
-	Headlines []db.Headline
+	Headlines []storage.Headline
 	fileId    string
 }
 
@@ -23,13 +22,28 @@ func NewSqlWriter(id string) *SqlWriter {
 	}
 }
 
-func (s *SqlWriter) ParseNodes(nodes *arraylist.List) []db.Headline {
+func (s *SqlWriter) ParseFileNodes(nodes *arraylist.List) *storage.File {
 	it := nodes.Iterator()
 	for it.Next() {
 		n := it.Value()
 		switch n := n.(type) {
 		case Headline:
-			s.ParseHeadline(n)
+			s.parseHeadline(n)
+		default:
+			continue
+		}
+	}
+	s.ParseHeadlineNodes(nodes)
+	return nil
+}
+
+func (s *SqlWriter) ParseHeadlineNodes(nodes *arraylist.List) []storage.Headline {
+	it := nodes.Iterator()
+	for it.Next() {
+		n := it.Value()
+		switch n := n.(type) {
+		case Headline:
+			s.parseHeadline(n)
 		default:
 			continue
 		}
@@ -38,20 +52,19 @@ func (s *SqlWriter) ParseNodes(nodes *arraylist.List) []db.Headline {
 }
 
 // WriteHeadline 构建headline 结构体用于后续数据库存储。
-func (s *SqlWriter) ParseHeadline(h Headline) {
+func (s *SqlWriter) parseHeadline(h Headline) {
 	if h.Children != nil {
-		s.ParseNodes(h.Children)
+		s.ParseHeadlineNodes(h.Children)
 	}
-	headline := db.Headline{
-		Data: storage.Headline{Level: h.Lvl, Title: h.Title, Status: h.Status,
-			Content: h.BodyContent, Priority: h.Priority,
-			FileID:    &s.fileId,
-			Scheduled: h.TaskTime.GetScheduled(),
-			Deadline:  h.TaskTime.GetDeadline(),
-			Closed:    h.TaskTime.GetClosed(),
-			LogBook:   GetLogBookFromDrawer(h.LogBook),
-		},
-		Children: []db.Headline{},
+	headline := storage.Headline{
+		Level: h.Lvl, Title: h.Title, Status: h.Status,
+		Content: h.BodyContent, Priority: h.Priority,
+		FileID:    &s.fileId,
+		Scheduled: h.TaskTime.GetScheduled(),
+		Deadline:  h.TaskTime.GetDeadline(),
+		Closed:    h.TaskTime.GetClosed(),
+		LogBook:   GetLogBookFromDrawer(h.LogBook),
+		Children:  []storage.Headline{},
 	}
 	getHeadlineProperty(&headline, h.Properties)
 
@@ -59,9 +72,9 @@ func (s *SqlWriter) ParseHeadline(h Headline) {
 	for {
 		preHeadline, _ := s.stack.Pop()
 		if preHeadline != nil {
-			ph := preHeadline.(db.Headline)
-			if ph.Data.Level == headline.Data.Level+1 {
-				ph.Data.ParentID = &headline.Data.ID
+			ph := preHeadline.(storage.Headline)
+			if ph.Level == headline.Level+1 {
+				ph.ParentID = &headline.ID
 				headline.Children = append(headline.Children, ph)
 			} else {
 				s.stack.Push(preHeadline)
@@ -73,9 +86,9 @@ func (s *SqlWriter) ParseHeadline(h Headline) {
 	}
 
 	if h.Lvl == 1 {
-		headline.Data.Order = len(s.Headlines) + 1
+		headline.Order = len(s.Headlines) + 1
 	} else {
-		headline.Data.Order = getHeadOrder(s.stack, headline)
+		headline.Order = getHeadOrder(s.stack, headline)
 	}
 
 	s.stack.Push(headline)

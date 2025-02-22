@@ -28,6 +28,7 @@ type Headline struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" hash:"ignore"`
 
 	Title   string `json:"title"`
+	Hash    string
 	Content string `json:"content"`
 	Weight  int64  `json:"weight"`
 	Source  string `json:"source"`

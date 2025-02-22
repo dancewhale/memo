@@ -32,6 +32,7 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_headline.DeletedAt = field.NewField(tableName, "deleted_at")
 	_headline.Title = field.NewString(tableName, "title")
+	_headline.Hash = field.NewString(tableName, "hash")
 	_headline.Content = field.NewString(tableName, "content")
 	_headline.Weight = field.NewInt64(tableName, "weight")
 	_headline.Source = field.NewString(tableName, "source")
@@ -149,6 +150,7 @@ type headline struct {
 	UpdatedAt     field.Time
 	DeletedAt     field.Field
 	Title         field.String
+	Hash          field.String
 	Content       field.String
 	Weight        field.Int64
 	Source        field.String
@@ -194,6 +196,7 @@ func (h *headline) updateTableName(table string) *headline {
 	h.UpdatedAt = field.NewTime(table, "updated_at")
 	h.DeletedAt = field.NewField(table, "deleted_at")
 	h.Title = field.NewString(table, "title")
+	h.Hash = field.NewString(table, "hash")
 	h.Content = field.NewString(table, "content")
 	h.Weight = field.NewInt64(table, "weight")
 	h.Source = field.NewString(table, "source")
@@ -223,12 +226,13 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 24)
+	h.fieldMap = make(map[string]field.Expr, 25)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
 	h.fieldMap["deleted_at"] = h.DeletedAt
 	h.fieldMap["title"] = h.Title
+	h.fieldMap["hash"] = h.Hash
 	h.fieldMap["content"] = h.Content
 	h.fieldMap["weight"] = h.Weight
 	h.fieldMap["source"] = h.Source

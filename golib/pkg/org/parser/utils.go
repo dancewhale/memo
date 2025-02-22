@@ -5,7 +5,6 @@ import (
 	"memo/pkg/util/gods/lists/arraylist"
 	"strconv"
 
-	"memo/pkg/org/db"
 	"memo/pkg/storage"
 	"memo/pkg/util/gods/stacks/arraystack"
 )
@@ -73,17 +72,17 @@ func getScheduleFromPropertyDrawer(pd *PropertyDrawer) string {
 	}
 }
 
-func getHeadlineProperty(headline *db.Headline, pd *PropertyDrawer) {
+func getHeadlineProperty(headline *storage.Headline, pd *PropertyDrawer) {
 	if pd != nil {
-		headline.Data.ID, _ = pd.Get(options.EmacsPropertyID)
-		headline.Data.Weight = getWeightFromPropertyDrawer(pd)
-		headline.Data.ScheduledType = getScheduleFromPropertyDrawer(pd)
-		headline.Data.Source = getSourceFromPropertyDrawer(pd)
+		headline.ID, _ = pd.Get(options.EmacsPropertyID)
+		headline.Weight = getWeightFromPropertyDrawer(pd)
+		headline.ScheduledType = getScheduleFromPropertyDrawer(pd)
+		headline.Source = getSourceFromPropertyDrawer(pd)
 	}
 }
 
 // Get the order of headline.
-func getHeadOrder(stack *arraystack.Stack, currentHead db.Headline) int {
+func getHeadOrder(stack *arraystack.Stack, currentHead storage.Headline) int {
 	order := 1
 	if stack.Size() == 0 {
 		return order
@@ -91,7 +90,7 @@ func getHeadOrder(stack *arraystack.Stack, currentHead db.Headline) int {
 	it := stack.Iterator()
 	for it.End(); it.Prev(); {
 		v := it.Value()
-		if v.(db.Headline).Data.Level == currentHead.Data.Level {
+		if v.(storage.Headline).Level == currentHead.Level {
 			order++
 		} else {
 			break

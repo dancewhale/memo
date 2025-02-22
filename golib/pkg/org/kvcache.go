@@ -37,27 +37,27 @@ func (f *fileStructCache) Save(orgFile *OrgFile, force bool) error {
 	var file *OrgFile
 	if orgFile == nil {
 		return logger.Errorf("The orgFile is nil or the hash or id is empty.")
-	} else if orgFile.Hash == "" {
+	} else if orgFile.file.Hash == "" {
 		return logger.Errorf("The orgFile hash is empty.")
-	} else if orgFile.ID == "" {
+	} else if orgFile.file.ID == "" {
 		return logger.Errorf("The orgFile id is empty.")
 	}
 
-	err := f.store.Get(orgFile.ID, &file)
+	err := f.store.Get(orgFile.file.ID, &file)
 	if err != nil && err != badgerhold.ErrNotFound {
-		logger.Errorf("Get file with ID %s error: %v", orgFile.Hash, err)
+		logger.Errorf("Get file with ID %s error: %v", orgFile.file.Hash, err)
 		return err
 	} else if err == badgerhold.ErrNotFound {
-		err = f.store.Insert(orgFile.ID, orgFile)
+		err = f.store.Insert(orgFile.file.ID, orgFile)
 		if err != nil {
-			return logger.Errorf("Insert file with id %s error: %v", orgFile.ID, err)
+			return logger.Errorf("Insert file with id %s error: %v", orgFile.file.ID, err)
 		}
-	} else if file.Hash == orgFile.Hash && file.Path == orgFile.Path && !force {
-		logger.Debugf("File with id %s is already in the cache and content is no change.", orgFile.ID)
+	} else if file.file.Hash == orgFile.file.Hash && file.file.FilePath == orgFile.file.FilePath && !force {
+		logger.Debugf("File with id %s is already in the cache and content is no change.", orgFile.file.ID)
 	} else {
-		err = f.store.Update(orgFile.ID, orgFile)
+		err = f.store.Update(orgFile.file.ID, orgFile)
 		if err != nil {
-			return logger.Errorf("Update file with id %s error: %v", orgFile.ID, err)
+			return logger.Errorf("Update file with id %s error: %v", orgFile.file.ID, err)
 		}
 	}
 	return nil

@@ -1,27 +1,35 @@
 package org
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"memo/pkg/org/db"
-
 	"github.com/creker/hashstructure"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"memo/pkg/logger"
+	"memo/pkg/org/db"
+	"memo/pkg/storage"
 )
 
 // 用于加载从硬盘文件读取的 headline 数据，用于和数据库 headline 数据进行比较。
-func NewHeadlineCache(headlines []db.Headline, fileID, filePath, hash string) (*HeadlineCacheMap, error) {
+func NewHeadlineCache(headlines []storage.Headline, fileID, filePath, hash string) (*HeadlineCacheMap, error) {
 	var err error
+	fileDB, err := db.NewOrgFileDB()
+	if err != nil {
+		return nil, err
+	}
+	headDB, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return nil, err
+	}
 	cache := HeadlineCacheMap{HeadlinesFileCache: linkedhashmap.New(), DuplicateID: []string{},
-		HeadlinesDBCache: linkedhashmap.New(), fileID: fileID, filePath: filePath}
+		HeadlinesDBCache: linkedhashmap.New(), fileID: fileID, filePath: filePath,
+		FileDB: fileDB, HeadlineDB: headDB}
 
 	err = cache.loadHeadFromFile(headlines)
 	if err != nil {
 		return nil, err
 	}
-	cache.HeadlinesDBCache, err = db.LoadFileHeadFromDB(fileID)
+	cache.HeadlinesDBCache, err = headDB.LoadFileHeadFromDB(fileID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,27 +46,29 @@ type HeadlineCacheMap struct {
 	HeadlinesDBCache   *linkedhashmap.Map
 	DuplicateID        []string
 	MissIDHeads        []string
+	FileDB             *db.OrgFileDB
+	HeadlineDB         *db.OrgHeadlineDB
 }
 
 // Scan for head without id or with duplicate id and prepare cache for compare.
-func (h *HeadlineCacheMap) loadHeadFromFile(headlines []db.Headline) error {
+func (h *HeadlineCacheMap) loadHeadFromFile(headlines []storage.Headline) error {
 	options := hashstructure.HashOptions{IgnoreZeroValue: true, ZeroNil: true}
 	for _, head := range headlines {
 		err := h.loadHeadFromFile(head.Children)
 		if err != nil {
 			return err
 		}
-		if _, ok := h.HeadlinesFileCache.Get(head.Data.ID); ok {
-			h.DuplicateID = append(h.DuplicateID, head.Data.ID)
+		if _, ok := h.HeadlinesFileCache.Get(head.ID); ok {
+			h.DuplicateID = append(h.DuplicateID, head.ID)
 		} else {
 			// compute headline struct hash.
-			hash, err := hashstructure.Hash(head.Data, hashstructure.FormatV2, &options)
+			hash, err := hashstructure.Hash(head, hashstructure.FormatV2, &options)
 			if err != nil {
 				return logger.Errorf("Hash headline error: %v", err)
 			}
-			head.Hash = hash
-			if head.Data.ID != "" {
-				h.HeadlinesFileCache.Put(head.Data.ID, head)
+			head.Hash = string(hash)
+			if head.ID != "" {
+				h.HeadlinesFileCache.Put(head.ID, head)
 			}
 		}
 	}
@@ -71,17 +81,17 @@ func (h *HeadlineCacheMap) UpdateHeadlineToDB(force bool) error {
 	var err error
 	for fileHeads.Begin(); fileHeads.Next(); {
 		id, value := fileHeads.Key(), fileHeads.Value()
-		headFromFile := value.(db.Headline)
+		headFromFile := value.(storage.Headline)
 		if headFromDB, ok := h.HeadlinesDBCache.Get(id); ok {
-			if !bytes.Equal(headFromDB.(db.Headline).Hash, headFromFile.Hash) || force {
-				err = headFromFile.UpdateByIDFile()
+			if headFromDB.(storage.Headline).Hash == headFromFile.Hash || force {
+				err = h.HeadlineDB.UpdateByIDFile(headFromFile)
 				h.HeadlinesDBCache.Remove(id)
 			} else {
 				h.HeadlinesDBCache.Remove(id)
 				continue
 			}
 		} else {
-			err = headFromFile.Create()
+			err = h.HeadlineDB.Create(headFromFile)
 		}
 		if err != nil {
 			return err
@@ -92,8 +102,8 @@ func (h *HeadlineCacheMap) UpdateHeadlineToDB(force bool) error {
 	itDB := h.HeadlinesDBCache.Iterator()
 	for itDB.Begin(); itDB.Next(); {
 		_, head := itDB.Key(), itDB.Value()
-		headDB := head.(db.Headline)
-		err = headDB.UnattachFromFile()
+		headDB := head.(storage.Headline)
+		err = h.HeadlineDB.UnattachFromFile(headDB)
 		if err != nil {
 			return err
 		}

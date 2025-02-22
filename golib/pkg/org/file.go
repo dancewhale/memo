@@ -3,10 +3,10 @@ package org
 import (
 	"bytes"
 	"crypto/md5"
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"memo/pkg/storage"
 	"os"
 	"path/filepath"
 
@@ -17,82 +17,14 @@ import (
 	"memo/pkg/util/gods/lists/arraylist"
 )
 
-// prepare for struct to be stored in kv database.
-// if not registered, kv database will not be able to store the struct.
-func init() {
-	gob.Register(OrgFile{})
-	gob.Register(parser.PropertyDrawer{})
-	gob.Register(parser.Headline{})
-	gob.Register(parser.Paragraph{})
-	gob.Register(parser.Text{})
-	gob.Register(parser.RegularLink{})
-	gob.Register(parser.TaskTime{})
-	gob.Register(parser.LogBookDrawer{})
-	gob.Register(arraylist.List{})
-}
-
-func GetFileFromHeadID(headID string) (*OrgFile, error) {
-	con := options.ConfigInit()
-	File, err := db.GetFileByHeadlineID(headID)
-	if err != nil {
-		return nil, err
-	}
-
-	fileCache := KvInit(con.GetDBPath())
-	file, err := fileCache.LoadFromFileID(File.ID)
-	defer fileCache.Close()
-	if err != nil && file == nil {
-		return nil, logger.Errorf("Load file By file id %s from kvcache failed: %v", File.ID, err)
-	} else if err == nil && file == nil {
-		// 如果kv 缓存被删除无记录，则直接从硬盘读取文件
-		file, err := NewFileFromPath(File.FilePath)
-		if err != nil {
-			return nil, err
-		} else if file == nil {
-			return nil, logger.Errorf("The file %s is not a org file.", File.FilePath)
-		}
-		err = file.LoadFromFile(false)
-		if err != nil {
-			return nil, err
-		}
-		return file, nil
-	}
-	return file, nil
-}
-
-func GetFileFromFileID(fileID string) (*OrgFile, error) {
-	con := options.ConfigInit()
-	File, err := db.GetFileByID(fileID)
-	if err != nil {
-		return nil, err
-	}
-
-	fileCache := KvInit(con.GetDBPath())
-	file, err := fileCache.LoadFromFileID(fileID)
-	defer fileCache.Close()
-	if err != nil && file == nil {
-		return nil, logger.Errorf("Load file By file id %s from kvcache failed: %v", File.ID, err)
-	} else if err == nil && file == nil {
-		// 如果kv 缓存被删除无记录，则直接从硬盘读取文件
-		file, err := NewFileFromPath(File.FilePath)
-		if err != nil {
-			return nil, err
-		} else if file == nil {
-			return nil, logger.Errorf("The file %s is not a org file.", File.FilePath)
-		}
-		err = file.LoadFromFile(false)
-		if err != nil {
-			return nil, err
-		}
-		return file, nil
-	}
-	return file, nil
-}
-
 // NewFileFromPath creates a new OrgFile from a file path.
 // It checks if the file exists, if it is a regular file, and if it is a .org file.
 // If the file is a .org file, it reads the file content, calculates the hash.
 func NewFileFromPath(filePath string) (*OrgFile, error) {
+	orgfiledb, err := db.NewOrgFileDB()
+	if err != nil {
+		return nil, logger.Errorf("Init orgfile db operator error: %v", err)
+	}
 	if filepath.Ext(filePath) != ".org" {
 		logger.Infof("The file %s is not a org fileHandler, skip this file.", filePath)
 		return nil, nil
@@ -122,9 +54,10 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 		return nil, logger.Errorf("Copy file content to buffer failed: %v", err.Error())
 	}
 	hashSting := hex.EncodeToString(hash.Sum(nil))
+	file := &storage.File{Hash: hashSting, FilePath: filePath}
 	return &OrgFile{
-		Path: filePath,
-		Hash: hashSting,
+		OrgFileDB: orgfiledb,
+		file:      file,
 	}, nil
 }
 
@@ -132,9 +65,8 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 // 提供接口用来加载文件，然后存储到kv数据库中
 // 提供接口用于修改，然后存储到kv数据库中，同时写入文件
 type OrgFile struct {
-	ID    string
-	Path  string
-	Hash  string
+	*db.OrgFileDB
+	file  *storage.File
 	Nodes *arraylist.List
 }
 
@@ -158,7 +90,7 @@ func (f *OrgFile) getFileID(d *OrgFile) (string, error) {
 		}
 	}
 	if ID == "" {
-		logger.Warnf("No FileID found in file %s.", d.Path)
+		logger.Warnf("No FileID found in file %s.", d.file.FilePath)
 		return "", parser.MissFileID
 	} else {
 		return ID, nil
@@ -177,7 +109,7 @@ func (f *OrgFile) String() (out string, err error) {
 		return "", er
 	} else if f.Nodes == nil {
 		return "", fmt.Errorf("File is empty.")
-	} else if f.Path == "" {
+	} else if f.file.FilePath == "" {
 		return "", fmt.Errorf("File path is empty.")
 	}
 
@@ -193,16 +125,16 @@ func (f *OrgFile) LoadFromFile(force bool) error {
 	con := options.ConfigInit()
 	fileCache := KvInit(con.GetDBPath())
 
-	file, err := fileCache.LoadFromHash(f.Hash)
+	file, err := fileCache.LoadFromHash(f.file.Hash)
 	defer fileCache.Close()
 	if err != nil {
-		return logger.Errorf("Load file By hash from kvcache %s failed: %v", f.Hash, err)
+		return logger.Errorf("Load file By hash from kvcache %s failed: %v", f.file.Hash, err)
 	}
 	if file == nil || force {
 		return f.parseDocument()
 	} else {
 		f.Nodes = file.Nodes
-		f.ID = file.ID
+		f.file.ID = file.file.ID
 		return nil
 	}
 }
@@ -218,10 +150,10 @@ func (f *OrgFile) SaveToKvDB(force bool) error {
 }
 
 func (f *OrgFile) SaveToSqlDB(force bool) error {
-	w := parser.NewSqlWriter(f.ID)
-	headlines := w.ParseNodes(f.Nodes)
+	w := parser.NewSqlWriter(f.file.ID)
+	headlines := w.ParseHeadlineNodes(f.Nodes)
 
-	HeadCache, err := NewHeadlineCache(headlines, f.ID, f.Path, f.Hash)
+	HeadCache, err := NewHeadlineCache(headlines, f.file.ID, f.file.FilePath, f.file.Hash)
 	if err != nil {
 		return err
 	}
@@ -248,8 +180,8 @@ func (f *OrgFile) SaveToDiskFile(path string) error {
 	}
 	hash := md5.New()
 	hash.Write([]byte(content))
-	f.Hash = hex.EncodeToString(hash.Sum(nil))
-	f.Path = path
+	f.file.Hash = hex.EncodeToString(hash.Sum(nil))
+	f.file.FilePath = path
 	return nil
 }
 
@@ -258,12 +190,12 @@ func (f *OrgFile) SaveDB(force bool) error {
 	if err != nil {
 		return err
 	}
-	needUpdate, err := db.IfFileDBNeedUpdate(f.ID, f.Hash)
+	needUpdate, err := db.IfFileDBNeedUpdate(f.file.ID, f.file.Hash)
 	if err != nil {
 		return err
 	}
 
-	err = db.FileDBUpdate(f.ID, f.Path, f.Hash)
+	err = db.FileDBUpdate(f.file.ID, f.file.FilePath, f.file.Hash)
 	if err != nil {
 		return err
 	}
@@ -278,26 +210,26 @@ func (f *OrgFile) SaveDB(force bool) error {
 }
 
 func (f *OrgFile) parseDocument() error {
-	content, err := os.ReadFile(f.Path)
+	content, err := os.ReadFile(f.file.FilePath)
 	reader := bytes.NewReader(content)
 
 	if err != nil {
 		return logger.Errorf("Read file content failed: %v", err)
 	} else if len(content) == 0 {
-		return logger.Errorf("File %s is empty.", f.Path)
+		return logger.Errorf("File %s is empty.", f.file.FilePath)
 	}
 
-	f.Nodes = parser.New().Parse(reader, f.Path)
-	f.ID, err = f.getFileID(f)
-	if err != nil {
-		return err
-	}
+	nodes := parser.New().Parse(reader, f.file.FilePath)
+	f.Nodes = nodes
+
+	// change Nodes to headlines.
+
 	return nil
 }
 
 func (f *OrgFile) parseString(content string) (*arraylist.List, error) {
 	reader := bytes.NewReader([]byte(content))
-	nodes := parser.New().Parse(reader, f.Path)
+	nodes := parser.New().Parse(reader, f.file.FilePath)
 	return nodes, nil
 }
 

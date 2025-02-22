@@ -3,9 +3,7 @@ package org
 import (
 	"context"
 	"errors"
-	"memo/cmd/options"
 	"memo/pkg/logger"
-	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
@@ -119,90 +117,17 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	}
 }
 
+// TODO: fix
 func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
-	f, err := GetFileFromFileID(fileid)
-	if err != nil {
-		return err
-	}
-	err = f.SaveToDiskFile(filePath)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
+// TODO: fix
 func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
-	file, err := GetFileFromHeadID(orgid)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	err = file.LoadFromFile(false)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	list, index := file.GetHeadlineByID(orgid)
-	if list == nil {
-		return util.Result{Data: false, Err: logger.Errorf("Can not find headline by orgid %s in file Nodes.", orgid)}
-	}
-
-	head, _ := list.Get(index)
-	if h, ok := head.(parser.Headline); ok {
-		h.BodyContent = bodyContent
-		list.Set(index, h)
-	} else {
-		return util.Result{Data: false, Err: logger.Errorf("Get headline by orgid %s failed.", orgid)}
-	}
-	err = file.SaveToDiskFile(file.Path)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	err = file.SaveToKvDB(false)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	err = db.UpdateHeadContentByID(orgid, bodyContent)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
 	return util.Result{Data: true, Err: nil}
 }
 
+// TODO: fix
 func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
-	file, err := GetFileFromHeadID(orgid)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	err = file.LoadFromFile(false)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	list, index := file.GetHeadlineByID(orgid)
-	if list == nil {
-		err = logger.Errorf("Can not find headline by orgid %s in file Nodes.", orgid)
-		return util.Result{Data: false, Err: err}
-	}
-
-	head, _ := list.Get(index)
-	if h, ok := head.(parser.Headline); ok {
-		h.Properties.Set(key, value)
-		list.Set(index, h)
-	} else {
-		err = logger.Errorf("Get headline by orgid %s failed.", orgid)
-		return util.Result{Data: false, Err: err}
-	}
-	err = file.SaveToDiskFile(file.Path)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	err = file.SaveToKvDB(false)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	if key == options.EmacsPropertySchedule {
-		err = db.UpdateHeadScheduleTypeByID(orgid, value)
-		if err != nil {
-			return util.Result{Data: false, Err: err}
-		}
-	}
 	return util.Result{Data: true, Err: nil}
 }

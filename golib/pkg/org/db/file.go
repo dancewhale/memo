@@ -7,18 +7,25 @@ import (
 	"memo/pkg/storage/dal"
 )
 
-func GetFileByID(id string) (*storage.File, error) {
+func NewOrgFileDB() (*OrgFileDB, error) {
 	db, err := storage.InitDBEngine()
 	if err != nil {
 		return nil, logger.Errorf("Init db engine error: %v", err)
 	}
-	f := dal.Use(db).File
+	return &OrgFileDB{query: dal.Use(db)}, nil
+}
 
-	file, err := f.WithContext(context.Background()).Where(f.ID.Eq(id)).First()
-	if err != nil {
-		return nil, logger.Errorf("Get file record in sql db error: %v", err)
-	}
-	return file, nil
+type OrgFileDB struct {
+	query *dal.Query
+}
+
+func (f *OrgFileDB) GetID() string {
+	return "set"
+}
+
+func (f *OrgFileDB) GetFileByID(id string) (*storage.File, error) {
+	file := f.query.File
+	return file.WithContext(context.Background()).Where(file.ID.Eq(id)).First()
 }
 
 func FileDBUpdate(id, filePath, hash string) error {
