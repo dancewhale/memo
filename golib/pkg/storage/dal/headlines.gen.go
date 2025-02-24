@@ -31,12 +31,12 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.CreatedAt = field.NewTime(tableName, "created_at")
 	_headline.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_headline.DeletedAt = field.NewField(tableName, "deleted_at")
-	_headline.Title = field.NewString(tableName, "title")
-	_headline.Hash = field.NewString(tableName, "hash")
-	_headline.Content = field.NewString(tableName, "content")
 	_headline.Weight = field.NewInt64(tableName, "weight")
 	_headline.Source = field.NewString(tableName, "source")
 	_headline.ScheduledType = field.NewString(tableName, "scheduled_type")
+	_headline.Title = field.NewString(tableName, "title")
+	_headline.Hash = field.NewString(tableName, "hash")
+	_headline.Content = field.NewString(tableName, "content")
 	_headline.ParentID = field.NewString(tableName, "parent_id")
 	_headline.Level = field.NewInt(tableName, "level")
 	_headline.Order_ = field.NewInt(tableName, "order")
@@ -52,64 +52,110 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		RelationField: field.NewRelation("Fsrs", "storage.FsrsInfo"),
 	}
 
+	_headline.Properties = headlineHasManyProperties{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Properties", "storage.Property"),
+		Headline: struct {
+			field.RelationField
+			File struct {
+				field.RelationField
+				Headlines struct {
+					field.RelationField
+				}
+			}
+			Fsrs struct {
+				field.RelationField
+			}
+			Properties struct {
+				field.RelationField
+			}
+			Children struct {
+				field.RelationField
+			}
+			ReviewLogs struct {
+				field.RelationField
+			}
+			LogBook struct {
+				field.RelationField
+				Headline struct {
+					field.RelationField
+				}
+			}
+			Locations struct {
+				field.RelationField
+				Headline struct {
+					field.RelationField
+				}
+			}
+		}{
+			RelationField: field.NewRelation("Properties.Headline", "storage.Headline"),
+			File: struct {
+				field.RelationField
+				Headlines struct {
+					field.RelationField
+				}
+			}{
+				RelationField: field.NewRelation("Properties.Headline.File", "storage.File"),
+				Headlines: struct {
+					field.RelationField
+				}{
+					RelationField: field.NewRelation("Properties.Headline.File.Headlines", "storage.Headline"),
+				},
+			},
+			Fsrs: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Properties.Headline.Fsrs", "storage.FsrsInfo"),
+			},
+			Properties: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Properties.Headline.Properties", "storage.Property"),
+			},
+			Children: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Properties.Headline.Children", "storage.Headline"),
+			},
+			ReviewLogs: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Properties.Headline.ReviewLogs", "storage.ReviewLog"),
+			},
+			LogBook: struct {
+				field.RelationField
+				Headline struct {
+					field.RelationField
+				}
+			}{
+				RelationField: field.NewRelation("Properties.Headline.LogBook", "storage.Clock"),
+				Headline: struct {
+					field.RelationField
+				}{
+					RelationField: field.NewRelation("Properties.Headline.LogBook.Headline", "storage.Headline"),
+				},
+			},
+			Locations: struct {
+				field.RelationField
+				Headline struct {
+					field.RelationField
+				}
+			}{
+				RelationField: field.NewRelation("Properties.Headline.Locations", "storage.Location"),
+				Headline: struct {
+					field.RelationField
+				}{
+					RelationField: field.NewRelation("Properties.Headline.Locations.Headline", "storage.Headline"),
+				},
+			},
+		},
+	}
+
 	_headline.Children = headlineHasManyChildren{
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("Children", "storage.Headline"),
-		File: struct {
-			field.RelationField
-			Headlines struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Children.File", "storage.File"),
-			Headlines: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Children.File.Headlines", "storage.Headline"),
-			},
-		},
-		Fsrs: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Children.Fsrs", "storage.FsrsInfo"),
-		},
-		Children: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Children.Children", "storage.Headline"),
-		},
-		ReviewLogs: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Children.ReviewLogs", "storage.ReviewLog"),
-		},
-		LogBook: struct {
-			field.RelationField
-			Headline struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Children.LogBook", "storage.Clock"),
-			Headline: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Children.LogBook.Headline", "storage.Headline"),
-			},
-		},
-		Locations: struct {
-			field.RelationField
-			Headline struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Children.Locations", "storage.Location"),
-			Headline: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Children.Locations.Headline", "storage.Headline"),
-			},
-		},
 	}
 
 	_headline.ReviewLogs = headlineHasManyReviewLogs{
@@ -149,12 +195,12 @@ type headline struct {
 	CreatedAt     field.Time
 	UpdatedAt     field.Time
 	DeletedAt     field.Field
-	Title         field.String
-	Hash          field.String
-	Content       field.String
 	Weight        field.Int64
 	Source        field.String
 	ScheduledType field.String
+	Title         field.String
+	Hash          field.String
+	Content       field.String
 	ParentID      field.String
 	Level         field.Int
 	Order_        field.Int
@@ -165,6 +211,8 @@ type headline struct {
 	Priority      field.String
 	FileID        field.String
 	Fsrs          headlineHasOneFsrs
+
+	Properties headlineHasManyProperties
 
 	Children headlineHasManyChildren
 
@@ -195,12 +243,12 @@ func (h *headline) updateTableName(table string) *headline {
 	h.CreatedAt = field.NewTime(table, "created_at")
 	h.UpdatedAt = field.NewTime(table, "updated_at")
 	h.DeletedAt = field.NewField(table, "deleted_at")
-	h.Title = field.NewString(table, "title")
-	h.Hash = field.NewString(table, "hash")
-	h.Content = field.NewString(table, "content")
 	h.Weight = field.NewInt64(table, "weight")
 	h.Source = field.NewString(table, "source")
 	h.ScheduledType = field.NewString(table, "scheduled_type")
+	h.Title = field.NewString(table, "title")
+	h.Hash = field.NewString(table, "hash")
+	h.Content = field.NewString(table, "content")
 	h.ParentID = field.NewString(table, "parent_id")
 	h.Level = field.NewInt(table, "level")
 	h.Order_ = field.NewInt(table, "order")
@@ -226,17 +274,17 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 25)
+	h.fieldMap = make(map[string]field.Expr, 26)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
 	h.fieldMap["deleted_at"] = h.DeletedAt
-	h.fieldMap["title"] = h.Title
-	h.fieldMap["hash"] = h.Hash
-	h.fieldMap["content"] = h.Content
 	h.fieldMap["weight"] = h.Weight
 	h.fieldMap["source"] = h.Source
 	h.fieldMap["scheduled_type"] = h.ScheduledType
+	h.fieldMap["title"] = h.Title
+	h.fieldMap["hash"] = h.Hash
+	h.fieldMap["content"] = h.Content
 	h.fieldMap["parent_id"] = h.ParentID
 	h.fieldMap["level"] = h.Level
 	h.fieldMap["order"] = h.Order_
@@ -330,38 +378,115 @@ func (a headlineHasOneFsrsTx) Count() int64 {
 	return a.tx.Count()
 }
 
-type headlineHasManyChildren struct {
+type headlineHasManyProperties struct {
 	db *gorm.DB
 
 	field.RelationField
 
-	File struct {
+	Headline struct {
 		field.RelationField
-		Headlines struct {
+		File struct {
+			field.RelationField
+			Headlines struct {
+				field.RelationField
+			}
+		}
+		Fsrs struct {
 			field.RelationField
 		}
-	}
-	Fsrs struct {
-		field.RelationField
-	}
-	Children struct {
-		field.RelationField
-	}
-	ReviewLogs struct {
-		field.RelationField
-	}
-	LogBook struct {
-		field.RelationField
-		Headline struct {
+		Properties struct {
 			field.RelationField
 		}
-	}
-	Locations struct {
-		field.RelationField
-		Headline struct {
+		Children struct {
 			field.RelationField
 		}
+		ReviewLogs struct {
+			field.RelationField
+		}
+		LogBook struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}
+		Locations struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}
 	}
+}
+
+func (a headlineHasManyProperties) Where(conds ...field.Expr) *headlineHasManyProperties {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineHasManyProperties) WithContext(ctx context.Context) *headlineHasManyProperties {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineHasManyProperties) Session(session *gorm.Session) *headlineHasManyProperties {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineHasManyProperties) Model(m *storage.Headline) *headlineHasManyPropertiesTx {
+	return &headlineHasManyPropertiesTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineHasManyPropertiesTx struct{ tx *gorm.Association }
+
+func (a headlineHasManyPropertiesTx) Find() (result []*storage.Property, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineHasManyPropertiesTx) Append(values ...*storage.Property) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineHasManyPropertiesTx) Replace(values ...*storage.Property) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineHasManyPropertiesTx) Delete(values ...*storage.Property) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineHasManyPropertiesTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineHasManyPropertiesTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type headlineHasManyChildren struct {
+	db *gorm.DB
+
+	field.RelationField
 }
 
 func (a headlineHasManyChildren) Where(conds ...field.Expr) *headlineHasManyChildren {

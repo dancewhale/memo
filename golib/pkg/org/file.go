@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
@@ -56,8 +55,8 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 	hashSting := hex.EncodeToString(hash.Sum(nil))
 	file := &storage.File{Hash: hashSting, FilePath: filePath}
 	return &OrgFile{
-		OrgFileDB: orgfiledb,
-		file:      file,
+		db:   orgfiledb,
+		file: file,
 	}, nil
 }
 
@@ -65,95 +64,58 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 // 提供接口用来加载文件，然后存储到kv数据库中
 // 提供接口用于修改，然后存储到kv数据库中，同时写入文件
 type OrgFile struct {
-	*db.OrgFileDB
+	db    *db.OrgFileDB
 	file  *storage.File
 	Nodes *arraylist.List
 }
 
-func (f *OrgFile) getFileID(d *OrgFile) (string, error) {
-	var ID string
-	if d.Nodes != nil && d.Nodes.Size() != 0 {
-		it := d.Nodes.Iterator()
-		for it.Next() {
-			node := it.Value()
-			switch n := node.(type) {
-			case parser.Headline:
-				break
-			case parser.PropertyDrawer:
-				id, exist := n.Get(options.EmacsPropertyID)
-				if exist && ID != "" {
-					return "", parser.FoundDupID
-				} else if exist {
-					ID = id
-				}
-			}
-		}
-	}
-	if ID == "" {
-		logger.Warnf("No FileID found in file %s.", d.file.FilePath)
-		return "", parser.MissFileID
-	} else {
-		return ID, nil
-	}
+// TODO: implement this function
+func (f *OrgFile) String() (out string, err error) {
+	return "", nil
 }
 
-func (f *OrgFile) String() (out string, err error) {
-	var er error
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			er = logger.Errorf("Could not export file, Because error happend: %s", recovered)
-		}
-	}()
+func (f *OrgFile) parseDocument() error {
+	content, err := os.ReadFile(f.file.FilePath)
+	reader := bytes.NewReader(content)
 
-	if er != nil {
-		return "", er
-	} else if f.Nodes == nil {
-		return "", fmt.Errorf("File is empty.")
-	} else if f.file.FilePath == "" {
-		return "", fmt.Errorf("File path is empty.")
+	if err != nil {
+		return logger.Errorf("Read file content failed: %v", err)
+	} else if len(content) == 0 {
+		return logger.Errorf("File %s is empty.", f.file.FilePath)
 	}
 
-	return parser.NodesToString(f.Nodes), nil
+	nodes := parser.New().Parse(reader, f.file.FilePath)
+	f.Nodes = nodes
+
+	s := parser.NewSqlWriter()
+	f.file = s.ParseOrgFile(f.Nodes)
+	if f.file.ID == "" {
+		return parser.MissFileID
+	}
+	return nil
 }
 
 // LoadFromFile parse file to File object.
-// It first check if the file with same hash is already in the cache,
-// If exist it returns the Nodes and ID from the cache.
-// If the file with same hash is not in the cache, it parses the file content and returns the file.
+// It first check if the file with same hash is already in the db,
+// If exist it returns the file and ID from the db.
+// If the file with same hash is not in the db, it parses the file content and returns the file.
 // if force, it will always parse the file content even file hash not change.
 func (f *OrgFile) LoadFromFile(force bool) error {
-	con := options.ConfigInit()
-	fileCache := KvInit(con.GetDBPath())
-
-	file, err := fileCache.LoadFromHash(f.file.Hash)
-	defer fileCache.Close()
+	file, err := f.db.GetFileByHash(f.file.Hash)
 	if err != nil {
-		return logger.Errorf("Load file By hash from kvcache %s failed: %v", f.file.Hash, err)
+		return logger.Errorf("Load file By hash from database %s failed: %v", f.file.Hash, err)
 	}
 	if file == nil || force {
 		return f.parseDocument()
 	} else {
-		f.Nodes = file.Nodes
-		f.file.ID = file.file.ID
+		f.file.ID = file.ID
 		return nil
 	}
 }
 
-// SaveToKvDB save orgfile to kv database.
-func (f *OrgFile) SaveToKvDB(force bool) error {
-	con := options.ConfigInit()
-	fileCache := KvInit(con.GetDBPath())
+func (f *OrgFile) SaveToDB(force bool) error {
 
-	err := fileCache.Save(f, force)
-	defer fileCache.Close()
-	return err
-}
-
-func (f *OrgFile) SaveToSqlDB(force bool) error {
-	w := parser.NewSqlWriter(f.file.ID)
-	headlines := w.ParseHeadlineNodes(f.Nodes)
-
-	HeadCache, err := NewHeadlineCache(headlines, f.file.ID, f.file.FilePath, f.file.Hash)
+	HeadCache, err := NewHeadlineCache(f.file.Headlines, f.file.ID, f.file.FilePath, f.file.Hash)
 	if err != nil {
 		return err
 	}
@@ -186,10 +148,6 @@ func (f *OrgFile) SaveToDiskFile(path string) error {
 }
 
 func (f *OrgFile) SaveDB(force bool) error {
-	err := f.SaveToKvDB(force)
-	if err != nil {
-		return err
-	}
 	needUpdate, err := db.IfFileDBNeedUpdate(f.file.ID, f.file.Hash)
 	if err != nil {
 		return err
@@ -201,29 +159,11 @@ func (f *OrgFile) SaveDB(force bool) error {
 	}
 
 	if needUpdate || force {
-		err = f.SaveToSqlDB(force)
+		err = f.SaveToDB(force)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
-}
-
-func (f *OrgFile) parseDocument() error {
-	content, err := os.ReadFile(f.file.FilePath)
-	reader := bytes.NewReader(content)
-
-	if err != nil {
-		return logger.Errorf("Read file content failed: %v", err)
-	} else if len(content) == 0 {
-		return logger.Errorf("File %s is empty.", f.file.FilePath)
-	}
-
-	nodes := parser.New().Parse(reader, f.file.FilePath)
-	f.Nodes = nodes
-
-	// change Nodes to headlines.
-
 	return nil
 }
 

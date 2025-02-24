@@ -33,6 +33,7 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 	_file.DeletedAt = field.NewField(tableName, "deleted_at")
 	_file.FilePath = field.NewString(tableName, "file_path")
 	_file.Hash = field.NewString(tableName, "hash")
+	_file.MetaContent = field.NewString(tableName, "meta_content")
 	_file.Headlines = fileHasManyHeadlines{
 		db: db.Session(&gorm.Session{}),
 
@@ -54,6 +55,19 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 			field.RelationField
 		}{
 			RelationField: field.NewRelation("Headlines.Fsrs", "storage.FsrsInfo"),
+		},
+		Properties: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headlines.Properties", "storage.Property"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headlines.Properties.Headline", "storage.Headline"),
+			},
 		},
 		Children: struct {
 			field.RelationField
@@ -101,14 +115,15 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 type file struct {
 	fileDo
 
-	ALL       field.Asterisk
-	ID        field.String
-	CreatedAt field.Time
-	UpdatedAt field.Time
-	DeletedAt field.Field
-	FilePath  field.String
-	Hash      field.String
-	Headlines fileHasManyHeadlines
+	ALL         field.Asterisk
+	ID          field.String
+	CreatedAt   field.Time
+	UpdatedAt   field.Time
+	DeletedAt   field.Field
+	FilePath    field.String
+	Hash        field.String
+	MetaContent field.String
+	Headlines   fileHasManyHeadlines
 
 	fieldMap map[string]field.Expr
 }
@@ -131,6 +146,7 @@ func (f *file) updateTableName(table string) *file {
 	f.DeletedAt = field.NewField(table, "deleted_at")
 	f.FilePath = field.NewString(table, "file_path")
 	f.Hash = field.NewString(table, "hash")
+	f.MetaContent = field.NewString(table, "meta_content")
 
 	f.fillFieldMap()
 
@@ -147,13 +163,14 @@ func (f *file) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (f *file) fillFieldMap() {
-	f.fieldMap = make(map[string]field.Expr, 7)
+	f.fieldMap = make(map[string]field.Expr, 8)
 	f.fieldMap["id"] = f.ID
 	f.fieldMap["created_at"] = f.CreatedAt
 	f.fieldMap["updated_at"] = f.UpdatedAt
 	f.fieldMap["deleted_at"] = f.DeletedAt
 	f.fieldMap["file_path"] = f.FilePath
 	f.fieldMap["hash"] = f.Hash
+	f.fieldMap["meta_content"] = f.MetaContent
 
 }
 
@@ -180,6 +197,12 @@ type fileHasManyHeadlines struct {
 	}
 	Fsrs struct {
 		field.RelationField
+	}
+	Properties struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
 	}
 	Children struct {
 		field.RelationField

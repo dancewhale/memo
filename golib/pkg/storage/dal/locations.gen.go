@@ -54,6 +54,19 @@ func newLocation(db *gorm.DB, opts ...gen.DOOption) location {
 		}{
 			RelationField: field.NewRelation("Headline.Fsrs", "storage.FsrsInfo"),
 		},
+		Properties: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headline.Properties", "storage.Property"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.Properties.Headline", "storage.Headline"),
+			},
+		},
 		Children: struct {
 			field.RelationField
 		}{
@@ -176,6 +189,12 @@ type locationManyToManyHeadline struct {
 	}
 	Fsrs struct {
 		field.RelationField
+	}
+	Properties struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
 	}
 	Children struct {
 		field.RelationField

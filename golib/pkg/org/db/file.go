@@ -19,13 +19,28 @@ type OrgFileDB struct {
 	query *dal.Query
 }
 
-func (f *OrgFileDB) GetID() string {
-	return "set"
+func (f *OrgFileDB) GetFileByHash(hash string) (*storage.File, error) {
+	file := f.query.File
+	files, err := file.WithContext(context.Background()).Where(file.Hash.Eq(hash)).Find()
+	if err != nil {
+		return nil, logger.Errorf("Get file by hash %s error: %v", hash, err)
+	}
+	if len(files) == 0 {
+		return nil, nil
+	}
+	return files[0], nil
 }
 
 func (f *OrgFileDB) GetFileByID(id string) (*storage.File, error) {
 	file := f.query.File
-	return file.WithContext(context.Background()).Where(file.ID.Eq(id)).First()
+	files, err := file.WithContext(context.Background()).Where(file.ID.Eq(id)).Find()
+	if err != nil {
+		return nil, logger.Errorf("Get file by id %s error: %v", id, err)
+	}
+	if len(files) == 0 {
+		return nil, nil
+	}
+	return files[0], nil
 }
 
 func FileDBUpdate(id, filePath, hash string) error {

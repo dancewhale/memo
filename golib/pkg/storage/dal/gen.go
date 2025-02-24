@@ -22,6 +22,7 @@ var (
 	FsrsInfo  *fsrsInfo
 	Headline  *headline
 	Location  *location
+	Property  *property
 	ReviewLog *reviewLog
 )
 
@@ -32,6 +33,7 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	FsrsInfo = &Q.FsrsInfo
 	Headline = &Q.Headline
 	Location = &Q.Location
+	Property = &Q.Property
 	ReviewLog = &Q.ReviewLog
 }
 
@@ -43,6 +45,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		FsrsInfo:  newFsrsInfo(db, opts...),
 		Headline:  newHeadline(db, opts...),
 		Location:  newLocation(db, opts...),
+		Property:  newProperty(db, opts...),
 		ReviewLog: newReviewLog(db, opts...),
 	}
 }
@@ -55,6 +58,7 @@ type Query struct {
 	FsrsInfo  fsrsInfo
 	Headline  headline
 	Location  location
+	Property  property
 	ReviewLog reviewLog
 }
 
@@ -68,6 +72,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		FsrsInfo:  q.FsrsInfo.clone(db),
 		Headline:  q.Headline.clone(db),
 		Location:  q.Location.clone(db),
+		Property:  q.Property.clone(db),
 		ReviewLog: q.ReviewLog.clone(db),
 	}
 }
@@ -88,6 +93,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		FsrsInfo:  q.FsrsInfo.replaceDB(db),
 		Headline:  q.Headline.replaceDB(db),
 		Location:  q.Location.replaceDB(db),
+		Property:  q.Property.replaceDB(db),
 		ReviewLog: q.ReviewLog.replaceDB(db),
 	}
 }
@@ -98,6 +104,7 @@ type queryCtx struct {
 	FsrsInfo  *fsrsInfoDo
 	Headline  *headlineDo
 	Location  *locationDo
+	Property  *propertyDo
 	ReviewLog *reviewLogDo
 }
 
@@ -108,6 +115,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		FsrsInfo:  q.FsrsInfo.WithContext(ctx),
 		Headline:  q.Headline.WithContext(ctx),
 		Location:  q.Location.WithContext(ctx),
+		Property:  q.Property.WithContext(ctx),
 		ReviewLog: q.ReviewLog.WithContext(ctx),
 	}
 }

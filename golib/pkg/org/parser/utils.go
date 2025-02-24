@@ -1,11 +1,13 @@
 package parser
 
 import (
-	"memo/cmd/options"
-	"memo/pkg/util/gods/lists/arraylist"
 	"strconv"
 
+	"github.com/google/uuid"
+
+	"memo/cmd/options"
 	"memo/pkg/storage"
+	"memo/pkg/util/gods/lists/arraylist"
 	"memo/pkg/util/gods/stacks/arraystack"
 )
 
@@ -31,7 +33,23 @@ func FilterContentForHeadline(node Node) bool {
 	}
 }
 
+func getIDFromPropertyDrawer(pd *PropertyDrawer) string {
+	// 如果pd ==nil,返回类似1ad3025f-c304-4227-9765-ba88905380e2 格式的随机字符串
+	// 如果pd不为nil,返回pd.Get(options.EmacsPropertyID)的值
+	if pd == nil {
+		return uuid.New().String()
+	}
+	id, exist := pd.Get(options.EmacsPropertyID)
+	if !exist {
+		return uuid.New().String()
+	}
+	return id
+}
+
 func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
+	if pd == nil {
+		return 50
+	}
 	weight, exist := pd.Get(options.EmacsPropertyWeight)
 	if !exist {
 		return 50
@@ -45,7 +63,23 @@ func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
 	}
 }
 
+func getPropertyDrawer(pd *PropertyDrawer) []storage.Property {
+	if pd == nil {
+		return nil
+	}
+	properties := []storage.Property{}
+	for _, kv := range pd.Properties {
+		if kv[0] != options.EmacsPropertyID && kv[0] != options.EmacsPropertySource && kv[0] != options.EmacsPropertyWeight && kv[0] != options.EmacsPropertySchedule {
+			properties = append(properties, storage.Property{Key: kv[0], Value: kv[1]})
+		}
+	}
+	return properties
+}
+
 func getSourceFromPropertyDrawer(pd *PropertyDrawer) string {
+	if pd == nil {
+		return ""
+	}
 	source, exist := pd.Get(options.EmacsPropertySource)
 	if !exist {
 		return ""
@@ -55,6 +89,9 @@ func getSourceFromPropertyDrawer(pd *PropertyDrawer) string {
 }
 
 func getScheduleFromPropertyDrawer(pd *PropertyDrawer) string {
+	if pd == nil {
+		return storage.NORMAL
+	}
 	schedule, exist := pd.Get(options.EmacsPropertySchedule)
 	if !exist {
 		return storage.NORMAL
@@ -72,17 +109,16 @@ func getScheduleFromPropertyDrawer(pd *PropertyDrawer) string {
 	}
 }
 
-func getHeadlineProperty(headline *storage.Headline, pd *PropertyDrawer) {
-	if pd != nil {
-		headline.ID, _ = pd.Get(options.EmacsPropertyID)
-		headline.Weight = getWeightFromPropertyDrawer(pd)
-		headline.ScheduledType = getScheduleFromPropertyDrawer(pd)
-		headline.Source = getSourceFromPropertyDrawer(pd)
-	}
+func parseHeadlineProperty(h *storage.Headline, pd *PropertyDrawer) {
+	h.ID = getIDFromPropertyDrawer(pd)
+	h.Weight = getWeightFromPropertyDrawer(pd)
+	h.ScheduledType = getScheduleFromPropertyDrawer(pd)
+	h.Source = getSourceFromPropertyDrawer(pd)
+	h.Properties = getPropertyDrawer(pd)
 }
 
 // Get the order of headline.
-func getHeadOrder(stack *arraystack.Stack, currentHead storage.Headline) int {
+func getHeadOrder(stack *arraystack.Stack, currentHead *storage.Headline) int {
 	order := 1
 	if stack.Size() == 0 {
 		return order
