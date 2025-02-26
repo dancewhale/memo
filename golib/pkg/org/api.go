@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"memo/pkg/logger"
+	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
@@ -118,23 +119,36 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 }
 
 func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
-	filedb, err := GetFileFromID(fileid)
+	file, err := GetFileFromID(fileid)
 	if err != nil {
 		return err
 	}
-	err = filedb.SaveToDiskFile(filePath)
+	err = file.SaveToDiskFile(filePath)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// TODO: fix
 func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
-	return util.Result{Data: true, Err: nil}
+	headdb, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	err = headdb.UpdateHeadlineBody(orgid, bodyContent)
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	} else {
+		return util.Result{Data: true, Err: nil}
+	}
 }
 
 // TODO: fix
 func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
-	return util.Result{Data: true, Err: nil}
+	headdb, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	err = headdb.UpdateProperty(orgid, key, value)
+	return util.Result{Data: true, Err: err}
 }

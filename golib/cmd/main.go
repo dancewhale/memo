@@ -155,13 +155,16 @@ func test(ctx context.Context, cmd *cli.Command) error {
 		fmt.Println(err)
 	}
 	//_, err = memorg.GetFileFromHeadID("4ABF840C-3E73-42EA-805E-A616C331DFE8")
+	//content := "ceshiyixai\nnojbk\njasfj;luwpr"
+	//err = api.UpdateOrgHeadContent("4ABF840C-3E73-42EA-805E-A616C331DFE8", content)
+	result = api.UpdateOrgHeadProperty("4ABF840C-3E73-42EA-805E-A616C331DFE8", "MEMO_NOTE_TEST", "jjjxsjj")
+	if result.Err != nil {
+		fmt.Println(err)
+	}
 	err = api.ExportOrgFileToDisk("1ad3025f-c304-4227-9765-ba88905380e2", "/tmp/elisp-export.org")
 	if err != nil {
 		fmt.Println(err)
 	}
-	//content := "ceshiyixai\nnojbk\njasfj;luwpr"
-	//err = api.UpdateOrgHeadContent("4ABF840C-3E73-42EA-805E-A616C331DFE8", content)
-	result = api.UpdateOrgHeadProperty("4ABF840C-3E73-42EA-805E-A616C331DFE8", "MEMO_NOTE_TEST", "jjjxsjj")
 	//capi, _ := card.NewCardApi()
 	//capi.ScanHeadlineInitFsrs()
 	//card := capi.GetReviewCardByWeightDueTime()

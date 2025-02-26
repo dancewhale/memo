@@ -56,10 +56,9 @@ type Headline struct {
 }
 
 type Property struct {
-	ID         uint     `gorm:"primarykey;not null" hash:"ignore"`
-	HeadlineID string   `gorm:"not null"`
+	HeadlineID string   `gorm:"primarykey;not null"`
 	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
-	Key        string   `gorm:"not null"`
+	Key        string   `gorm:"primarykey;not null"`
 	Value      string   `gorm:"not null"`
 }
 

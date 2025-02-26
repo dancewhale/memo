@@ -5,10 +5,12 @@ import (
 	"github.com/creker/hashstructure"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"gorm.io/gorm"
+	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/org/location"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+	"strconv"
 )
 
 func NewOrgHeadlineDB() (*OrgHeadlineDB, error) {
@@ -16,11 +18,12 @@ func NewOrgHeadlineDB() (*OrgHeadlineDB, error) {
 	if err != nil {
 		return nil, logger.Errorf("Init db engine error: %v", err)
 	}
-	return &OrgHeadlineDB{query: dal.Use(db)}, nil
+	return &OrgHeadlineDB{query: dal.Use(db), db: db}, nil
 }
 
 type OrgHeadlineDB struct {
 	query *dal.Query
+	db    *gorm.DB
 }
 
 // 修改保存依靠双键，ID和FileID都必须存在
@@ -93,6 +96,39 @@ func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, e
 		}
 	}
 	return headlinesDBCache, nil
+}
+
+func (h *OrgHeadlineDB) UpdateHeadlineBody(id, body string) error {
+	headline := h.query.Headline
+	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).UpdateSimple(headline.Content.Value(body))
+	if err != nil {
+		return logger.Errorf("Update headline %s body content error: %v", id, err)
+	}
+	return nil
+}
+
+func (h *OrgHeadlineDB) UpdateProperty(id, key, value string) error {
+	headline := h.query.Headline
+	if key == options.EmacsPropertyID {
+		return logger.Errorf("ID is not allowed to update.")
+	} else if key == options.EmacsPropertySource {
+		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).UpdateSimple(headline.Source.Value(value))
+		return err
+	} else if key == options.EmacsPropertySchedule {
+		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).UpdateSimple(headline.ScheduledType.Value(value))
+		return err
+	} else if key == options.EmacsPropertyWeight {
+		w, err := strconv.Atoi(value)
+		if err != nil {
+			return logger.Errorf("convert weight to int error: %v", err)
+		}
+		_, err = headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).UpdateSimple(headline.Weight.Value(int64(w)))
+		return err
+	} else {
+		property := storage.Property{HeadlineID: id, Key: key, Value: value}
+		err := h.db.Save(&property).Error
+		return err
+	}
 }
 
 func (h *OrgHeadlineDB) GetFileByHeadlineID(headlineID string) (*storage.File, error) {

@@ -27,7 +27,6 @@ func newProperty(db *gorm.DB, opts ...gen.DOOption) property {
 
 	tableName := _property.propertyDo.TableName()
 	_property.ALL = field.NewAsterisk(tableName)
-	_property.ID = field.NewUint(tableName, "id")
 	_property.HeadlineID = field.NewString(tableName, "headline_id")
 	_property.Key = field.NewString(tableName, "key")
 	_property.Value = field.NewString(tableName, "value")
@@ -113,7 +112,6 @@ type property struct {
 	propertyDo
 
 	ALL        field.Asterisk
-	ID         field.Uint
 	HeadlineID field.String
 	Key        field.String
 	Value      field.String
@@ -134,7 +132,6 @@ func (p property) As(alias string) *property {
 
 func (p *property) updateTableName(table string) *property {
 	p.ALL = field.NewAsterisk(table)
-	p.ID = field.NewUint(table, "id")
 	p.HeadlineID = field.NewString(table, "headline_id")
 	p.Key = field.NewString(table, "key")
 	p.Value = field.NewString(table, "value")
@@ -154,8 +151,7 @@ func (p *property) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (p *property) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 5)
-	p.fieldMap["id"] = p.ID
+	p.fieldMap = make(map[string]field.Expr, 4)
 	p.fieldMap["headline_id"] = p.HeadlineID
 	p.fieldMap["key"] = p.Key
 	p.fieldMap["value"] = p.Value

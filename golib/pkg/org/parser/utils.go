@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"memo/pkg/logger"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -62,14 +63,43 @@ func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
 	}
 }
 
-func getPropertyDrawer(pd *PropertyDrawer) []storage.Property {
+func setProperty(headline *storage.Headline, key, value string) error {
+	if headline == nil {
+		return logger.Errorf("headline is nil")
+	}
+	if headline.Properties == nil {
+		headline.Properties = []storage.Property{}
+	}
+	if key == options.EmacsPropertyID {
+		headline.ID = value
+		return nil
+	} else if key == options.EmacsPropertySource {
+		headline.Source = value
+		return nil
+	} else if key == options.EmacsPropertySchedule {
+		headline.ScheduledType = value
+		return nil
+	} else if key == options.EmacsPropertyWeight {
+		w, err := strconv.Atoi(value)
+		if err != nil {
+			return logger.Errorf("convert weight to int error: %v", err)
+		}
+		headline.Weight = int64(w)
+		return nil
+	} else {
+		headline.Properties = append(headline.Properties, storage.Property{Key: key, Value: value})
+		return nil
+	}
+}
+
+func getPropertyDrawer(id string, pd *PropertyDrawer) []storage.Property {
 	if pd == nil {
 		return nil
 	}
 	properties := []storage.Property{}
 	for _, kv := range pd.Properties {
 		if kv[0] != options.EmacsPropertyID && kv[0] != options.EmacsPropertySource && kv[0] != options.EmacsPropertyWeight && kv[0] != options.EmacsPropertySchedule {
-			properties = append(properties, storage.Property{Key: kv[0], Value: kv[1]})
+			properties = append(properties, storage.Property{HeadlineID: id, Key: kv[0], Value: kv[1]})
 		}
 	}
 	return properties
@@ -113,7 +143,7 @@ func parseHeadlineProperty(h *storage.Headline, pd *PropertyDrawer) {
 	h.Weight = getWeightFromPropertyDrawer(pd)
 	h.ScheduledType = getScheduleFromPropertyDrawer(pd)
 	h.Source = getSourceFromPropertyDrawer(pd)
-	h.Properties = getPropertyDrawer(pd)
+	h.Properties = getPropertyDrawer(h.ID, pd)
 }
 
 // Get the order of headline.
