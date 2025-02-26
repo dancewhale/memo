@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"memo/pkg/logger"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -63,32 +62,15 @@ func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
 	}
 }
 
-func setProperty(headline *storage.Headline, key, value string) error {
-	if headline == nil {
-		return logger.Errorf("headline is nil")
-	}
-	if headline.Properties == nil {
-		headline.Properties = []storage.Property{}
-	}
-	if key == options.EmacsPropertyID {
-		headline.ID = value
-		return nil
-	} else if key == options.EmacsPropertySource {
-		headline.Source = value
-		return nil
-	} else if key == options.EmacsPropertySchedule {
-		headline.ScheduledType = value
-		return nil
-	} else if key == options.EmacsPropertyWeight {
-		w, err := strconv.Atoi(value)
-		if err != nil {
-			return logger.Errorf("convert weight to int error: %v", err)
-		}
-		headline.Weight = int64(w)
+func getTags(tags []string) []*storage.Tag {
+	if tags == nil {
 		return nil
 	} else {
-		headline.Properties = append(headline.Properties, storage.Property{Key: key, Value: value})
-		return nil
+		Tags := []*storage.Tag{}
+		for _, tag := range tags {
+			Tags = append(Tags, &storage.Tag{Name: tag})
+		}
+		return Tags
 	}
 }
 

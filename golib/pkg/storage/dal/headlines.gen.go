@@ -88,6 +88,9 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 					field.RelationField
 				}
 			}
+			Tags struct {
+				field.RelationField
+			}
 		}{
 			RelationField: field.NewRelation("Properties.Headline", "storage.Headline"),
 			File: struct {
@@ -149,6 +152,11 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 					RelationField: field.NewRelation("Properties.Headline.Locations.Headline", "storage.Headline"),
 				},
 			},
+			Tags: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Properties.Headline.Tags", "storage.Tag"),
+			},
 		},
 	}
 
@@ -180,6 +188,12 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("Locations", "storage.Location"),
+	}
+
+	_headline.Tags = headlineManyToManyTags{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Tags", "storage.Tag"),
 	}
 
 	_headline.fillFieldMap()
@@ -223,6 +237,8 @@ type headline struct {
 	File headlineBelongsToFile
 
 	Locations headlineManyToManyLocations
+
+	Tags headlineManyToManyTags
 
 	fieldMap map[string]field.Expr
 }
@@ -274,7 +290,7 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 26)
+	h.fieldMap = make(map[string]field.Expr, 27)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
@@ -414,6 +430,9 @@ type headlineHasManyProperties struct {
 			Headline struct {
 				field.RelationField
 			}
+		}
+		Tags struct {
+			field.RelationField
 		}
 	}
 }
@@ -835,6 +854,77 @@ func (a headlineManyToManyLocationsTx) Clear() error {
 }
 
 func (a headlineManyToManyLocationsTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type headlineManyToManyTags struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a headlineManyToManyTags) Where(conds ...field.Expr) *headlineManyToManyTags {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineManyToManyTags) WithContext(ctx context.Context) *headlineManyToManyTags {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineManyToManyTags) Session(session *gorm.Session) *headlineManyToManyTags {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineManyToManyTags) Model(m *storage.Headline) *headlineManyToManyTagsTx {
+	return &headlineManyToManyTagsTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineManyToManyTagsTx struct{ tx *gorm.Association }
+
+func (a headlineManyToManyTagsTx) Find() (result []*storage.Tag, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineManyToManyTagsTx) Append(values ...*storage.Tag) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineManyToManyTagsTx) Replace(values ...*storage.Tag) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineManyToManyTagsTx) Delete(values ...*storage.Tag) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineManyToManyTagsTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineManyToManyTagsTx) Count() int64 {
 	return a.tx.Count()
 }
 

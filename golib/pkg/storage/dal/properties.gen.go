@@ -101,6 +101,11 @@ func newProperty(db *gorm.DB, opts ...gen.DOOption) property {
 				RelationField: field.NewRelation("Headline.Locations.Headline", "storage.Headline"),
 			},
 		},
+		Tags: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headline.Tags", "storage.Tag"),
+		},
 	}
 
 	_property.fillFieldMap()
@@ -205,6 +210,9 @@ type propertyBelongsToHeadline struct {
 		Headline struct {
 			field.RelationField
 		}
+	}
+	Tags struct {
+		field.RelationField
 	}
 }
 

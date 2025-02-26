@@ -103,6 +103,11 @@ func newLocation(db *gorm.DB, opts ...gen.DOOption) location {
 				RelationField: field.NewRelation("Headline.Locations.Headline", "storage.Headline"),
 			},
 		},
+		Tags: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headline.Tags", "storage.Tag"),
+		},
 	}
 
 	_location.fillFieldMap()
@@ -213,6 +218,9 @@ type locationManyToManyHeadline struct {
 		Headline struct {
 			field.RelationField
 		}
+	}
+	Tags struct {
+		field.RelationField
 	}
 }
 

@@ -53,6 +53,7 @@ type Headline struct {
 	ReviewLogs    []ReviewLog `hash:"ignore"`
 	LogBook       []*Clock    `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
 	Locations     []*Location `gorm:"many2many:headline_locations;" json:"locations"`
+	Tags          []*Tag      `gorm:"many2many:headline_tags;" json:"tags"`
 }
 
 type Property struct {
@@ -77,6 +78,11 @@ type Location struct {
 	Link     string
 	ExLink   string
 	Type     string
+}
+
+type Tag struct {
+	Name     string     `gorm:"primarykey;not null"`
+	headline []Headline `gorm:"many2many:headline_tags;foreignKey:Name" json:"headline"`
 }
 
 func (c Clock) String() string {

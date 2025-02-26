@@ -24,6 +24,7 @@ var (
 	Location  *location
 	Property  *property
 	ReviewLog *reviewLog
+	Tag       *tag
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
@@ -35,6 +36,7 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	Location = &Q.Location
 	Property = &Q.Property
 	ReviewLog = &Q.ReviewLog
+	Tag = &Q.Tag
 }
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
@@ -47,6 +49,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		Location:  newLocation(db, opts...),
 		Property:  newProperty(db, opts...),
 		ReviewLog: newReviewLog(db, opts...),
+		Tag:       newTag(db, opts...),
 	}
 }
 
@@ -60,6 +63,7 @@ type Query struct {
 	Location  location
 	Property  property
 	ReviewLog reviewLog
+	Tag       tag
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -74,6 +78,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		Location:  q.Location.clone(db),
 		Property:  q.Property.clone(db),
 		ReviewLog: q.ReviewLog.clone(db),
+		Tag:       q.Tag.clone(db),
 	}
 }
 
@@ -95,6 +100,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		Location:  q.Location.replaceDB(db),
 		Property:  q.Property.replaceDB(db),
 		ReviewLog: q.ReviewLog.replaceDB(db),
+		Tag:       q.Tag.replaceDB(db),
 	}
 }
 
@@ -106,6 +112,7 @@ type queryCtx struct {
 	Location  *locationDo
 	Property  *propertyDo
 	ReviewLog *reviewLogDo
+	Tag       *tagDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
@@ -117,6 +124,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		Location:  q.Location.WithContext(ctx),
 		Property:  q.Property.WithContext(ctx),
 		ReviewLog: q.ReviewLog.WithContext(ctx),
+		Tag:       q.Tag.WithContext(ctx),
 	}
 }
 
