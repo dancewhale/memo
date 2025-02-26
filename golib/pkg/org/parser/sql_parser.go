@@ -1,14 +1,15 @@
 package parser
 
 import (
+	"fmt"
 	"memo/pkg/storage"
 
-	"memo/pkg/util/gods/lists/arraylist"
-	"memo/pkg/util/gods/stacks/arraystack"
+	"github.com/emirpasic/gods/lists/arraylist"
+	"github.com/emirpasic/gods/stacks/arraystack"
 )
 
 // SqlWriter an org document into database.
-type SqlWriter struct {
+type OrgParserSql struct {
 	// 用于存储headline 结构体的堆栈
 	stack     *arraystack.Stack
 	Headlines []storage.Headline
@@ -16,14 +17,14 @@ type SqlWriter struct {
 	fileId    string
 }
 
-func NewSqlWriter() *SqlWriter {
-	return &SqlWriter{
+func NewSqlWriter() *OrgParserSql {
+	return &OrgParserSql{
 		stack: arraystack.New(),
 		file:  &storage.File{},
 	}
 }
 
-func (s *SqlWriter) ParseOrgFile(nodes *arraylist.List) *storage.File {
+func (s *OrgParserSql) ParseOrgFile(nodes *arraylist.List) *storage.File {
 	it := nodes.Iterator()
 	for it.Next() {
 		n := it.Value()
@@ -38,7 +39,7 @@ func (s *SqlWriter) ParseOrgFile(nodes *arraylist.List) *storage.File {
 	return s.file
 }
 
-func (s *SqlWriter) ParseFileMeta(node Node) {
+func (s *OrgParserSql) ParseFileMeta(node Node) {
 	var id string
 	exist := false
 	switch n := node.(type) {
@@ -52,7 +53,7 @@ func (s *SqlWriter) ParseFileMeta(node Node) {
 }
 
 // WriteHeadline 构建headline 结构体用于后续数据库存储。
-func (s *SqlWriter) parseHeadline(h Headline) {
+func (s *OrgParserSql) parseHeadline(h Headline) {
 	if h.Children != nil {
 		it := h.Children.Iterator()
 		for it.Next() {
@@ -65,7 +66,7 @@ func (s *SqlWriter) parseHeadline(h Headline) {
 			}
 		}
 	}
-	head := &storage.Headline{
+	head := storage.Headline{
 		Level: h.Lvl, Title: h.Title, Status: h.Status,
 		Content: h.BodyContent, Priority: h.Priority,
 		FileID:    &s.file.ID,
@@ -75,7 +76,10 @@ func (s *SqlWriter) parseHeadline(h Headline) {
 		LogBook:   GetLogBookFromDrawer(h.LogBook),
 		Children:  []storage.Headline{},
 	}
-	parseHeadlineProperty(head, h.Properties)
+	if h.ID() == "3A000187-0B2E-479B-96BC-9739ADC4EE7E" {
+		fmt.Printf("head: %+v\n", head)
+	}
+	parseHeadlineProperty(&head, h.Properties)
 
 	// 深度优先遍历
 	for {
@@ -103,7 +107,7 @@ func (s *SqlWriter) parseHeadline(h Headline) {
 	s.stack.Push(head)
 	if h.Lvl == 1 {
 		s.stack.Pop()
-		s.Headlines = append(s.Headlines, *head)
+		s.Headlines = append(s.Headlines, head)
 	}
 }
 

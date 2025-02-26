@@ -28,6 +28,12 @@ func main() {
 				Usage:   "start the daemon",
 				Action:  appstart,
 			},
+			{
+				Name:    "test",
+				Aliases: []string{"t"},
+				Usage:   "start the test",
+				Action:  test,
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.IntFlag{
@@ -127,7 +133,7 @@ func appstart(ctx context.Context, cmd *cli.Command) error {
 	return nil
 }
 
-func test() {
+func test(ctx context.Context, cmd *cli.Command) error {
 	f, err := os.Create("/tmp/cpu.prof")
 	if err != nil {
 		log.Fatal(err)
@@ -149,10 +155,10 @@ func test() {
 		fmt.Println(err)
 	}
 	//_, err = memorg.GetFileFromHeadID("4ABF840C-3E73-42EA-805E-A616C331DFE8")
-	//err = api.ExportOrgFileToDisk("1ad3025f-c304-4227-9765-ba88905380e2", "/tmp/elisp-export.org")
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
+	err = api.ExportOrgFileToDisk("1ad3025f-c304-4227-9765-ba88905380e2", "/tmp/elisp-export.org")
+	if err != nil {
+		fmt.Println(err)
+	}
 	//content := "ceshiyixai\nnojbk\njasfj;luwpr"
 	//err = api.UpdateOrgHeadContent("4ABF840C-3E73-42EA-805E-A616C331DFE8", content)
 	result = api.UpdateOrgHeadProperty("4ABF840C-3E73-42EA-805E-A616C331DFE8", "MEMO_NOTE_TEST", "jjjxsjj")
@@ -179,6 +185,7 @@ func test() {
 	//fmt.Println("=======================================================\n", elapsing2.Stats(), "\n=======================================================")
 	//fmt.Println(result)
 	fmt.Println("jkljresult")
+	return nil
 
 	//index.Index()
 }

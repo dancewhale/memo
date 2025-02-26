@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"memo/pkg/util/gods/lists/arraylist"
+	"github.com/emirpasic/gods/lists/arraylist"
 	"regexp"
 	"strings"
 	"unicode"
@@ -79,21 +79,30 @@ func (d *Document) parseHeadline(i int, parentStop stopFn) (int, Node) {
 	consumed, nodes := d.parseMany(i+1, stop)
 	it := nodes.Iterator()
 	for it.Next() {
+		index := it.Index()
 		node := it.Value()
 		if d, ok := node.(PropertyDrawer); ok {
 			headline.Properties = &d
-			headline.MeteContent = d.String()
+			headline.MeteContent += d.String()
+			it.Prev()
+			nodes.Remove(index)
 			continue
 		} else if t, ok := node.(TaskTime); ok {
 			headline.TaskTime = t
-			headline.MeteContent = t.String()
+			headline.MeteContent += t.String()
+			it.Prev()
+			nodes.Remove(index)
 			continue
 		} else if l, ok := node.(LogBookDrawer); ok {
 			headline.LogBook = &l
 			headline.MeteContent += l.String()
+			it.Prev()
+			nodes.Remove(index)
 			continue
 		} else if p, ok := node.(Paragraph); ok {
 			headline.BodyContent += p.String()
+			it.Prev()
+			nodes.Remove(index)
 		}
 	}
 	headline.Children = nodes

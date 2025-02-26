@@ -117,8 +117,15 @@ func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
 	}
 }
 
-// TODO: fix
 func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
+	filedb, err := GetFileFromID(fileid)
+	if err != nil {
+		return err
+	}
+	err = filedb.SaveToDiskFile(filePath)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

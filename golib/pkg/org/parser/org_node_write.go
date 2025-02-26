@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"memo/pkg/util/gods/lists/arraylist"
+	"github.com/emirpasic/gods/lists/arraylist"
 	"strings"
 )
 

@@ -3,10 +3,10 @@ package parser
 import (
 	"bufio"
 	"fmt"
+	"github.com/emirpasic/gods/lists/arraylist"
 	"io"
 	"io/ioutil"
 	"log"
-	"memo/pkg/util/gods/lists/arraylist"
 	"os"
 )
 
@@ -129,7 +129,7 @@ func (d *Document) parseOne(i int, stop stopFn) (consumed int, node Node) {
 	if consumed != 0 {
 		return consumed, node
 	}
-	d.Log.Printf("Could not parse token %#v in file %s: Falling back to treating it as plain text.", d.tokens[i], d.Path)
+	d.Log.Printf("Could not parse token %#v in file %s in line %d: Falling back to treating it as plain text.", d.tokens[i], d.Path, i)
 	m := plainTextRegexp.FindStringSubmatch(d.tokens[i].matches[0])
 	d.tokens[i] = token{"text", m[1], m}
 	return d.parseOne(i, stop)

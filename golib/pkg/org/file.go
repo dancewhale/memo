@@ -10,10 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/emirpasic/gods/lists/arraylist"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
-	"memo/pkg/util/gods/lists/arraylist"
 )
 
 // NewFileFromPath creates a new OrgFile from a file path.
@@ -53,9 +53,29 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 		return nil, logger.Errorf("Copy file content to buffer failed: %v", err.Error())
 	}
 	hashSting := hex.EncodeToString(hash.Sum(nil))
-	file := &storage.File{Hash: hashSting, FilePath: filePath}
 	return &OrgFile{
 		db:   orgfiledb,
+		hash: hashSting,
+		path: filePath,
+	}, nil
+}
+
+func GetFileFromID(id string) (*OrgFile, error) {
+	orgfiledb, err := db.NewOrgFileDB()
+	if err != nil {
+		return nil, logger.Errorf("Init orgfile db operator error: %v", err)
+	}
+	file, err := orgfiledb.GetFileByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if file == nil {
+		return nil, nil
+	}
+	return &OrgFile{
+		db:   orgfiledb,
+		hash: file.Hash,
+		path: file.FilePath,
 		file: file,
 	}, nil
 }
@@ -65,30 +85,34 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 // 提供接口用于修改，然后存储到kv数据库中，同时写入文件
 type OrgFile struct {
 	db    *db.OrgFileDB
+	path  string
+	hash  string
 	file  *storage.File
 	Nodes *arraylist.List
 }
 
 // TODO: implement this function
-func (f *OrgFile) String() (out string, err error) {
-	return "", nil
+func (f *OrgFile) String() string {
+	return parser.FileToString(*f.file)
 }
 
 func (f *OrgFile) parseDocument() error {
-	content, err := os.ReadFile(f.file.FilePath)
+	content, err := os.ReadFile(f.path)
 	reader := bytes.NewReader(content)
 
 	if err != nil {
 		return logger.Errorf("Read file content failed: %v", err)
 	} else if len(content) == 0 {
-		return logger.Errorf("File %s is empty.", f.file.FilePath)
+		return logger.Errorf("File %s is empty.", f.path)
 	}
 
-	nodes := parser.New().Parse(reader, f.file.FilePath)
+	nodes := parser.New().Parse(reader, f.path)
 	f.Nodes = nodes
 
 	s := parser.NewSqlWriter()
 	f.file = s.ParseOrgFile(f.Nodes)
+	f.file.FilePath = f.path
+	f.file.Hash = f.hash
 	if f.file.ID == "" {
 		return parser.MissFileID
 	}
@@ -101,26 +125,18 @@ func (f *OrgFile) parseDocument() error {
 // If the file with same hash is not in the db, it parses the file content and returns the file.
 // if force, it will always parse the file content even file hash not change.
 func (f *OrgFile) LoadFromFile(force bool) error {
-	file, err := f.db.GetFileByHash(f.file.Hash)
+	file, err := f.db.GetFileByHash(f.hash)
 	if err != nil {
 		return logger.Errorf("Load file By hash from database %s failed: %v", f.file.Hash, err)
 	}
 	if file == nil || force {
 		return f.parseDocument()
 	} else {
-		f.file.ID = file.ID
+		f.file = file
+		f.path = file.FilePath
+		f.hash = file.Hash
 		return nil
 	}
-}
-
-func (f *OrgFile) SaveToDB(force bool) error {
-
-	HeadCache, err := NewHeadlineCache(f.file.Headlines, f.file.ID, f.file.FilePath, f.file.Hash)
-	if err != nil {
-		return err
-	}
-
-	return HeadCache.UpdateHeadlineToDB(force)
 }
 
 func (f *OrgFile) SaveToDiskFile(path string) error {
@@ -131,7 +147,7 @@ func (f *OrgFile) SaveToDiskFile(path string) error {
 	}
 	defer file.Close()
 
-	content, err := f.String()
+	content := f.String()
 	if err != nil {
 		return fmt.Errorf("Failed to get file content: %w", err)
 	}
@@ -153,30 +169,21 @@ func (f *OrgFile) SaveDB(force bool) error {
 		return err
 	}
 
-	err = db.FileDBUpdate(f.file.ID, f.file.FilePath, f.file.Hash)
+	err = db.FileDBUpdate(f.file, force)
 	if err != nil {
 		return err
 	}
 
 	if needUpdate || force {
-		err = f.SaveToDB(force)
+		HeadCache, err := NewHeadlineCache(f.file.Headlines, f.file.ID, f.file.FilePath, f.file.Hash)
+		if err != nil {
+			return err
+		}
+
+		err = HeadCache.UpdateHeadlineToDB(force)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (f *OrgFile) parseString(content string) (*arraylist.List, error) {
-	reader := bytes.NewReader([]byte(content))
-	nodes := parser.New().Parse(reader, f.file.FilePath)
-	return nodes, nil
-}
-
-func (f *OrgFile) GetHeadlineByID(id string) (*arraylist.List, int) {
-	list, index := parser.FindHeadByID(f.Nodes, id)
-	if list == nil {
-		return nil, -1
-	}
-	return list, index
 }

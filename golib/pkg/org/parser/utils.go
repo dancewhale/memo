@@ -5,10 +5,9 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/emirpasic/gods/stacks/arraystack"
 	"memo/cmd/options"
 	"memo/pkg/storage"
-	"memo/pkg/util/gods/lists/arraylist"
-	"memo/pkg/util/gods/stacks/arraystack"
 )
 
 // 用于对[]org.Nodes 过滤
@@ -118,13 +117,13 @@ func parseHeadlineProperty(h *storage.Headline, pd *PropertyDrawer) {
 }
 
 // Get the order of headline.
-func getHeadOrder(stack *arraystack.Stack, currentHead *storage.Headline) int {
+func getHeadOrder(stack *arraystack.Stack, currentHead storage.Headline) int {
 	order := 1
 	if stack.Size() == 0 {
 		return order
 	}
 	it := stack.Iterator()
-	for it.End(); it.Prev(); {
+	for it.Begin(); it.Next(); {
 		v := it.Value()
 		if v.(storage.Headline).Level == currentHead.Level {
 			order++
@@ -133,25 +132,4 @@ func getHeadOrder(stack *arraystack.Stack, currentHead *storage.Headline) int {
 		}
 	}
 	return order
-}
-
-func FindHeadByID(list *arraylist.List, id string) (*arraylist.List, int) {
-	if list == nil {
-		return nil, -1
-	}
-	it := list.Iterator()
-	for it.Next() {
-		if h, ok := it.Value().(Headline); ok {
-			if h.ID() == id {
-				return list, it.Index()
-			}
-			hl, index := FindHeadByID(h.Children, id)
-			if hl == nil {
-				continue
-			} else {
-				return hl, index
-			}
-		}
-	}
-	return nil, -1
 }
