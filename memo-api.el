@@ -110,18 +110,19 @@ memo-note is (orgid  type  content)."
 
 (defun memo-api-sync-file (filePath)
 "Synchronize current org-file to db."
-  (interactive)
   (save-buffer)
-  (let ((result (memo-bridge-call-sync "UploadFile" filePath  0)))
+  (let ((result (memo-bridge-call-sync "UploadFile" filePath  0  0)))
     (memo--parse-result result)
     (message "Push file is success complete.")))
 
 ;; auto sync file after save buffer.
-(defun memo-sync-file-after-save ()
-  "Sync file to database after save file."
+(defun memo-sync-file ()
+  "Sync the current buffer file to database."
+  (interactive)
   (let ((path (buffer-file-name)))
     (if (and  (f-ext-p path "org") (f-ancestor-of-p memo-org-directory path))
 	(memo-api-sync-file path))))
+
 
 
 (provide 'memo-api)

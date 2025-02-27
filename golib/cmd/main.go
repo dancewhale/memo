@@ -147,7 +147,7 @@ func test(ctx context.Context, cmd *cli.Command) error {
 	//err := api.UploadFile("/Users/whale/Seafile/Dropbox/roam/20200402150453-记忆力的几个本质要点.org", true)
 	//err := api.UploadFile("/Users/whale/Dropbox/roam/daily/2021-01-05.org", false)
 	//err := api.UploadFilesUnderDir("/Users/whale/Dropbox/memo/resource", true)
-	result := api.UploadFile("/Users/whale/Dropbox/memo/resource/elisp-manual.org", 1)
+	result := api.UploadFile("/Users/whale/Dropbox/memo/resource/elisp-manual.org", 1, 0)
 	//err := api.UploadFile("/Users/whale/Dropbox/memo/tasks.org", false)
 	//err := api.UploadFile("/Users/whale/elisp-manual.org", true)
 	//err := api.UploadFile("/tmp/elisp-manual.org", true)

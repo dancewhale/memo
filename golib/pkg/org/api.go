@@ -3,18 +3,23 @@ package org
 import (
 	"context"
 	"errors"
+	"strings"
+	"sync"
+
+	"memo/pkg/card"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"memo/pkg/util"
-	"strings"
 
 	"github.com/karrick/godirwalk"
 	epc "github.com/kiwanami/go-elrpc"
 	"gorm.io/gorm"
 )
+
+var mute = sync.Mutex{}
 
 type OrgApi struct {
 	db *gorm.DB
@@ -38,8 +43,9 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 
 // UploadFile first load hash and filePath from file in disk，
 // Then get nodes and fileId, first try to get from kv cache, second to parse file.
-// force mean alway update file even hash is same.
-func (o *OrgApi) UploadFile(filePath string, fo int) util.Result {
+// force is not 0 mean alway update file even hash is same.
+// batchMode is 1 mean not scan head for fsrs init after upload.
+func (o *OrgApi) UploadFile(filePath string, fo int, batchMode int) util.Result {
 	var force bool
 	if fo == 0 {
 		force = false
@@ -63,6 +69,14 @@ func (o *OrgApi) UploadFile(filePath string, fo int) util.Result {
 	err = f.SaveDB(force)
 	if err != nil {
 		return util.Result{Data: false, Err: err}
+	}
+
+	if batchMode == 0 {
+		o.InitFsrs()
+	}
+
+	if err != nil {
+		return util.Result{Data: false, Err: err}
 	} else {
 		return util.Result{Data: true, Err: nil}
 	}
@@ -72,15 +86,14 @@ func (o *OrgApi) Test(test string) error {
 	return errors.New("test")
 }
 
-func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) util.Result {
-
+func (o *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) util.Result {
 	err := godirwalk.Walk(dirPath, &godirwalk.Options{
 		Callback: func(osPathname string, de *godirwalk.Dirent) error {
 			// Following string operation is not most performant way
 			// of doing this, but common enough to warrant a simple
 			// example here:
 			if strings.Contains(osPathname, ".org") && !de.IsDir() {
-				result := e.UploadFile(osPathname, needForce)
+				result := o.UploadFile(osPathname, needForce, 1)
 				if errors.Is(result.Err, parser.MissFileID) {
 					return nil
 				} else if errors.Is(result.Err, parser.FoundDupID) {
@@ -96,9 +109,9 @@ func (e *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) util.Result 
 	})
 	if err != nil {
 		return util.Result{Data: false, Err: err}
-	} else {
-		return util.Result{Data: true, Err: nil}
 	}
+	o.InitFsrs()
+	return util.Result{Data: true, Err: nil}
 }
 
 // GetNote 获取一张卡片,首先判断org是否有fsrs学习记录，没有
@@ -143,7 +156,6 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
 	}
 }
 
-// TODO: fix
 func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
@@ -151,4 +163,21 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
 	}
 	err = headdb.UpdateProperty(orgid, key, value)
 	return util.Result{Data: true, Err: err}
+}
+
+func (o *OrgApi) InitFsrs() {
+	cardApi, err := card.NewCardApi()
+	if err != nil {
+		logger.Warnf("Failed to create CardApi instance: %v", err)
+	} else {
+		// 异步执行 scanHeadlineInitFsrs
+		go func() {
+			mute.Lock()
+			defer mute.Unlock()
+
+			if _, err := cardApi.ScanHeadlineInitFsrs(); err != nil {
+				logger.Warnf("Async scanHeadlineInitFsrs failed: %v", err)
+			}
+		}()
+	}
 }

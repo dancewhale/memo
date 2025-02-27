@@ -296,7 +296,7 @@ func (api *CardApi) ifCardIsDue(orgid string) (bool, error) {
 	}
 }
 
-func (api *CardApi) scanHeadlineInitFsrs() ([]*storage.Headline, error) {
+func (api *CardApi) ScanHeadlineInitFsrs() ([]*storage.Headline, error) {
 	logger.Infof("Start to scan org for headline init.")
 	headline := api.Headline
 	fsrsInfo := api.FsrsInfo

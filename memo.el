@@ -26,6 +26,13 @@
 (defconst memo-prop-note-source  "MEMO_NOTE_SOURCE"
   "Property used to store the cards SOURCE.")
 
+(defconst memo-prop-note-id  "ID"
+  "Property used to store the cards ID.")
+
+(defconst memo-prop-note-weight  "MEMO_NOTE_WEIGHT"
+  "Property used to store the cards WEIGHT.")
+
+
 (defvar memo-log-level "0"
   "Setting dynamic module log level, -1 debug, 0 info, 1 warn, 2 error.")
 
