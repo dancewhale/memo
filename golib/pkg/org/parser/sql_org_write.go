@@ -47,17 +47,6 @@ func taskTimeString(h storage.Headline) string {
 	return content
 }
 
-func tagsString(h storage.Headline) string {
-	var content string
-	if h.Tags != nil {
-		for _, t := range h.Tags {
-			content += fmt.Sprintf(":%s", t.Name)
-		}
-		content += ":"
-	}
-	return content
-}
-
 func propertiesString(h storage.Headline) string {
 	var content string
 	content = ":PROPERTIES:\n"
@@ -102,7 +91,7 @@ func logbookString(h storage.Headline) string {
 }
 
 func headString(h storage.Headline) string {
-	content := strings.Repeat("*", h.Level) + " " + h.Title + " " + tagsString(h) + "\n"
+	content := strings.Repeat("*", h.Level) + " " + h.Title + "\n"
 	content += taskTimeString(h)
 	content += propertiesString(h)
 	content += logbookString(h)
