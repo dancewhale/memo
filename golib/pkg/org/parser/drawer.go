@@ -50,7 +50,7 @@ func (d *Document) parseDrawer(i int, parentStop stopFn) (int, Node) {
 	} else if name == "LOGBOOK" {
 		return d.parseLogBookClock(i, parentStop)
 	}
-	drawer, start := Drawer{Name: name}, i
+	drawer, start := Drawer{Name: name, Children: arraylist.New()}, i
 	i++
 	stop := func(d *Document, i int) bool {
 		if parentStop(d, i) {
