@@ -148,6 +148,8 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
 	if err != nil {
 		return util.Result{Data: false, Err: err}
 	}
+	bodyContent = strings.ReplaceAll(bodyContent, "\\\\", "\\")
+	bodyContent = strings.ReplaceAll(bodyContent, "\\\"", "\"")
 	err = headdb.UpdateHeadlineBody(orgid, bodyContent)
 	if err != nil {
 		return util.Result{Data: false, Err: err}
