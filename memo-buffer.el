@@ -42,8 +42,8 @@
   (interactive)
   (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
     (progn (memo-api--update-content (memo-note-id memo--review-note)
-				     (buffer-substring-no-properties (point-min) (point-max))))))
-
+				     (buffer-substring-no-properties (point-min) (point-max)))
+           (set-buffer-modified-p nil) t)))
 
 (defun memo-review-note()
   "Get next review note in review buffer."
@@ -54,13 +54,15 @@
   (let* ((buf (get-buffer-create memo--review-buffer-name))
 	 answer-start answer-end)
     (with-current-buffer buf
-	(memo-card-remove-overlays)
-	(erase-buffer)
-	(insert (memo-note-content memo--review-note))
-	(memo-card-hidden)
-	(memo-cloze-hidden)
-	(switch-to-buffer buf)
-	(org-mode))))
+      (memo-card-remove-overlays)
+      (erase-buffer)
+      (insert (memo-note-content memo--review-note))
+      (memo-card-hidden)
+      (memo-cloze-hidden)
+      (set-buffer-modified-p nil)
+      (org-mode))
+    (switch-to-buffer buf)
+    (setq write-contents-functions '(memo-update-current-note-content))))
 
 
 (defun memo-review-easy()

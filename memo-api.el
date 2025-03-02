@@ -84,8 +84,8 @@ memo-note is (orgid  type  content)."
 (defun memo-api--update-content (id content)
   "Update the content of head."
   (let ((result (memo-bridge-call-sync "UpdateOrgHeadContent" id content)))
-    (memo--parse-result result))
-  (message "Content Update finish."))
+    (memo--parse-result result)
+    t))
 
 (defun memo-api--update-property (id key value)
   "Update the content of head."
@@ -120,7 +120,7 @@ memo-note is (orgid  type  content)."
   "Sync the current buffer file to database."
   (interactive)
   (let ((path (buffer-file-name)))
-    (if (and  (f-ext-p path "org") (f-ancestor-of-p memo-org-directory path))
+    (if (and path (f-ext-p path "org") (f-ancestor-of-p memo-org-directory path))
 	(memo-api-sync-file path))))
 
 
