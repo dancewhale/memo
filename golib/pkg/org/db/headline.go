@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/creker/hashstructure"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"memo/cmd/options"
 	"memo/pkg/logger"
@@ -172,4 +173,36 @@ func UpdateHeadScheduleTypeByID(headlineID, stype string) error {
 		return logger.Errorf("Update headline %s type %s error: Only %s, %s, %s is allowed",
 			headlineID, stype, storage.NORMAL, storage.POSTPONE, storage.SUSPEND)
 	}
+}
+
+func (h *OrgHeadlineDB) CreateVirtualHead(parentID, title, content string) error {
+	head := h.query.Headline
+	source := "[[id:" + parentID + "]]"
+
+	count, err := head.WithContext(context.Background()).Where(head.ID.Eq(parentID)).Where(head.Type.Eq(storage.VirtualHead)).Count()
+	if err != nil {
+		return logger.Errorf("Count virtual headline by parent id %s error: %v", parentID, err)
+	}
+
+	headline := storage.Headline{ID: uuid.New().String(),
+		ParentID: &parentID, Title: title, Content: content,
+		Weight: storage.DefaultWeight, Type: storage.VirtualHead,
+		Source: source, ScheduledType: storage.NORMAL,
+		Order: int(count + 1),
+	}
+
+	err = head.WithContext(context.Background()).Create(&headline)
+	if err != nil {
+		return logger.Errorf("Create virtual headline by parent id failed: %v", err)
+	}
+	return err
+}
+
+func (h *OrgHeadlineDB) GetVirtualHeadByParentID(parentID string) ([]*storage.Headline, error) {
+	head := h.query.Headline
+	headlines, err := head.WithContext(context.Background()).Where(head.ParentID.Eq(parentID)).Where(head.Type.Eq(storage.VirtualHead)).Find()
+	if err != nil {
+		return nil, logger.Errorf("Get virtual child headline by parent id %s error: %v", parentID, err)
+	}
+	return headlines, nil
 }

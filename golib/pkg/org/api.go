@@ -37,6 +37,8 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadContent", o.UpdateOrgHeadContent, "string", "Update org head content"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
+	service.RegisterMethod(epc.MakeMethod("CreateVirtualHead", o.CreateVirtHead, "string", "Create virtual head."))
+	service.RegisterMethod(epc.MakeMethod("GetVirtualHeadByParentID", o.GetVirtHeadByParentID, "string", "Get VirtHead By parentID."))
 	service.RegisterMethod(epc.MakeMethod("Test", o.Test, "string", "test"))
 	return service
 }
@@ -165,6 +167,27 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
 	}
 	err = headdb.UpdateProperty(orgid, key, value)
 	return util.Result{Data: true, Err: err}
+}
+
+func (o *OrgApi) CreateVirtHead(parentid, title, content string) util.Result {
+	headdb, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	err = headdb.CreateVirtualHead(parentid, title, content)
+	return util.Result{Data: true, Err: err}
+}
+
+func (o *OrgApi) GetVirtHeadByParentID(parentid string) util.Result {
+	headdb, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	heads, err := headdb.GetVirtualHeadByParentID(parentid)
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	return util.Result{Data: heads, Err: nil}
 }
 
 func (o *OrgApi) InitFsrs() {

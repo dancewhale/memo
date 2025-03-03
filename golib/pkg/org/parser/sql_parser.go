@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"memo/pkg/storage"
 
 	"github.com/emirpasic/gods/lists/arraylist"
@@ -70,6 +69,7 @@ func (s *OrgParserSql) parseHeadline(h Headline) {
 		Level: h.Lvl, Title: h.Title, Status: h.Status,
 		Content: h.BodyContent, Priority: h.Priority,
 		FileID:    &s.file.ID,
+		Type:      storage.NormalHead,
 		Tags:      getTags(h.Tags),
 		Scheduled: h.TaskTime.GetScheduled(),
 		Deadline:  h.TaskTime.GetDeadline(),
@@ -77,9 +77,7 @@ func (s *OrgParserSql) parseHeadline(h Headline) {
 		LogBook:   GetLogBookFromDrawer(h.LogBook),
 		Children:  []storage.Headline{},
 	}
-	if h.ID() == "3A000187-0B2E-479B-96BC-9739ADC4EE7E" {
-		fmt.Printf("head: %+v\n", head)
-	}
+
 	parseHeadlineProperty(&head, h.Properties)
 
 	// 深度优先遍历

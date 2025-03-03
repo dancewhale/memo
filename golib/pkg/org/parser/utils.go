@@ -47,7 +47,7 @@ func getIDFromPropertyDrawer(pd *PropertyDrawer) string {
 
 func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
 	if pd == nil {
-		return 50
+		return storage.DefaultWeight
 	}
 	weight, exist := pd.Get(options.EmacsPropertyWeight)
 	if !exist {
@@ -55,7 +55,7 @@ func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
 	} else {
 		w, err := strconv.Atoi(weight)
 		if err != nil {
-			return 50
+			return storage.DefaultWeight
 		} else {
 			return int64(w)
 		}
