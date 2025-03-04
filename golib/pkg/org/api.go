@@ -187,7 +187,8 @@ func (o *OrgApi) GetVirtHeadByParentID(parentid string) util.Result {
 	if err != nil {
 		return util.Result{Data: false, Err: err}
 	}
-	return util.Result{Data: heads, Err: nil}
+	Heads := getHeadStructs(heads)
+	return util.Result{Data: Heads, Err: nil}
 }
 
 func (o *OrgApi) InitFsrs() {

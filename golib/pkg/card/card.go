@@ -3,7 +3,6 @@ package card
 import (
 	"context"
 	"errors"
-	"strconv"
 	"time"
 
 	"memo/pkg/logger"
@@ -49,14 +48,13 @@ func (api *CardApi) GetNextReviewNote() util.Result {
 	if head == nil {
 		return util.Result{Data: nil, Err: errors.New("There is no card need review.")}
 	}
-	weight := strconv.Itoa(int(head.Weight))
 
-	note := util.Note{
-		ID:      head.ID,
-		Weight:  weight,
-		Content: head.Content,
-		File:    head.File.FilePath,
-		Source:  head.Source,
+	note := util.Headline{
+		ID:       head.ID,
+		Weight:   head.Weight,
+		Content:  head.Content,
+		FilePath: head.File.FilePath,
+		Source:   head.Source,
 	}
 
 	return util.Result{note, nil}

@@ -58,11 +58,12 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (setq memo-api-return-value (memo-alist-get result "Data"))
   (setq memo-api-return-err (memo-alist-get result "Err"))
   (unless (eq memo-api-return-err 'null)
-    (user-error (memo-alist-get memo-api-return-err "s"))))
+    (user-error (memo-alist-get memo-api-return-err "s")))
+  memo-api-return-value)
 
 ;; get note for review.
 (cl-defstruct memo-note
-  id weight content file source)
+  id weight content filepath source)
 
 (defvar memo--review-note nil
   "The memo-note object which store note info wait for review.")
@@ -71,7 +72,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
  (setq memo--review-note (make-memo-note :id (memo-alist-get x "ID")
 					  :weight (memo-alist-get x "Weight")
 					  :content (memo-alist-get x "Content")
-					  :file (memo-alist-get x "File")
+					  :filepath (memo-alist-get x "FilePath")
 					  :source (memo-alist-get x "Source"))))
 
 (defun memo--get-review-note-object ()
@@ -92,6 +93,18 @@ memo-note is (orgid  type  content)."
   (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" id key value)))
     (memo--parse-result result))
   (message "Content Update finish."))
+
+(defun memo-api--create-virt-head (id title content)
+  "Create virt head with TITLE and CONTENT under head with ID."
+  (let ((result (memo-bridge-call-sync "CreateVirtualHead" id title content)))
+    (memo--parse-result result)
+    t))
+
+(defun memo-api--get-virt-heads-by-parentid (parentid)
+  "Get virt heads by PARENTID."
+  (let ((result (memo-bridge-call-sync "GetVirtualHeadByParentID" parentid)))
+    (memo--parse-result result)
+    ))
 
 ;; sync org file under dir.
 (defun memo-sync-db ()

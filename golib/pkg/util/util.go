@@ -1,0 +1,66 @@
+package util
+
+import (
+	"fmt"
+	"memo/pkg/storage"
+	"net"
+)
+
+type Result struct {
+	Data interface{}
+	Err  error
+}
+
+func QueryFreePort() (int64, error) {
+	s, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return -1, fmt.Errorf("could not listen TCP port 0: %v", err)
+	}
+	defer s.Close()
+	tcpa, _ := s.Addr().(*net.TCPAddr)
+	return int64(tcpa.Port), nil
+}
+
+type Headline struct {
+	ID            string  `json:"id"`
+	Weight        int64   `json:"weight"`
+	Source        string  `json:"source"`
+	ScheduledType string  `json:"scheduled_type"`
+	Type          int     `json:"type"`
+	Title         string  `json:"title"`
+	Hash          string  `json:"hash" hash:"ignore"`
+	Content       string  `json:"content"`
+	ParentID      *string `json:"parent_id"`
+	Level         int     `json:"level"`
+	Order         int     `json:"order"`
+	Status        string  `json:"status"`
+	Priority      string  `json:"priority"`
+	FileID        *string `json:"fileID"`
+	FilePath      string  `json:"file_path"`
+}
+
+// change
+func getHeadStruct(headline *storage.Headline) Headline {
+	if headline == nil {
+		return Headline{}
+	}
+	return Headline{
+		ID: headline.ID, Weight: headline.Weight, Source: headline.Source, ScheduledType: headline.ScheduledType,
+		Type: headline.Type, Title: headline.Title, Hash: headline.Hash, Content: headline.Content, ParentID: headline.ParentID,
+		Level: headline.Level, Order: headline.Order, Status: headline.Status, Priority: headline.Priority, FileID: headline.FileID}
+
+}
+
+func GetHeadStructs(headline []*storage.Headline) []Headline {
+	if headline == nil {
+		return nil
+	}
+	var heads []Headline
+	for _, head := range headline {
+		if head == nil {
+			continue
+		}
+		heads = append(heads, getHeadStruct(head))
+	}
+	return heads
+}

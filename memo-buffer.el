@@ -102,12 +102,25 @@
 	  (memo-remove-all-overlays)
 	  ))))
 
+;; virtual head
+(defun memo-create-virt-head ()
+  "Create a virtual head with user input title and content under head with ID."
+  (interactive)
+  (let* ((title (read-string "Enter title: "))
+         (content (read-string "Enter content: "))
+         (id  (memo-note-id memo--review-note)))
+    (when (and title content)
+      (memo-api--create-virt-head id title content)
+      (message "Virtual head created successfully."))
+    (when (or (string-empty-p title) (string-empty-p content))
+      (user-error "Title and content cannot be empty"))))
+
 
 ;; jump to org and enable editor.
 (defun memo-goto-org ()
   "Jump to source point from review buffer."
   (interactive)
-  (let* ((file (memo-note-file memo--review-note))
+  (let* ((file (memo-note-filepath memo--review-note))
         (id  (memo-note-id memo--review-note))
 	(position (org-id-find-id-in-file id file 'markerp)))
       (pop-to-buffer-same-window (marker-buffer  position))

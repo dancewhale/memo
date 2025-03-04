@@ -4,11 +4,11 @@ import (
 	"context"
 	"github.com/creker/hashstructure"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/org/location"
+	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"strconv"
@@ -184,7 +184,7 @@ func (h *OrgHeadlineDB) CreateVirtualHead(parentID, title, content string) error
 		return logger.Errorf("Count virtual headline by parent id %s error: %v", parentID, err)
 	}
 
-	headline := storage.Headline{ID: uuid.New().String(),
+	headline := storage.Headline{ID: parser.GenerateID(),
 		ParentID: &parentID, Title: title, Content: content,
 		Weight: storage.DefaultWeight, Type: storage.VirtualHead,
 		Source: source, ScheduledType: storage.NORMAL,

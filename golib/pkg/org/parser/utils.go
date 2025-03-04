@@ -2,6 +2,7 @@ package parser
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -36,11 +37,11 @@ func getIDFromPropertyDrawer(pd *PropertyDrawer) string {
 	// 如果pd ==nil,返回类似1ad3025f-c304-4227-9765-ba88905380e2 格式的随机字符串
 	// 如果pd不为nil,返回pd.Get(options.EmacsPropertyID)的值
 	if pd == nil {
-		return uuid.New().String()
+		return GenerateID()
 	}
 	id, exist := pd.Get(options.EmacsPropertyID)
 	if !exist {
-		return uuid.New().String()
+		return GenerateID()
 	}
 	return id
 }
@@ -144,4 +145,10 @@ func getHeadOrder(stack *arraystack.Stack, currentHead storage.Headline) int {
 		}
 	}
 	return order
+}
+
+func GenerateID() string {
+	id := uuid.New().String()
+	ID := strings.ToUpper(id)
+	return ID
 }
