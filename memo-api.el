@@ -63,24 +63,39 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 
 ;; get note for review.
 (cl-defstruct memo-note
-  id weight content filepath source)
+  id weight source scheduletype type title hash
+  content parentid level  order status priority
+  fileid filepath expandable)
+
 
 (defvar memo--review-note nil
   "The memo-note object which store note info wait for review.")
 
-(defun memo--set-review-note (x)
- (setq memo--review-note (make-memo-note :id (memo-alist-get x "ID")
-					  :weight (memo-alist-get x "Weight")
-					  :content (memo-alist-get x "Content")
-					  :filepath (memo-alist-get x "FilePath")
-					  :source (memo-alist-get x "Source"))))
+(defun memo-make-note-from-alist (x)
+  "Generate memo note object from return list."
+  (make-memo-note :id (memo-alist-get x "ID")
+		  :weight (memo-alist-get x "Weight")
+		  :source (memo-alist-get x "Source")
+		  :scheduletype (memo-alist-get x "ScheduleType")
+		  :type (memo-alist-get x "Type")
+		  :title (memo-alist-get x "Title")
+		  :hash (memo-alist-get x "Hash")
+		  :content (memo-alist-get x "Content")
+		  :parentid (memo-alist-get x "ParentID")
+		  :level (memo-alist-get x "Level")
+		  :order (memo-alist-get x "Order")
+		  :status (memo-alist-get x "Status")
+		  :priority (memo-alist-get x "Priority")
+		  :fileid (memo-alist-get x "FileID")
+		  :filepath (memo-alist-get x "FilePath")
+		  :expandable (memo-alist-get x "Expandable")))
 
 (defun memo--get-review-note-object ()
   "Return memo-note object which need review from server;
 memo-note is (orgid  type  content)."
   (let ((result (memo-bridge-call-sync "GetNextReviewNote")))
-    (memo--parse-result result)
-    (memo--set-review-note memo-api-return-value)))
+    (memo--parse-result result))
+  (setq memo--review-note (memo-make-note-from-alist memo-api-return-value)))
 
 (defun memo-api--update-content (id content)
   "Update the content of head."
@@ -103,8 +118,7 @@ memo-note is (orgid  type  content)."
 (defun memo-api--get-virt-heads-by-parentid (parentid)
   "Get virt heads by PARENTID."
   (let ((result (memo-bridge-call-sync "GetVirtualHeadByParentID" parentid)))
-    (memo--parse-result result)
-    ))
+    (-map #'memo-make-note-from-alist (memo--parse-result result))))
 
 ;; sync org file under dir.
 (defun memo-sync-db ()

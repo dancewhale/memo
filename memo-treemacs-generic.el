@@ -13,7 +13,7 @@
 ;; This file is not part of GNU Emacs.
 ;;
 ;;; Commentary:
-;; Borrow code from lsp-treemacs.
+;; Borrow code from memo-treemacs.
 ;;; Code:
 
 
@@ -25,6 +25,16 @@
 (defvar-local memo-treemacs-generic-filter nil)
 
 (declare-function memo-treemacs--set-mode-line-format "memo-treemacs.el")
+
+(defun memo-resolve-value (value)
+  "Resolve VALUE's value.
+If it is function - call it.
+If it is a variable - return it's value
+Otherwise returns value itself."
+  (cond
+   ((functionp value) (funcall value))
+   ((and (symbolp value) (boundp value)) (symbol-value value))
+   (value)))
 
 (defmacro memo-treemacs-wcb-unless-killed (buffer &rest body)
   "`with-current-buffer' unless buffer killed."
@@ -94,11 +104,10 @@
 
 (defun memo-treemacs-perform-ret-action (&rest _)
   (interactive)
-  (if-let (action (-> (treemacs-node-at-point)
-                      (button-get :item)
-                      (plist-get :ret-action)))
-      (funcall-interactively action)
-    (treemacs-pulse-on-failure "No ret action defined.")))
+  (if-let (item (-> (treemacs-node-at-point)
+                      (button-get :item)))
+      (memo-open-head-in-view-buffer item)
+    (treemacs-pulse-on-failure "No Child head Found.")))
 
 (treemacs-define-expandable-node-type memo-treemacs-generic-node
   :closed-icon "• "

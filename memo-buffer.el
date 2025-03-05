@@ -26,6 +26,12 @@
 (defconst memo--review-buffer-name "*memo-review*"
   "The memo buffer for review note show and flip.")
 
+(defconst memo--view-buffer-name "*memo-view*"
+  "The memo buffer for view child virtual head.")
+
+(defvar-local memo--buffer-local-note nil
+  "The memo note object store in current buffer.")
+
 
 (defconst memo--source-buffer-name "*memo-source*"
   "The memo buffer for review note show and flip.")
@@ -40,8 +46,8 @@
 (defun memo-update-current-note-content ()
   "Skip current review note and review next note."
   (interactive)
-  (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
-    (progn (memo-api--update-content (memo-note-id memo--review-note)
+  (when memo--buffer-local-note
+    (progn (memo-api--update-content (memo-note-id memo--buffer-local-note)
 				     (buffer-substring-no-properties (point-min) (point-max)))
            (set-buffer-modified-p nil) t)))
 
@@ -62,6 +68,7 @@
       (set-buffer-modified-p nil)
       (org-mode))
     (switch-to-buffer buf)
+    (setq memo--buffer-local-note memo--review-note)
     (setq write-contents-functions '(memo-update-current-note-content))))
 
 
@@ -116,6 +123,28 @@
       (user-error "Title and content cannot be empty"))))
 
 
+(defun memo-get-current-note-id ()
+  "Get current note id."
+  (memo-note-id memo--buffer-local-note)
+)
+
+(defun memo-open-head-in-view-buffer(head)
+  "Open HEAD in view buffer."
+  (if (not (memo-note-id head))
+      (user-error "Memo-note object is nil"))
+  (let* ((buf (get-buffer-create memo--view-buffer-name)))
+    (pop-to-buffer buf)
+    (with-current-buffer buf
+      (erase-buffer)
+      (insert (memo-note-content head))
+      (set-buffer-modified-p nil)
+      (org-mode)
+      (setq memo--buffer-local-note head)
+      (setq write-contents-functions '(memo-update-current-note-content)))))
+
+
+
+
 ;; jump to org and enable editor.
 (defun memo-goto-org ()
   "Jump to source point from review buffer."
@@ -158,8 +187,6 @@
       (org-link-open-from-string source)
       (org-mode)
       (goto-char (point-min)))))
-
-
 
 
 (provide 'memo-buffer)
