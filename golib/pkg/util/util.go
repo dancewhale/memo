@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"memo/pkg/org/db"
 	"memo/pkg/storage"
 	"net"
 )
@@ -37,21 +38,28 @@ type Headline struct {
 	Priority      string  `json:"priority"`
 	FileID        *string `json:"fileID"`
 	FilePath      string  `json:"file_path"`
+	Expandable    int     `json:"expandable"`
 }
 
 // change
-func getHeadStruct(headline *storage.Headline) Headline {
+func GetHeadStruct(headline *storage.Headline, db *db.OrgHeadlineDB) Headline {
 	if headline == nil {
+		return Headline{}
+	}
+	ifExpand, err := db.IfVirtualHeadExpandable(headline.ID)
+	if err != nil {
 		return Headline{}
 	}
 	return Headline{
 		ID: headline.ID, Weight: headline.Weight, Source: headline.Source, ScheduledType: headline.ScheduledType,
-		Type: headline.Type, Title: headline.Title, Hash: headline.Hash, Content: headline.Content, ParentID: headline.ParentID,
-		Level: headline.Level, Order: headline.Order, Status: headline.Status, Priority: headline.Priority, FileID: headline.FileID}
+		Type: headline.Type, Title: headline.Title, Hash: headline.Hash, Content: headline.Content,
+		ParentID: headline.ParentID, Level: headline.Level, Order: headline.Order, Status: headline.Status,
+		Priority: headline.Priority, FileID: headline.FileID, FilePath: headline.File.FilePath, Expandable: ifExpand,
+	}
 
 }
 
-func GetHeadStructs(headline []*storage.Headline) []Headline {
+func GetHeadStructs(headline []*storage.Headline, db *db.OrgHeadlineDB) []Headline {
 	if headline == nil {
 		return nil
 	}
@@ -60,7 +68,7 @@ func GetHeadStructs(headline []*storage.Headline) []Headline {
 		if head == nil {
 			continue
 		}
-		heads = append(heads, getHeadStruct(head))
+		heads = append(heads, GetHeadStruct(head, db))
 	}
 	return heads
 }

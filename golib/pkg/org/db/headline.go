@@ -206,3 +206,16 @@ func (h *OrgHeadlineDB) GetVirtualHeadByParentID(parentID string) ([]*storage.He
 	}
 	return headlines, nil
 }
+
+func (h *OrgHeadlineDB) IfVirtualHeadExpandable(id string) (int, error) {
+	head := h.query.Headline
+	count, err := head.WithContext(context.Background()).Where(head.ParentID.Eq(id)).Count()
+	if err != nil {
+		return 0, logger.Errorf("Get headline by id %s error: %v", id, err)
+	}
+	if count > 0 {
+		return 1, nil
+	} else {
+		return 0, nil
+	}
+}

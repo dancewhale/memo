@@ -187,7 +187,7 @@ func (o *OrgApi) GetVirtHeadByParentID(parentid string) util.Result {
 	if err != nil {
 		return util.Result{Data: false, Err: err}
 	}
-	Heads := getHeadStructs(heads)
+	Heads := util.GetHeadStructs(heads, headdb)
 	return util.Result{Data: Heads, Err: nil}
 }
 
