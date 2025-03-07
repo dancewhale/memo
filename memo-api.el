@@ -91,8 +91,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 		  :expandable (memo-alist-get x "Expandable")))
 
 (defun memo--get-review-note-object ()
-  "Return memo-note object which need review from server;
-memo-note is (orgid  type  content)."
+  "Return memo-note object which need review from server."
   (let ((result (memo-bridge-call-sync "GetNextReviewNote")))
     (memo--parse-result result))
   (setq memo--review-note (memo-make-note-from-alist memo-api-return-value)))

@@ -252,7 +252,8 @@
                      memo-bridge-name memo-bridge-name
                      memo-bridge-internal-process-prog memo-bridge-internal-process-args)))
       (set-process-filter memo-bridge-internal-process 'comint-output-filter)
-      (set-process-query-on-exit-flag memo-bridge-internal-process nil))))
+      (set-process-query-on-exit-flag memo-bridge-internal-process nil))
+    (message "Memo server start success.")))
 
 (defun memo-bridge--called-from-wsl-on-windows-p ()
   "Check whether memo-bridge is called by Emacs on WSL and is running on Windows."

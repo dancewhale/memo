@@ -43,6 +43,13 @@
     (progn (memo-api--update-property (memo-note-id memo--review-note) "MEMO_NOTE_SCHEDULE" "postpone")
 	   (memo-review-note))))
 
+(defun memo-suspend-current-review-note ()
+  "Skip current review note and review next note."
+  (interactive)
+  (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
+    (progn (memo-api--update-property (memo-note-id memo--review-note) "MEMO_NOTE_SCHEDULE" "suspend")
+	   (memo-review-note))))
+
 (defun memo-update-current-note-content ()
   "Skip current review note and review next note."
   (interactive)
@@ -127,6 +134,12 @@
   "Get current note id."
   (memo-note-id memo--buffer-local-note)
 )
+
+(defun memo-get-review-note ()
+  "Get Current Review note."
+  (let* ((buf (get-buffer-create memo--review-buffer-name)))
+    (with-current-buffer buf
+      memo--buffer-local-note)))
 
 (defun memo-open-head-in-view-buffer(head)
   "Open HEAD in view buffer."

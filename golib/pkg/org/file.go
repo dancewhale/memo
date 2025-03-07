@@ -91,7 +91,6 @@ type OrgFile struct {
 	Nodes *arraylist.List
 }
 
-// TODO: implement this function
 func (f *OrgFile) String() string {
 	return parser.FileToString(*f.file)
 }

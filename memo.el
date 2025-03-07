@@ -75,6 +75,14 @@ if nil will default use user home dir.")
         (message "Compile module succeed!")
       (error "Compile Memo dynamic server failed"))))
 
+(defun memo-start ()
+  "Start memo Server."
+  (interactive)
+  (let ((server-path (concat memo--root "server")))
+    (unless (file-exists-p server-path)
+      (memo-compile-server))
+    (memo-bridge-start-process)))
+
 ;;;###autoload
 (defun memo-activate ()
   "Activate memo."
@@ -87,9 +95,8 @@ if nil will default use user home dir.")
   (require 'memo-card)
   (require 'memo-cloze)
   (require 'memo-fast)
-  (require 'memo-treemacs-generic)
   (require 'memo-treemacs)
-  (memo-compile-server))
+  (memo-start))
 
 (provide 'memo)
 ;;; memo.el ends here
