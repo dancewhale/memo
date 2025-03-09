@@ -76,7 +76,8 @@
       (org-mode))
     (switch-to-buffer buf)
     (setq memo--buffer-local-note memo--review-note)
-    (setq write-contents-functions '(memo-update-current-note-content))))
+    (setq write-contents-functions '(memo-update-current-note-content))
+    (memo-treemacs-refresh)))
 
 
 (defun memo-review-easy()

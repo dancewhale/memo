@@ -76,15 +76,13 @@ Otherwise returns value itself."
      (with-current-buffer ,buffer
        ,@body)))
 
-(defun memo-treemacs-generic-refresh (&optional _cache)
+(defun memo-treemacs-refresh (&optional _cache)
   (condition-case _err
       (let ((inhibit-read-only t))
-        (treemacs-update-node '(memo-treemacs-generic-root)))
+        (when-let ((buf (get-buffer memo-treemacs-buffer-name)))
+	  (with-current-buffer buf
+            (treemacs-update-async-node '("memo-treemacs-root" "VirtHeadTree") buf))))
     (error)))
-
-(defun memo-treemacs-generic-update (tree)
-  (setq memo-treemacs-tree tree)
-  (memo-treemacs-generic-refresh))
 
 (defun memo-treemacs-generic-right-click (event)
   (interactive "e")
@@ -153,7 +151,8 @@ Otherwise returns value itself."
   :ret-action #'memo-treemacs-perform-ret-action
   :children
   (when (equal (memo-note-expandable item) 1)
-    (memo-api--get-virt-heads-by-parentid (memo-note-id item)))
+    (let ((items (memo-api--get-virt-heads-by-parentid (memo-note-id item))))
+      (funcall callback items)))
   :child-type
   'memo-treemacs-virtual-node
   :more-properties
@@ -163,14 +162,13 @@ Otherwise returns value itself."
   :async? t)
 
 (treemacs-define-expandable-node-type memo-treemacs-generic-node
-  :closed-icon "• "
-  :open-icon   "- "
-  :label (memo-note-title (memo-get-review-note))
+  :closed-icon "--"
+  :open-icon   "--"
+  :label "--------------------------"
   :key item
-  :ret-action #'memo-treemacs-perform-ret-action
   :children
   (when (equal item "VirtHeadTree")
-    (let ((items  (memo-api--get-virt-heads-by-parentid (memo-note-id  (memo-get-review-note)))))
+    (let ((items  (list (memo-get-review-note))))
       (funcall callback items)))
   :child-type
   'memo-treemacs-virtual-node
