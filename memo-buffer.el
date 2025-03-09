@@ -77,7 +77,7 @@
     (switch-to-buffer buf)
     (setq memo--buffer-local-note memo--review-note)
     (setq write-contents-functions '(memo-update-current-note-content))
-    (memo-treemacs-refresh)))
+    (save-excursion  (memo-treemacs-update))))
 
 
 (defun memo-review-easy()

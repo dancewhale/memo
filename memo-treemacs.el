@@ -77,6 +77,7 @@ Otherwise returns value itself."
        ,@body)))
 
 (defun memo-treemacs-refresh (&optional _cache)
+  "Update note under Treemacs."
   (condition-case _err
       (let ((inhibit-read-only t))
         (when-let ((buf (get-buffer memo-treemacs-buffer-name)))
@@ -127,11 +128,6 @@ Otherwise returns value itself."
             nil
             memo-treemacs-theme)
          "   "))))
-
-(defun memo-treemacs-filter-if-needed (result)
-  (if memo-treemacs-generic-filter
-      (funcall memo-treemacs-generic-filter result)
-    result))
 
 (defun memo-treemacs-perform-ret-action (&rest _)
   (interactive)
@@ -202,12 +198,17 @@ Otherwise returns value itself."
 (defun memo-treemacs-initialize ()
   "Display heads in treemacs."
   (interactive)
-  (select-window
-   (display-buffer-in-side-window
-    (memo-treemacs-render
-     "*MemoTree*" memo-treemacs-virtual-head-expand-depth)
-    memo-treemacs-virtual-head-position-params)))
+  (display-buffer-in-side-window
+   (memo-treemacs-render
+    "*MemoTree*" memo-treemacs-virtual-head-expand-depth)
+   memo-treemacs-virtual-head-position-params))
 
+(defun memo-treemacs-update ()
+  "Update treemacs buffer, create buffer and init if buffer not exist.
+Update node in buffer if buffer exist."
+  (let ((buffer (get-buffer memo-treemacs-buffer-name)))
+    (if buffer (memo-treemacs-refresh)
+      (memo-treemacs-initialize))))
 
 ;(treemacs-define-entry-node-type show-virtual-children-heads-entry
 ;  :key 'show-virtual-children-heads-entry
