@@ -165,7 +165,7 @@ Otherwise returns value itself."
 (treemacs-define-expandable-node-type memo-treemacs-generic-node
   :closed-icon "• "
   :open-icon   "- "
-  :label item
+  :label (memo-note-title (memo-get-review-note))
   :key item
   :ret-action #'memo-treemacs-perform-ret-action
   :children

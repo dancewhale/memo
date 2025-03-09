@@ -3,6 +3,7 @@ package card
 import (
 	"context"
 	"errors"
+	"memo/pkg/org/db"
 	"time"
 
 	"memo/pkg/logger"
@@ -49,13 +50,8 @@ func (api *CardApi) GetNextReviewNote() util.Result {
 		return util.Result{Data: nil, Err: errors.New("There is no card need review.")}
 	}
 
-	note := util.Headline{
-		ID:       head.ID,
-		Weight:   head.Weight,
-		Content:  head.Content,
-		FilePath: head.File.FilePath,
-		Source:   head.Source,
-	}
+	headDB, _ := db.NewOrgHeadlineDB()
+	note := util.GetHeadStruct(head, headDB)
 
 	return util.Result{note, nil}
 }
