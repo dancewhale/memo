@@ -51,6 +51,8 @@ and used for backend to indentify memo head.")
 (defun memo--parse-result (result)
 "To parse value return from 'API-CALL;
 catch error to  memo-api-return-err, value to memo-api-return-value"
+  (unless (eq (plist-get result 'error) nil)
+    (user-error (plist-get result 'error)))
   (unless (eq (plist-get result 'epc-error) nil)
     (user-error (plist-get result 'epc-error)))
   (unless (eq (plist-get result 'application-error) nil)

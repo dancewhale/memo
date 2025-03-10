@@ -80,7 +80,7 @@ func (h *HeadlineCacheMap) UpdateHeadlineToDB(force bool) error {
 		id, value := fileHeads.Key(), fileHeads.Value()
 		headFromFile := value.(storage.Headline)
 		if headFromDB, ok := h.HeadlinesDBCache.Get(id); ok {
-			if headFromDB.(*storage.Headline).Hash == headFromFile.Hash || force {
+			if headFromDB.(storage.Headline).Hash == headFromFile.Hash || force {
 				err = h.HeadlineDB.UpdateByIDFile(headFromFile)
 				h.HeadlinesDBCache.Remove(id)
 			} else {

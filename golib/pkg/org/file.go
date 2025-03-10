@@ -168,11 +168,6 @@ func (f *OrgFile) SaveDB(force bool) error {
 		return err
 	}
 
-	err = db.FileDBUpdate(f.file, force)
-	if err != nil {
-		return err
-	}
-
 	if needUpdate || force {
 		HeadCache, err := NewHeadlineCache(f.file.Headlines, f.file.ID, f.file.FilePath, f.file.Hash)
 		if err != nil {
@@ -183,6 +178,11 @@ func (f *OrgFile) SaveDB(force bool) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	err = db.FileDBUpdate(f.file, force)
+	if err != nil {
+		return err
 	}
 	return nil
 }
