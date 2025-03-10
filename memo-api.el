@@ -104,6 +104,12 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
     (memo--parse-result result)
     t))
 
+(defun memo-api--review-note (id rate)
+  "Review current review-note with rate."
+  (let ((result (memo-bridge-call-sync "ReviewNote" id rate)))
+    (memo--parse-result result)
+    t))
+
 (defun memo-api--update-property (id key value)
   "Update the content of head."
   (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" id key value)))

@@ -56,14 +56,14 @@ func (api *CardApi) GetNextReviewNote() util.Result {
 	return util.Result{note, nil}
 }
 
-func (api *CardApi) ReviewNote(orgID string, rating string) error {
+func (api *CardApi) ReviewNote(orgID string, rating string) util.Result {
 	if orgID == "" {
-		return logger.Errorf("orgID is empty When review note.")
+		return util.Result{nil, errors.New("orgID is empty When review note.")}
 	}
 	fsrsRate := storage.StringToRate(rating)
 	r := api.ReviewCard(orgID, fsrsRate)
 	logger.Debugf("Review note success, orgID: %s, rating: %s", r.ID, rating)
-	return nil
+	return util.Result{nil, nil}
 }
 
 // GetCard 获取一张卡片。

@@ -1,6 +1,7 @@
 golib/*.so
 golib/memo
 golib/server
+server
 
 *.db
 *.sqlite

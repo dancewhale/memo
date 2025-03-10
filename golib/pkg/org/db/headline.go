@@ -93,7 +93,7 @@ func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, e
 				return nil, logger.Errorf("Hash headline struct error: %v", err)
 			}
 			headline.Hash = string(hash)
-			headlinesDBCache.Put(headline.ID, headline)
+			headlinesDBCache.Put(headline.ID, *headline)
 		}
 	}
 	return headlinesDBCache, nil
