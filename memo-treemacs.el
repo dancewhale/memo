@@ -82,7 +82,8 @@ Otherwise returns value itself."
       (let ((inhibit-read-only t))
         (when-let ((buf (get-buffer memo-treemacs-buffer-name)))
 	  (with-current-buffer buf
-            (treemacs-update-async-node '("memo-treemacs-root" "VirtHeadTree") buf))))
+            (treemacs-update-async-node '("memo-treemacs-root" "VirtHeadTree") buf)
+	    (display-buffer-in-side-window buf memo-treemacs-virtual-head-position-params))))
     (error)))
 
 (defun memo-treemacs-generic-right-click (event)
