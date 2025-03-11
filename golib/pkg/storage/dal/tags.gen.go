@@ -27,7 +27,70 @@ func newTag(db *gorm.DB, opts ...gen.DOOption) tag {
 
 	tableName := _tag.tagDo.TableName()
 	_tag.ALL = field.NewAsterisk(tableName)
+	_tag.HeadlineID = field.NewString(tableName, "headline_id")
 	_tag.Name = field.NewString(tableName, "name")
+	_tag.Headline = tagBelongsToHeadline{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Headline", "storage.Headline"),
+		File: struct {
+			field.RelationField
+			Headlines struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headline.File", "storage.File"),
+			Headlines: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.File.Headlines", "storage.Headline"),
+			},
+		},
+		Properties: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headline.Properties", "storage.Property"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.Properties.Headline", "storage.Headline"),
+			},
+		},
+		Children: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headline.Children", "storage.Headline"),
+		},
+		LogBook: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headline.LogBook", "storage.Clock"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.LogBook.Headline", "storage.Headline"),
+			},
+		},
+		Tags: struct {
+			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
+		}{
+			RelationField: field.NewRelation("Headline.Tags", "storage.Tag"),
+			Headline: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Headline.Tags.Headline", "storage.Headline"),
+			},
+		},
+	}
 
 	_tag.fillFieldMap()
 
@@ -37,8 +100,10 @@ func newTag(db *gorm.DB, opts ...gen.DOOption) tag {
 type tag struct {
 	tagDo
 
-	ALL  field.Asterisk
-	Name field.String
+	ALL        field.Asterisk
+	HeadlineID field.String
+	Name       field.String
+	Headline   tagBelongsToHeadline
 
 	fieldMap map[string]field.Expr
 }
@@ -55,6 +120,7 @@ func (t tag) As(alias string) *tag {
 
 func (t *tag) updateTableName(table string) *tag {
 	t.ALL = field.NewAsterisk(table)
+	t.HeadlineID = field.NewString(table, "headline_id")
 	t.Name = field.NewString(table, "name")
 
 	t.fillFieldMap()
@@ -72,8 +138,10 @@ func (t *tag) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (t *tag) fillFieldMap() {
-	t.fieldMap = make(map[string]field.Expr, 1)
+	t.fieldMap = make(map[string]field.Expr, 3)
+	t.fieldMap["headline_id"] = t.HeadlineID
 	t.fieldMap["name"] = t.Name
+
 }
 
 func (t tag) clone(db *gorm.DB) tag {
@@ -84,6 +152,105 @@ func (t tag) clone(db *gorm.DB) tag {
 func (t tag) replaceDB(db *gorm.DB) tag {
 	t.tagDo.ReplaceDB(db)
 	return t
+}
+
+type tagBelongsToHeadline struct {
+	db *gorm.DB
+
+	field.RelationField
+
+	File struct {
+		field.RelationField
+		Headlines struct {
+			field.RelationField
+		}
+	}
+	Properties struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
+	}
+	Children struct {
+		field.RelationField
+	}
+	LogBook struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
+	}
+	Tags struct {
+		field.RelationField
+		Headline struct {
+			field.RelationField
+		}
+	}
+}
+
+func (a tagBelongsToHeadline) Where(conds ...field.Expr) *tagBelongsToHeadline {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a tagBelongsToHeadline) WithContext(ctx context.Context) *tagBelongsToHeadline {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a tagBelongsToHeadline) Session(session *gorm.Session) *tagBelongsToHeadline {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a tagBelongsToHeadline) Model(m *storage.Tag) *tagBelongsToHeadlineTx {
+	return &tagBelongsToHeadlineTx{a.db.Model(m).Association(a.Name())}
+}
+
+type tagBelongsToHeadlineTx struct{ tx *gorm.Association }
+
+func (a tagBelongsToHeadlineTx) Find() (result *storage.Headline, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a tagBelongsToHeadlineTx) Append(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a tagBelongsToHeadlineTx) Replace(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a tagBelongsToHeadlineTx) Delete(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a tagBelongsToHeadlineTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a tagBelongsToHeadlineTx) Count() int64 {
+	return a.tx.Count()
 }
 
 type tagDo struct{ gen.DO }

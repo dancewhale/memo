@@ -26,25 +26,111 @@ type OrgHeadlineDB struct {
 	db    *gorm.DB
 }
 
+func (h *OrgHeadlineDB) UpdatePropertyByID(id string, currentProperties []storage.Property) error {
+	p := h.query.Property
+	dbProperties, err := p.WithContext(context.Background()).Where(p.HeadlineID.Eq(id)).Find()
+	if err != nil {
+		return logger.Errorf("Get headline %s property error: %v", id, err)
+	}
+	dbHashMap := linkedhashmap.New()
+	for _, dbProperty := range dbProperties {
+		dbHashMap.Put(dbProperty.Key, dbProperty)
+	}
+	for _, currentProperty := range currentProperties {
+		if dbProperty, ok := dbHashMap.Get(currentProperty.Key); ok {
+			if dbProperty.(storage.Property).Value != currentProperty.Value {
+				err := h.db.Save(&currentProperty).Error
+				if err != nil {
+					return logger.Errorf("Update headline %s property %s error: %v", id, currentProperty.Key, err)
+				}
+			}
+			dbHashMap.Remove(currentProperty.Key)
+		} else {
+			err = p.WithContext(context.Background()).Create(&currentProperty)
+			if err != nil {
+				return logger.Errorf("Update headline %s property %s error: %v", id, currentProperty.Key, err)
+			}
+		}
+	}
+	it := dbHashMap.Iterator()
+	for it.Begin(); it.Next(); {
+		prop := it.Value().(*storage.Property)
+		_, err := p.WithContext(context.Background()).Delete(prop)
+		if err != nil {
+			return logger.Errorf("Delete headline %s property %s error: %v", id, prop.Key, err)
+		}
+	}
+	return nil
+}
+
+func (h *OrgHeadlineDB) UpdateTagByID(id string, tags []storage.Tag) error {
+	t := h.query.Tag
+	dbTags, err := t.WithContext(context.Background()).Where(t.HeadlineID.Eq(id)).Find()
+	if err != nil {
+		return logger.Errorf("Get headline %s tag error: %v", id, err)
+	}
+	dbHashMap := linkedhashmap.New()
+	for _, dbTag := range dbTags {
+		dbHashMap.Put(dbTag.Name, dbTag)
+	}
+	for _, tag := range tags {
+		if _, ok := dbHashMap.Get(tag.Name); ok {
+			dbHashMap.Remove(tag.Name)
+		} else {
+			err = t.WithContext(context.Background()).Create(&tag)
+			if err != nil {
+				return logger.Errorf("Update headline %s tag %s error: %v", id, tag.Name, err)
+			}
+		}
+	}
+	it := dbHashMap.Iterator()
+	for it.Begin(); it.Next(); {
+		tag := it.Value().(*storage.Tag)
+		_, err := t.WithContext(context.Background()).Delete(tag)
+		if err != nil {
+			return logger.Errorf("Delete headline %s tag %s error: %v", id, tag.Name, err)
+		}
+	}
+	return nil
+}
+
+func (h *OrgHeadlineDB) UpdateClockByID(id string, clocks []*storage.Clock) error {
+	c := h.query.Clock
+	_, err := c.WithContext(context.Background()).Where(c.HeadlineID.Eq(id)).Delete()
+	if err != nil {
+		return logger.Errorf("Delete headline %s clock error: %v", id, err)
+	}
+	if clocks != nil {
+		return c.WithContext(context.Background()).Create(clocks...)
+	}
+	return nil
+}
+
 // 修改保存依靠双键，ID和FileID都必须存在
 func (h *OrgHeadlineDB) UpdateHeadline(Data storage.Headline) error {
-	err := storage.Engine.Save(&Data).Error
+	err := h.UpdatePropertyByID(Data.ID, Data.Properties)
+	if err != nil {
+		return err
+	}
+	err = h.UpdateTagByID(Data.ID, Data.Tags)
+	if err != nil {
+		return err
+	}
+	err = h.UpdateClockByID(Data.ID, Data.LogBook)
+	if err != nil {
+		return err
+	}
+	err = storage.Engine.Save(&Data).Error
 	return err
 }
 
 // Create headline record.
-// need to deal with situation that headline unattach from file，then fileid of file is 为null
 func (h *OrgHeadlineDB) Create(Data storage.Headline) error {
 	headline := h.query.Headline
-	result, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(Data.ID)).UpdateSimple(headline.FileID.Value(*Data.FileID))
+
+	err := headline.WithContext(context.Background()).Create(&Data)
 	if err != nil {
-		return logger.Errorf("Update fileid of headline %v error: %v", Data, err)
-	}
-	if result.RowsAffected == 0 {
-		err := headline.WithContext(context.Background()).Create(&Data)
-		if err != nil {
-			return logger.Errorf("Insert headline %v error: %v", Data, err)
-		}
+		return logger.Errorf("Insert headline %v error: %v", Data, err)
 	}
 	return nil
 }
@@ -61,7 +147,9 @@ func (h *OrgHeadlineDB) Delete(Data storage.Headline) error {
 func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, error) {
 	headlinesDBCache := linkedhashmap.New()
 	headline := h.query.Headline
-	headlines, err := headline.WithContext(context.Background()).Where(headline.FileID.Eq(fileID)).Find()
+	headlines, err := headline.WithContext(context.Background()).
+		Preload(headline.Properties).Preload(headline.LogBook).Preload(headline.Tags).
+		Where(headline.FileID.Eq(fileID)).Find()
 	if err != nil {
 		return nil, logger.Errorf("Headlines load for file %s error: %v", fileID, err)
 	}
@@ -71,9 +159,10 @@ func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, e
 	return headlinesDBCache, nil
 }
 
-func (h *OrgHeadlineDB) UpdateHeadlineBody(id, body string) error {
+func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
 	headline := h.query.Headline
-	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).UpdateSimple(headline.Content.Value(body))
+	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
+		UpdateSimple(headline.Content.Value(body))
 	if err != nil {
 		return logger.Errorf("Update headline %s body content error: %v", id, err)
 	}
@@ -85,17 +174,20 @@ func (h *OrgHeadlineDB) UpdateProperty(id, key, value string) error {
 	if key == options.EmacsPropertyID {
 		return logger.Errorf("ID is not allowed to update.")
 	} else if key == options.EmacsPropertySource {
-		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).UpdateSimple(headline.Source.Value(value))
+		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
+			UpdateSimple(headline.Source.Value(value))
 		return err
 	} else if key == options.EmacsPropertySchedule {
-		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).UpdateSimple(headline.ScheduledType.Value(value))
+		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
+			UpdateSimple(headline.ScheduledType.Value(value))
 		return err
 	} else if key == options.EmacsPropertyWeight {
 		w, err := strconv.Atoi(value)
 		if err != nil {
 			return logger.Errorf("convert weight to int error: %v", err)
 		}
-		_, err = headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).UpdateSimple(headline.Weight.Value(int64(w)))
+		_, err = headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
+			UpdateSimple(headline.Weight.Value(int64(w)))
 		return err
 	} else {
 		property := storage.Property{HeadlineID: id, Key: key, Value: value}
@@ -124,7 +216,8 @@ func (h *OrgHeadlineDB) GetFileByHeadlineID(headlineID string) (*storage.File, e
 
 func UpdateHeadContentByID(headlineID, bodyContent string) error {
 	headline := dal.Use(storage.Engine).Headline
-	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).UpdateSimple(headline.Content.Value(bodyContent))
+	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).
+		UpdateSimple(headline.Content.Value(bodyContent))
 	if err != nil {
 		return logger.Errorf("Update headline %s body content error: %v", headlineID, err)
 	}
@@ -151,7 +244,8 @@ func (h *OrgHeadlineDB) CreateVirtualHead(parentID, title, content string) error
 	head := h.query.Headline
 	source := "[[id:" + parentID + "]]"
 
-	count, err := head.WithContext(context.Background()).Where(head.ID.Eq(parentID)).Where(head.Type.Eq(storage.VirtualHead)).Count()
+	count, err := head.WithContext(context.Background()).Where(head.ID.Eq(parentID)).
+		Where(head.Type.Eq(storage.VirtualHead)).Count()
 	if err != nil {
 		return logger.Errorf("Count virtual headline by parent id %s error: %v", parentID, err)
 	}
@@ -172,7 +266,8 @@ func (h *OrgHeadlineDB) CreateVirtualHead(parentID, title, content string) error
 
 func (h *OrgHeadlineDB) GetVirtualHeadByParentID(parentID string) ([]*storage.Headline, error) {
 	head := h.query.Headline
-	headlines, err := head.WithContext(context.Background()).Where(head.ParentID.Eq(parentID)).Where(head.Type.Eq(storage.VirtualHead)).Find()
+	headlines, err := head.WithContext(context.Background()).Where(head.ParentID.Eq(parentID)).
+		Where(head.Type.Eq(storage.VirtualHead)).Find()
 	if err != nil {
 		return nil, logger.Errorf("Get virtual child headline by parent id %s error: %v", parentID, err)
 	}

@@ -73,6 +73,9 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 			}
 			Tags struct {
 				field.RelationField
+				Headline struct {
+					field.RelationField
+				}
 			}
 		}{
 			RelationField: field.NewRelation("Properties.Headline", "storage.Headline"),
@@ -114,8 +117,16 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 			},
 			Tags: struct {
 				field.RelationField
+				Headline struct {
+					field.RelationField
+				}
 			}{
 				RelationField: field.NewRelation("Properties.Headline.Tags", "storage.Tag"),
+				Headline: struct {
+					field.RelationField
+				}{
+					RelationField: field.NewRelation("Properties.Headline.Tags.Headline", "storage.Headline"),
+				},
 			},
 		},
 	}
@@ -295,6 +306,9 @@ type headlineHasManyProperties struct {
 		}
 		Tags struct {
 			field.RelationField
+			Headline struct {
+				field.RelationField
+			}
 		}
 	}
 }

@@ -23,13 +23,15 @@ type OrgFileDB struct {
 }
 
 func preload(d *gorm.DB) *gorm.DB {
-	return d.Order("`order` ASC").Preload("Children", "type = 1", preload).Preload("Properties")
+	return d.Order("`order` ASC").Preload("Children", "type = 1", preload).
+		Preload("Properties").Preload("Tags").Preload("LogBook")
 }
 func (f *OrgFileDB) GetHeadTree(fileID string) ([]storage.Headline, error) {
 	var heads []storage.Headline
 	err := f.db.Model(&storage.Headline{}).Order("`order` ASC").
 		Where("file_id = ? AND level = ?", fileID, 1).
-		Preload("Properties").Preload("Children", "type = 1", preload).Find(&heads).Error
+		Preload("Properties").Preload("LogBook").Preload("Tags").
+		Preload("Children", "type = 1", preload).Find(&heads).Error
 	if err != nil {
 		return nil, logger.Errorf("Get headline of file %s error: %v", fileID, err)
 	}

@@ -59,7 +59,7 @@ type Headline struct {
 	FileID     *string    `gorm:"primaryKey"`
 	File       File       `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
 	LogBook    []*Clock   `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
-	Tags       []*Tag     `gorm:"many2many:headline_tags;" json:"tags"`
+	Tags       []Tag      `gorm:"many2many:headline_tags;" json:"tags"`
 }
 
 type Property struct {
@@ -88,8 +88,9 @@ type Location struct {
 }
 
 type Tag struct {
-	Name     string     `gorm:"primarykey;not null"`
-	headline []Headline `gorm:"many2many:headline_tags;foreignKey:Name" json:"headline"`
+	HeadlineID string   `gorm:"primarykey;not null"`
+	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
+	Name       string   `gorm:"primarykey;not null"`
 }
 
 func (c Clock) String() string {
