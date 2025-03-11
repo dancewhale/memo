@@ -2,10 +2,11 @@ package db
 
 import (
 	"context"
-	"gorm.io/gorm"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+
+	"gorm.io/gorm"
 )
 
 func NewOrgFileDB() (*OrgFileDB, error) {
@@ -45,6 +46,15 @@ func (f *OrgFileDB) GetFileByHash(hash string) (*storage.File, error) {
 		return nil, nil
 	}
 	return files[0], nil
+}
+
+func (f *OrgFileDB) UpdateFileHash(fileid, hash string) error {
+	file := f.query.File
+	_, err := file.WithContext(context.Background()).Where(file.ID.Eq(fileid)).UpdateSimple(file.Hash.Value(hash))
+	if err != nil {
+		return logger.Errorf("Update file hash error: %v", err)
+	}
+	return nil
 }
 
 func (f *OrgFileDB) GetFileByID(id string) (*storage.File, error) {

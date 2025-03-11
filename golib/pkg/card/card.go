@@ -7,16 +7,13 @@ import (
 	"time"
 
 	"memo/pkg/logger"
-	"memo/pkg/org/location"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"memo/pkg/util"
 
-	"github.com/jinzhu/copier"
 	epc "github.com/kiwanami/go-elrpc"
 	"github.com/maniartech/gotime"
 	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
-	"gorm.io/gen/field"
 	//	"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 )
@@ -61,69 +58,68 @@ func (api *CardApi) ReviewNote(orgID string, rating string) util.Result {
 		return util.Result{nil, errors.New("orgID is empty When review note.")}
 	}
 	fsrsRate := storage.StringToRate(rating)
-	r := api.ReviewCard(orgID, fsrsRate)
-	logger.Debugf("Review note success, orgID: %s, rating: %s", r.ID, rating)
-	return util.Result{nil, nil}
+	err := api.ReviewCard(orgID, fsrsRate)
+	logger.Debugf("Review note success, orgID: %s, rating: %s", orgID, rating)
+	if err != nil {
+		return util.Result{false, err}
+	} else {
+		return util.Result{true, nil}
+	}
 }
 
-// GetCard 获取一张卡片。
-func (api *CardApi) getCardByOrgID(orgid string) *storage.Headline {
-	n := api.Headline
-	Card, err := n.WithContext(context.Background()).Preload(n.Fsrs).Where(n.ID.Eq(orgid)).First()
+// 获取一张卡片的fsrs信息
+func (api *CardApi) getFsrsInfoByOrgID(orgid string) *storage.FsrsInfo {
+	f := api.FsrsInfo
+	FsrsInfo, err := f.WithContext(context.Background()).Where(f.HeadlineID.Eq(orgid)).First()
 	if err != nil {
-		logger.Errorf("Get Headline by orgid failed: %v", err)
+		logger.Errorf("Get FsrsInfo by orgid failed: %v", err)
 		return nil
 	}
-	return Card
+	return FsrsInfo
 }
 
-// UpdateCard 设置一张卡片。
-func (api *CardApi) UpdateCard(fCard *storage.Headline) *storage.Headline {
-	n := api.Headline
-	_, err := n.WithContext(context.Background()).Where(n.ID.Eq(fCard.ID)).Updates(fCard)
+// update fsrsinfo of headline.
+func (api *CardApi) updateFsrs(Fsrs *storage.FsrsInfo) error {
+	if Fsrs == nil {
+		return nil
+	}
+	f := api.FsrsInfo
+	_, err := f.WithContext(context.Background()).Where(f.HeadlineID.Eq(Fsrs.HeadlineID)).Updates(Fsrs)
 	if err != nil {
 		logger.Errorf("Update Headline in database failed: %v", err)
-		return nil
+		return err
 	}
-	return fCard
+	return nil
 }
 
-// UpdateCardOfCard 更新一张卡片中的学习记录。
-func (api *CardApi) UpdateCardOfCard(fCard *storage.Headline) *storage.Headline {
-	api.db.Unscoped().Model(fCard).Association("Fsrs").Unscoped().Replace(&fCard.Fsrs)
-	api.db.Session(&gorm.Session{FullSaveAssociations: true}).Save(fCard)
-	return fCard
-}
-
-// RemoveCard 移除一张卡片,包括所有学习记录。
-func (api *CardApi) RemoveCard(orgid string) error {
-	n := api.Headline
-	card, err := n.WithContext(context.Background()).Where(n.ID.Eq(orgid)).First()
+// 移除一张卡片,包括所有学习记录。
+func (api *CardApi) RemoveFsrs(orgid string) error {
+	f := api.FsrsInfo
+	r := api.ReviewLog
+	_, err := f.WithContext(context.Background()).Unscoped().Where(f.HeadlineID.Eq(orgid)).Delete()
 	if err != nil {
-		return logger.Errorf("Remove Headline in db failed: %v", err)
+		return logger.Errorf("Remove Fsrs in by %s failed: %v", orgid, err)
 	}
-	_, error := n.Select(field.AssociationFields).Delete(card)
-	return error
+	_, err = r.WithContext(context.Background()).Unscoped().Where(r.HeadlineID.Eq(orgid)).Delete()
+	if err != nil {
+		return logger.Errorf("Remove ReviewLog in by %s failed: %v", orgid, err)
+	}
+	return nil
 }
 
 // 增加复习记录
-func (api *CardApi) AddReviewLog(orgid string, rlog *gfsrs.ReviewLog) error {
-	n := api.Headline
-	card := &storage.Headline{}
-	log := &storage.ReviewLog{}
+func (api *CardApi) AddReviewLog(rlog *storage.ReviewLog) error {
+	r := api.ReviewLog
 
-	copier.Copy(log, rlog)
+	if rlog.HeadlineID == "" {
+		return logger.Errorf("Add review log failed: headlineID is empty.")
+	}
 
-	card, err := n.WithContext(context.Background()).
-		Preload(n.ReviewLogs).
-		Where(n.ID.Eq(orgid)).
-		First()
-
+	err := r.WithContext(context.Background()).Create(rlog)
 	if err != nil {
 		return logger.Errorf("Add review log in db failed: %v", err)
 	}
-
-	return n.ReviewLogs.Model(card).Append(log)
+	return err
 }
 
 // CountCards 获取卡包中的闪卡数量。
@@ -135,7 +131,6 @@ func (api *CardApi) CountCards() int {
 func (api *CardApi) DueCardsInDay(day int64) []*storage.Headline {
 	h := api.Headline
 	f := api.FsrsInfo
-	l := api.Location
 
 	china, _ := time.LoadLocation("Asia/Shanghai")
 	dueDay := time.Now().In(china).AddDate(0, 0, int(day))
@@ -143,7 +138,7 @@ func (api *CardApi) DueCardsInDay(day int64) []*storage.Headline {
 	dueDayEnd := gotime.EoD(dueDay)
 
 	heads, err := h.WithContext(context.Background()).
-		Preload(h.Locations.On(l.Type.Eq(string(location.SourceType)))).Preload(h.File).
+		Preload(h.File).
 		Join(f, h.ID.EqCol(f.HeadlineID)).
 		Order(h.Weight.Desc()).Order(f.Due.Asc()).Where(f.Due.Gte(dueDayStart)).
 		Where(f.Due.Lte(dueDayEnd)).Find()
@@ -159,7 +154,6 @@ func (api *CardApi) DueCardsInDay(day int64) []*storage.Headline {
 func (api *CardApi) DueCardsBeforeToday(stype string) []*storage.Headline {
 	h := api.Headline
 	f := api.FsrsInfo
-	l := api.Location
 
 	var err error
 	var heads []*storage.Headline
@@ -169,7 +163,7 @@ func (api *CardApi) DueCardsBeforeToday(stype string) []*storage.Headline {
 	todayStart := gotime.SoD(today)
 
 	headDo := h.WithContext(context.Background()).
-		Preload(h.Locations.On(l.Type.Eq(string(location.SourceType)))).Preload(h.File).
+		Preload(h.File).
 		Join(f, h.ID.EqCol(f.HeadlineID)).
 		Order(h.Weight.Desc()).Order(f.Due.Asc()).
 		Where(f.Due.Lte(todayStart))
@@ -193,7 +187,6 @@ func (api *CardApi) DueCardsBeforeToday(stype string) []*storage.Headline {
 func (api *CardApi) DueCardsInToday(stype string) []*storage.Headline {
 	h := api.Headline
 	f := api.FsrsInfo
-	l := api.Location
 
 	var err error
 	var heads []*storage.Headline
@@ -204,7 +197,6 @@ func (api *CardApi) DueCardsInToday(stype string) []*storage.Headline {
 	todayEnd := gotime.EoD(today)
 
 	headDo := h.WithContext(context.Background()).
-		Preload(h.Locations.On(l.Type.Eq(string(location.SourceType)))).Preload(h.Fsrs).
 		Join(f, h.ID.EqCol(f.HeadlineID)).
 		Order(h.Weight.Desc()).Order(f.Due.Asc()).
 		Where(f.Due.Lte(todayEnd)).Where(f.Due.Gt(todayStart))
@@ -243,12 +235,12 @@ func (api *CardApi) GetReviewCardByWeightDueTime() *storage.Headline {
 }
 
 // 给指定过期的闪卡打分进行review,返回复习后的闪卡
-func (api *CardApi) ReviewCard(orgID string, rating gfsrs.Rating) *storage.Headline {
+func (api *CardApi) ReviewCard(orgID string, rating gfsrs.Rating) error {
 
 	logger.Debugf("Start Review Headline with orgID: %s, rating: %d", orgID, rating)
 	now := time.Now()
-	fcard := api.getCardByOrgID(orgID)
-	if fcard == nil {
+	fsrs := api.getFsrsInfoByOrgID(orgID)
+	if fsrs == nil {
 		_ = logger.Errorf("not found card [orgid=%s] to review", orgID)
 		return nil
 	}
@@ -257,17 +249,20 @@ func (api *CardApi) ReviewCard(orgID string, rating gfsrs.Rating) *storage.Headl
 	needReview, error := api.ifCardIsDue(orgID)
 
 	if needReview && error == nil {
-		schedulingInfo := api.scheduler.Repeat(fcard.Fsrs.Card, now)
+		schedulingInfo := api.scheduler.Repeat(fsrs.Card, now)
 		updatedCard := schedulingInfo[rating].Card
 
 		rLog := schedulingInfo[rating].ReviewLog
 
-		reviewlog := storage.ReviewLog{}
-		reviewlog.ReviewLog = rLog
+		reviewlog := &storage.ReviewLog{HeadlineID: orgID, ReviewLog: rLog}
 
-		fcard.Fsrs.Card = updatedCard
-		fcard.ReviewLogs = append(fcard.ReviewLogs, reviewlog)
-		return api.UpdateCardOfCard(fcard)
+		fsrs.Card = updatedCard
+		err := api.AddReviewLog(reviewlog)
+		if err != nil {
+			return err
+		}
+
+		return api.updateFsrs(fsrs)
 	}
 	logger.Infof("Card %s no need to review.", orgID)
 	return nil

@@ -19,7 +19,8 @@ import (
 	"gorm.io/gorm"
 )
 
-var mute = sync.Mutex{}
+var muteDB = sync.Mutex{}
+var muteFile = sync.Mutex{}
 
 type OrgApi struct {
 	db *gorm.DB
@@ -138,9 +139,23 @@ func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
 	if err != nil {
 		return err
 	}
-	err = file.SaveToDiskFile(filePath)
+	err = file.SaveToDiskFile(file.path)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (o *OrgApi) ExportOrgFileToDiskByOrgID(orgid string, filePath string) error {
+	headline, err := o.GetHeadlineByOrgID(orgid)
+	if err != nil {
+		return err
+	}
+	if headline.FileID != nil {
+		err = o.ExportOrgFileToDisk(*headline.FileID, filePath)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -155,9 +170,13 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
 	err = headdb.UpdateHeadlineBody(orgid, bodyContent)
 	if err != nil {
 		return util.Result{Data: false, Err: err}
-	} else {
-		return util.Result{Data: true, Err: nil}
 	}
+	go func() {
+		muteFile.Lock()
+		defer muteFile.Unlock()
+		o.ExportOrgFileToDiskByOrgID(orgid, "")
+	}()
+	return util.Result{Data: true, Err: nil}
 }
 
 func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
@@ -166,7 +185,15 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
 		return util.Result{Data: false, Err: err}
 	}
 	err = headdb.UpdateProperty(orgid, key, value)
-	return util.Result{Data: true, Err: err}
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	go func() {
+		muteFile.Lock()
+		defer muteFile.Unlock()
+		o.ExportOrgFileToDiskByOrgID(orgid, "")
+	}()
+	return util.Result{Data: true, Err: nil}
 }
 
 func (o *OrgApi) CreateVirtHead(parentid, title, content string) util.Result {
@@ -175,7 +202,11 @@ func (o *OrgApi) CreateVirtHead(parentid, title, content string) util.Result {
 		return util.Result{Data: false, Err: err}
 	}
 	err = headdb.CreateVirtualHead(parentid, title, content)
-	return util.Result{Data: true, Err: err}
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	o.InitFsrs()
+	return util.Result{Data: true, Err: nil}
 }
 
 func (o *OrgApi) GetVirtHeadByParentID(parentid string) util.Result {
@@ -193,17 +224,14 @@ func (o *OrgApi) GetVirtHeadByParentID(parentid string) util.Result {
 
 func (o *OrgApi) InitFsrs() {
 	cardApi, err := card.NewCardApi()
-	if err != nil {
-		logger.Warnf("Failed to create CardApi instance: %v", err)
-	} else {
-		// 异步执行 scanHeadlineInitFsrs
-		go func() {
-			mute.Lock()
-			defer mute.Unlock()
+	logger.Warnf("Failed to create CardApi instance: %v", err)
+	// 异步执行 scanHeadlineInitFsrs
+	go func() {
+		muteDB.Lock()
+		defer muteDB.Unlock()
 
-			if _, err := cardApi.ScanHeadlineInitFsrs(); err != nil {
-				logger.Warnf("Async scanHeadlineInitFsrs failed: %v", err)
-			}
-		}()
-	}
+		if _, err := cardApi.ScanHeadlineInitFsrs(); err != nil {
+			logger.Warnf("Async scanHeadlineInitFsrs failed: %v", err)
+		}
+	}()
 }

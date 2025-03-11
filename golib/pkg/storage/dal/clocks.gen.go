@@ -48,11 +48,6 @@ func newClock(db *gorm.DB, opts ...gen.DOOption) clock {
 				RelationField: field.NewRelation("Headline.File.Headlines", "storage.Headline"),
 			},
 		},
-		Fsrs: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Headline.Fsrs", "storage.FsrsInfo"),
-		},
 		Properties: struct {
 			field.RelationField
 			Headline struct {
@@ -71,11 +66,6 @@ func newClock(db *gorm.DB, opts ...gen.DOOption) clock {
 		}{
 			RelationField: field.NewRelation("Headline.Children", "storage.Headline"),
 		},
-		ReviewLogs: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Headline.ReviewLogs", "storage.ReviewLog"),
-		},
 		LogBook: struct {
 			field.RelationField
 			Headline struct {
@@ -87,19 +77,6 @@ func newClock(db *gorm.DB, opts ...gen.DOOption) clock {
 				field.RelationField
 			}{
 				RelationField: field.NewRelation("Headline.LogBook.Headline", "storage.Headline"),
-			},
-		},
-		Locations: struct {
-			field.RelationField
-			Headline struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Headline.Locations", "storage.Location"),
-			Headline: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Headline.Locations.Headline", "storage.Headline"),
 			},
 		},
 		Tags: struct {
@@ -188,9 +165,6 @@ type clockBelongsToHeadline struct {
 			field.RelationField
 		}
 	}
-	Fsrs struct {
-		field.RelationField
-	}
 	Properties struct {
 		field.RelationField
 		Headline struct {
@@ -200,16 +174,7 @@ type clockBelongsToHeadline struct {
 	Children struct {
 		field.RelationField
 	}
-	ReviewLogs struct {
-		field.RelationField
-	}
 	LogBook struct {
-		field.RelationField
-		Headline struct {
-			field.RelationField
-		}
-	}
-	Locations struct {
 		field.RelationField
 		Headline struct {
 			field.RelationField

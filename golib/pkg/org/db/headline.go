@@ -2,12 +2,11 @@ package db
 
 import (
 	"context"
-	"github.com/creker/hashstructure"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
+	"gorm.io/gen/field"
 	"gorm.io/gorm"
 	"memo/cmd/options"
 	"memo/pkg/logger"
-	"memo/pkg/org/location"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
@@ -28,27 +27,9 @@ type OrgHeadlineDB struct {
 }
 
 // 修改保存依靠双键，ID和FileID都必须存在
-func (h *OrgHeadlineDB) UpdateByIDFile(Data storage.Headline) error {
-	head := h.query.Headline
-	loc := h.query.Location
-	clock := h.query.Clock
-
-	_, err := clock.WithContext(context.Background()).Unscoped().Where(clock.HeadlineID.Eq(Data.ID)).Delete()
-	if err != nil {
-		return logger.Errorf("Delete logbook of head %s error: %v", Data.ID, err)
-	}
-
-	// delete location of headline which type is source, and then append new location
-	locs, _ := head.Locations.Where(loc.Type.Eq(string(location.SourceType))).Model(&Data).Find()
-	head.Locations.Model(&Data).Delete(locs...)
-	// Warn: only unattach source location, other type location may duplicate append.
-	if len(Data.Locations) != 0 {
-		head.Locations.Model(&Data).Append(Data.Locations...)
-	}
-
-	storage.Engine.Session(&gorm.Session{FullSaveAssociations: true}).Updates(Data)
-
-	return nil
+func (h *OrgHeadlineDB) UpdateHeadline(Data storage.Headline) error {
+	err := storage.Engine.Save(&Data).Error
+	return err
 }
 
 // Create headline record.
@@ -68,11 +49,10 @@ func (h *OrgHeadlineDB) Create(Data storage.Headline) error {
 	return nil
 }
 
-func (h *OrgHeadlineDB) UnattachFromFile(Data storage.Headline) error {
-	headline := h.query.Headline
-	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(Data.ID)).UpdateSimple(headline.FileID.Null(), headline.ParentID.Null())
+func (h *OrgHeadlineDB) Delete(Data storage.Headline) error {
+	err := h.db.Select(field.AssociationFields).Delete(&Data).Error
 	if err != nil {
-		return logger.Errorf("Delete logbook of head %s error: %v", Data.ID, err)
+		return logger.Errorf("Delete head %s error: %v", Data.ID, err)
 	}
 	return nil
 }
@@ -85,16 +65,8 @@ func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, e
 	if err != nil {
 		return nil, logger.Errorf("Headlines load for file %s error: %v", fileID, err)
 	}
-	if len(headlines) != 0 {
-		for _, headline := range headlines {
-			options := hashstructure.HashOptions{IgnoreZeroValue: true, ZeroNil: true}
-			hash, err := hashstructure.Hash(*headline, hashstructure.FormatV2, &options)
-			if err != nil {
-				return nil, logger.Errorf("Hash headline struct error: %v", err)
-			}
-			headline.Hash = string(hash)
-			headlinesDBCache.Put(headline.ID, *headline)
-		}
+	for _, headline := range headlines {
+		headlinesDBCache.Put(headline.ID, *headline)
 	}
 	return headlinesDBCache, nil
 }

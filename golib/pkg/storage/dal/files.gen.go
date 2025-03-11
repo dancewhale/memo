@@ -51,11 +51,6 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 				RelationField: field.NewRelation("Headlines.File.Headlines", "storage.Headline"),
 			},
 		},
-		Fsrs: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Headlines.Fsrs", "storage.FsrsInfo"),
-		},
 		Properties: struct {
 			field.RelationField
 			Headline struct {
@@ -74,11 +69,6 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 		}{
 			RelationField: field.NewRelation("Headlines.Children", "storage.Headline"),
 		},
-		ReviewLogs: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Headlines.ReviewLogs", "storage.ReviewLog"),
-		},
 		LogBook: struct {
 			field.RelationField
 			Headline struct {
@@ -90,19 +80,6 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 				field.RelationField
 			}{
 				RelationField: field.NewRelation("Headlines.LogBook.Headline", "storage.Headline"),
-			},
-		},
-		Locations: struct {
-			field.RelationField
-			Headline struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Headlines.Locations", "storage.Location"),
-			Headline: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Headlines.Locations.Headline", "storage.Headline"),
 			},
 		},
 		Tags: struct {
@@ -200,9 +177,6 @@ type fileHasManyHeadlines struct {
 			field.RelationField
 		}
 	}
-	Fsrs struct {
-		field.RelationField
-	}
 	Properties struct {
 		field.RelationField
 		Headline struct {
@@ -212,16 +186,7 @@ type fileHasManyHeadlines struct {
 	Children struct {
 		field.RelationField
 	}
-	ReviewLogs struct {
-		field.RelationField
-	}
 	LogBook struct {
-		field.RelationField
-		Headline struct {
-			field.RelationField
-		}
-	}
-	Locations struct {
 		field.RelationField
 		Headline struct {
 			field.RelationField

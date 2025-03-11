@@ -3,11 +3,12 @@ package org
 import (
 	"errors"
 	"fmt"
-	"github.com/creker/hashstructure"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
+	"github.com/gohugoio/hashstructure"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/storage"
+	"strconv"
 )
 
 // 用于加载从硬盘文件读取的 headline 数据，用于和数据库 headline 数据进行比较。
@@ -61,11 +62,11 @@ func (h *HeadlineCacheMap) loadHead(headlines []storage.Headline) error {
 			h.DuplicateID = append(h.DuplicateID, head.ID)
 		} else {
 			// compute headline struct hash.
-			hash, err := hashstructure.Hash(head, hashstructure.FormatV2, &options)
+			hash, err := hashstructure.Hash(head, &options)
 			if err != nil {
 				return logger.Errorf("Hash headline error: %v", err)
 			}
-			head.Hash = string(hash)
+			head.Hash = strconv.FormatUint(hash, 10)
 			h.HeadlinesFileCache.Put(head.ID, head)
 		}
 	}
@@ -77,14 +78,14 @@ func (h *HeadlineCacheMap) UpdateHeadlineToDB(force bool) error {
 	fileHeads := h.HeadlinesFileCache.Iterator()
 	var err error
 	for fileHeads.Begin(); fileHeads.Next(); {
-		id, value := fileHeads.Key(), fileHeads.Value()
+		fileheadID, value := fileHeads.Key(), fileHeads.Value()
 		headFromFile := value.(storage.Headline)
-		if headFromDB, ok := h.HeadlinesDBCache.Get(id); ok {
-			if headFromDB.(storage.Headline).Hash == headFromFile.Hash || force {
-				err = h.HeadlineDB.UpdateByIDFile(headFromFile)
-				h.HeadlinesDBCache.Remove(id)
+		if headFromDB, ok := h.HeadlinesDBCache.Get(fileheadID); ok {
+			if headFromDB.(storage.Headline).Hash != headFromFile.Hash || force {
+				err = h.HeadlineDB.UpdateHeadline(headFromFile)
+				h.HeadlinesDBCache.Remove(fileheadID)
 			} else {
-				h.HeadlinesDBCache.Remove(id)
+				h.HeadlinesDBCache.Remove(fileheadID)
 				continue
 			}
 		} else {
@@ -100,7 +101,7 @@ func (h *HeadlineCacheMap) UpdateHeadlineToDB(force bool) error {
 	for itDB.Begin(); itDB.Next(); {
 		_, head := itDB.Key(), itDB.Value()
 		headDB := head.(storage.Headline)
-		err = h.HeadlineDB.UnattachFromFile(headDB)
+		err = h.HeadlineDB.Delete(headDB)
 		if err != nil {
 			return err
 		}

@@ -4,16 +4,16 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"memo/pkg/storage"
 	"os"
 	"path/filepath"
 
-	"github.com/emirpasic/gods/lists/arraylist"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
+
+	"github.com/emirpasic/gods/lists/arraylist"
 )
 
 // NewFileFromPath creates a new OrgFile from a file path.
@@ -139,26 +139,34 @@ func (f *OrgFile) LoadFromFile(force bool) error {
 }
 
 func (f *OrgFile) SaveToDiskFile(path string) error {
+	if path == "" {
+		path = f.file.FilePath
+	}
 	// Open the file with write-only, create if not exists, and truncate it if it exists
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("Failed to open file when save file: %w", err)
+		return logger.Errorf("Failed to open file when save file: %w", err)
 	}
 	defer file.Close()
 
 	content := f.String()
-	if err != nil {
-		return fmt.Errorf("Failed to get file content: %w", err)
-	}
-	// Write the content to the file
-	_, err = file.WriteString(content)
-	if err != nil {
-		return fmt.Errorf("failed to write to file: %w", err)
-	}
 	hash := md5.New()
 	hash.Write([]byte(content))
-	f.file.Hash = hex.EncodeToString(hash.Sum(nil))
-	f.file.FilePath = path
+	HashString := hex.EncodeToString(hash.Sum(nil))
+
+	if f.hash != HashString {
+		// Write the content to the file
+		_, err = file.WriteString(content)
+		if err != nil {
+			return logger.Errorf("failed to write to file: %w", err)
+		}
+	}
+	if f.file.FilePath == path {
+		err = f.db.UpdateFileHash(f.file.ID, HashString)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

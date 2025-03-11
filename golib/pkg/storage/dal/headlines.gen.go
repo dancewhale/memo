@@ -47,12 +47,6 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.Closed = field.NewTime(tableName, "closed")
 	_headline.Priority = field.NewString(tableName, "priority")
 	_headline.FileID = field.NewString(tableName, "file_id")
-	_headline.Fsrs = headlineHasOneFsrs{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("Fsrs", "storage.FsrsInfo"),
-	}
-
 	_headline.Properties = headlineHasManyProperties{
 		db: db.Session(&gorm.Session{}),
 
@@ -65,25 +59,13 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 					field.RelationField
 				}
 			}
-			Fsrs struct {
-				field.RelationField
-			}
 			Properties struct {
 				field.RelationField
 			}
 			Children struct {
 				field.RelationField
 			}
-			ReviewLogs struct {
-				field.RelationField
-			}
 			LogBook struct {
-				field.RelationField
-				Headline struct {
-					field.RelationField
-				}
-			}
-			Locations struct {
 				field.RelationField
 				Headline struct {
 					field.RelationField
@@ -107,11 +89,6 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 					RelationField: field.NewRelation("Properties.Headline.File.Headlines", "storage.Headline"),
 				},
 			},
-			Fsrs: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Properties.Headline.Fsrs", "storage.FsrsInfo"),
-			},
 			Properties: struct {
 				field.RelationField
 			}{
@@ -121,11 +98,6 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 				field.RelationField
 			}{
 				RelationField: field.NewRelation("Properties.Headline.Children", "storage.Headline"),
-			},
-			ReviewLogs: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Properties.Headline.ReviewLogs", "storage.ReviewLog"),
 			},
 			LogBook: struct {
 				field.RelationField
@@ -138,19 +110,6 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 					field.RelationField
 				}{
 					RelationField: field.NewRelation("Properties.Headline.LogBook.Headline", "storage.Headline"),
-				},
-			},
-			Locations: struct {
-				field.RelationField
-				Headline struct {
-					field.RelationField
-				}
-			}{
-				RelationField: field.NewRelation("Properties.Headline.Locations", "storage.Location"),
-				Headline: struct {
-					field.RelationField
-				}{
-					RelationField: field.NewRelation("Properties.Headline.Locations.Headline", "storage.Headline"),
 				},
 			},
 			Tags: struct {
@@ -167,12 +126,6 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		RelationField: field.NewRelation("Children", "storage.Headline"),
 	}
 
-	_headline.ReviewLogs = headlineHasManyReviewLogs{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("ReviewLogs", "storage.ReviewLog"),
-	}
-
 	_headline.LogBook = headlineHasManyLogBook{
 		db: db.Session(&gorm.Session{}),
 
@@ -183,12 +136,6 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("File", "storage.File"),
-	}
-
-	_headline.Locations = headlineManyToManyLocations{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("Locations", "storage.Location"),
 	}
 
 	_headline.Tags = headlineManyToManyTags{
@@ -226,19 +173,13 @@ type headline struct {
 	Closed        field.Time
 	Priority      field.String
 	FileID        field.String
-	Fsrs          headlineHasOneFsrs
-
-	Properties headlineHasManyProperties
+	Properties    headlineHasManyProperties
 
 	Children headlineHasManyChildren
-
-	ReviewLogs headlineHasManyReviewLogs
 
 	LogBook headlineHasManyLogBook
 
 	File headlineBelongsToFile
-
-	Locations headlineManyToManyLocations
 
 	Tags headlineManyToManyTags
 
@@ -293,7 +234,7 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 28)
+	h.fieldMap = make(map[string]field.Expr, 25)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
@@ -327,77 +268,6 @@ func (h headline) replaceDB(db *gorm.DB) headline {
 	return h
 }
 
-type headlineHasOneFsrs struct {
-	db *gorm.DB
-
-	field.RelationField
-}
-
-func (a headlineHasOneFsrs) Where(conds ...field.Expr) *headlineHasOneFsrs {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a headlineHasOneFsrs) WithContext(ctx context.Context) *headlineHasOneFsrs {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a headlineHasOneFsrs) Session(session *gorm.Session) *headlineHasOneFsrs {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a headlineHasOneFsrs) Model(m *storage.Headline) *headlineHasOneFsrsTx {
-	return &headlineHasOneFsrsTx{a.db.Model(m).Association(a.Name())}
-}
-
-type headlineHasOneFsrsTx struct{ tx *gorm.Association }
-
-func (a headlineHasOneFsrsTx) Find() (result *storage.FsrsInfo, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a headlineHasOneFsrsTx) Append(values ...*storage.FsrsInfo) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a headlineHasOneFsrsTx) Replace(values ...*storage.FsrsInfo) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a headlineHasOneFsrsTx) Delete(values ...*storage.FsrsInfo) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a headlineHasOneFsrsTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a headlineHasOneFsrsTx) Count() int64 {
-	return a.tx.Count()
-}
-
 type headlineHasManyProperties struct {
 	db *gorm.DB
 
@@ -411,25 +281,13 @@ type headlineHasManyProperties struct {
 				field.RelationField
 			}
 		}
-		Fsrs struct {
-			field.RelationField
-		}
 		Properties struct {
 			field.RelationField
 		}
 		Children struct {
 			field.RelationField
 		}
-		ReviewLogs struct {
-			field.RelationField
-		}
 		LogBook struct {
-			field.RelationField
-			Headline struct {
-				field.RelationField
-			}
-		}
-		Locations struct {
 			field.RelationField
 			Headline struct {
 				field.RelationField
@@ -577,77 +435,6 @@ func (a headlineHasManyChildrenTx) Count() int64 {
 	return a.tx.Count()
 }
 
-type headlineHasManyReviewLogs struct {
-	db *gorm.DB
-
-	field.RelationField
-}
-
-func (a headlineHasManyReviewLogs) Where(conds ...field.Expr) *headlineHasManyReviewLogs {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a headlineHasManyReviewLogs) WithContext(ctx context.Context) *headlineHasManyReviewLogs {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a headlineHasManyReviewLogs) Session(session *gorm.Session) *headlineHasManyReviewLogs {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a headlineHasManyReviewLogs) Model(m *storage.Headline) *headlineHasManyReviewLogsTx {
-	return &headlineHasManyReviewLogsTx{a.db.Model(m).Association(a.Name())}
-}
-
-type headlineHasManyReviewLogsTx struct{ tx *gorm.Association }
-
-func (a headlineHasManyReviewLogsTx) Find() (result []*storage.ReviewLog, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a headlineHasManyReviewLogsTx) Append(values ...*storage.ReviewLog) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a headlineHasManyReviewLogsTx) Replace(values ...*storage.ReviewLog) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a headlineHasManyReviewLogsTx) Delete(values ...*storage.ReviewLog) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a headlineHasManyReviewLogsTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a headlineHasManyReviewLogsTx) Count() int64 {
-	return a.tx.Count()
-}
-
 type headlineHasManyLogBook struct {
 	db *gorm.DB
 
@@ -787,77 +574,6 @@ func (a headlineBelongsToFileTx) Clear() error {
 }
 
 func (a headlineBelongsToFileTx) Count() int64 {
-	return a.tx.Count()
-}
-
-type headlineManyToManyLocations struct {
-	db *gorm.DB
-
-	field.RelationField
-}
-
-func (a headlineManyToManyLocations) Where(conds ...field.Expr) *headlineManyToManyLocations {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a headlineManyToManyLocations) WithContext(ctx context.Context) *headlineManyToManyLocations {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a headlineManyToManyLocations) Session(session *gorm.Session) *headlineManyToManyLocations {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a headlineManyToManyLocations) Model(m *storage.Headline) *headlineManyToManyLocationsTx {
-	return &headlineManyToManyLocationsTx{a.db.Model(m).Association(a.Name())}
-}
-
-type headlineManyToManyLocationsTx struct{ tx *gorm.Association }
-
-func (a headlineManyToManyLocationsTx) Find() (result []*storage.Location, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a headlineManyToManyLocationsTx) Append(values ...*storage.Location) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a headlineManyToManyLocationsTx) Replace(values ...*storage.Location) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a headlineManyToManyLocationsTx) Delete(values ...*storage.Location) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a headlineManyToManyLocationsTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a headlineManyToManyLocationsTx) Count() int64 {
 	return a.tx.Count()
 }
 
