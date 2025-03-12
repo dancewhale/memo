@@ -63,13 +63,13 @@ func getWeightFromPropertyDrawer(pd *PropertyDrawer) int64 {
 	}
 }
 
-func getTags(tags []string) []storage.Tag {
+func getTags(tags []string, orgid string) []storage.Tag {
 	if tags == nil {
 		return nil
 	} else {
 		Tags := []storage.Tag{}
 		for _, tag := range tags {
-			Tags = append(Tags, storage.Tag{Name: tag})
+			Tags = append(Tags, storage.Tag{HeadlineID: orgid, Name: tag})
 		}
 		return Tags
 	}

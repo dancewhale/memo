@@ -4,11 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
-	"github.com/gohugoio/hashstructure"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
 	"memo/pkg/storage"
-	"strconv"
+	"memo/pkg/util"
 )
 
 // 用于加载从硬盘文件读取的 headline 数据，用于和数据库 headline 数据进行比较。
@@ -52,7 +51,6 @@ type HeadlineCacheMap struct {
 
 // Scan for head without id or with duplicate id and prepare cache for compare.
 func (h *HeadlineCacheMap) loadHead(headlines []storage.Headline) error {
-	options := hashstructure.HashOptions{IgnoreZeroValue: true, ZeroNil: true}
 	for _, head := range headlines {
 		err := h.loadHead(head.Children)
 		if err != nil {
@@ -62,11 +60,11 @@ func (h *HeadlineCacheMap) loadHead(headlines []storage.Headline) error {
 			h.DuplicateID = append(h.DuplicateID, head.ID)
 		} else {
 			// compute headline struct hash.
-			hash, err := hashstructure.Hash(head, &options)
+			hash := util.HashContent(head.String())
 			if err != nil {
 				return logger.Errorf("Hash headline error: %v", err)
 			}
-			head.Hash = strconv.FormatUint(hash, 10)
+			head.Hash = hash
 			h.HeadlinesFileCache.Put(head.ID, head)
 		}
 	}
@@ -74,6 +72,7 @@ func (h *HeadlineCacheMap) loadHead(headlines []storage.Headline) error {
 }
 
 // 通过对比两个缓存，进行对比更新数据库中的headline
+// TODO: property  tag  和clock 在hash 时不会做计算和判断，导致不会自动更新。
 func (h *HeadlineCacheMap) UpdateHeadlineToDB(force bool) error {
 	fileHeads := h.HeadlinesFileCache.Iterator()
 	var err error

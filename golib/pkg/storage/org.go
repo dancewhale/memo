@@ -2,6 +2,8 @@ package storage
 
 import (
 	"fmt"
+	"memo/cmd/options"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -59,7 +61,7 @@ type Headline struct {
 	FileID     *string    `gorm:"primaryKey"`
 	File       File       `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
 	LogBook    []*Clock   `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
-	Tags       []Tag      `gorm:"many2many:headline_tags;" json:"tags"`
+	Tags       []Tag      `gorm:"foreignKey:HeadlineID;references:ID" json:"tags"`
 }
 
 type Property struct {
@@ -77,21 +79,23 @@ type Clock struct {
 	End        *time.Time
 }
 
+type Tag struct {
+	HeadlineID string   `gorm:"primarykey;not null"`
+	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
+	Name       string   `gorm:"primarykey;not null"`
+}
+
 // Wait for complement.
 type Location struct {
-	ID       uint       `gorm:"primarykey"`
-	Headline []Headline `gorm:"many2many:headline_locations;" json:"headline"`
+	ID       uint `gorm:"primarykey"`
 	Protocol string
 	Link     string
 	ExLink   string
 	Type     string
 }
 
-type Tag struct {
-	HeadlineID string   `gorm:"primarykey;not null"`
-	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
-	Name       string   `gorm:"primarykey;not null"`
-}
+//--------------------------------------------------
+// output for sql struct.
 
 func (c Clock) String() string {
 	start := "nil"
@@ -103,4 +107,104 @@ func (c Clock) String() string {
 		end = c.End.Format("2006-01-02 15:04:05")
 	}
 	return fmt.Sprintf("Clock{Start: %s, End: %s}", start, end)
+}
+
+type Content struct {
+	strings.Builder
+}
+
+func (f *File) String() string {
+	file := &Content{}
+	file.WriteString(f.MetaContent)
+
+	for _, h := range f.Headlines {
+		h.Write(file)
+	}
+	return file.String()
+}
+
+func (h *Headline) taskTimeString() string {
+	var content string
+	if h.Closed != nil {
+		closedTime := "CLOSED: [" + h.Closed.Format("2006-01-02 Mon 15:04") + "]"
+		content += closedTime
+	}
+	if h.Deadline != nil {
+		if content != "" {
+			content += " "
+		}
+		deadTime := "DEADLINE: [" + h.Deadline.Format("2006-01-02 Mon") + "]"
+		content += deadTime
+	}
+	if h.Scheduled != nil {
+		if content != "" {
+			content += " "
+		}
+		schTime := "SCHEDULED: [" + h.Scheduled.Format("2006-01-02 Mon") + "]"
+		content += schTime
+	}
+	if content != "" {
+		content += "\n"
+	}
+	return content
+}
+
+func (h *Headline) propertiesString() string {
+	var content string
+	content = ":PROPERTIES:\n"
+	content += fmt.Sprintf("%-10s %s", ":"+options.EmacsPropertyID+":", h.ID) + "\n"
+	content += fmt.Sprintf("%-10s %s", ":"+options.EmacsPropertySource+":", h.ID) + "\n"
+	content += fmt.Sprintf("%-10s %d", ":"+options.EmacsPropertyWeight+":", h.Weight) + "\n"
+	content += fmt.Sprintf("%-10s %s", ":"+options.EmacsPropertySchedule+":", h.ScheduledType) + "\n"
+	if h.Properties != nil {
+		for _, kv := range h.Properties {
+			key := ":" + kv.Key + ":"
+			value := kv.Value
+			formatString := fmt.Sprintf("%-10s %s", key, value)
+			content += formatString + "\n"
+		}
+	}
+	content += ":END:\n"
+	return content
+}
+
+func (h *Headline) logbookString() string {
+	var content string
+	if h.LogBook == nil {
+		return content
+	}
+	content = ":LOGBOOK:\n"
+	for _, c := range h.LogBook {
+		end := "nil"
+		if c.Start != nil {
+			content += "CLOCK: [" + c.Start.Format("2006-01-02 15:04:05") + "]"
+		}
+		if c.End != nil {
+			end = c.End.Format("2006-01-02 15:04:05")
+			duration := c.End.Sub(*c.Start)
+			hours := int(duration.Hours())
+			minutes := int(duration.Minutes()) % 60
+			content += fmt.Sprintf(" -- [%s] =>  %d:%d", end, hours, minutes)
+		}
+		content += "\n"
+	}
+	content += ":END:\n"
+	return content
+}
+
+func (h *Headline) String() string {
+	content := strings.Repeat("*", h.Level) + " " + h.Title + "\n"
+	content += h.taskTimeString()
+	content += h.propertiesString()
+	content += h.logbookString()
+	content += h.Content
+	return content
+}
+
+func (h *Headline) Write(content *Content) {
+	content.WriteString(h.String())
+
+	for _, c := range h.Children {
+		c.Write(content)
+	}
 }

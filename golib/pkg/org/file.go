@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
-	"io"
 	"memo/pkg/storage"
+	"memo/pkg/util"
 	"os"
 	"path/filepath"
 
@@ -28,31 +28,11 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 		logger.Infof("The file %s is not a org fileHandler, skip this file.", filePath)
 		return nil, nil
 	}
-	info, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		return nil, logger.Errorf("The file %s does not exist.", filePath)
-	}
-	if err != nil {
-		return nil, logger.Errorf("The file %s stat failed: %v", filePath, err)
-	}
 
-	// Check if it is a regular file
-	if !info.Mode().IsRegular() {
-		return nil, logger.Errorf("The fileHandler %s is not a regular file.", filePath)
-	}
-	// Try to open the file for reading
-	fileHandler, err := os.Open(filePath)
+	hashSting, err := util.HashFile(filePath)
 	if err != nil {
-		return nil, logger.Errorf("Open file %s failed: %v", filePath, err)
+		return nil, err
 	}
-	defer fileHandler.Close()
-
-	hash := md5.New()
-	_, err = io.Copy(hash, fileHandler)
-	if err != nil {
-		return nil, logger.Errorf("Copy file content to buffer failed: %v", err.Error())
-	}
-	hashSting := hex.EncodeToString(hash.Sum(nil))
 	return &OrgFile{
 		db:   orgfiledb,
 		hash: hashSting,
@@ -92,7 +72,7 @@ type OrgFile struct {
 }
 
 func (f *OrgFile) String() string {
-	return parser.FileToString(*f.file)
+	return f.file.String()
 }
 
 func (f *OrgFile) parseDocument() error {

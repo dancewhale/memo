@@ -70,15 +70,16 @@ func (s *OrgParserSql) parseHeadline(h Headline) {
 		Content: h.BodyContent, Priority: h.Priority,
 		FileID:    &s.file.ID,
 		Type:      storage.NormalHead,
-		Tags:      getTags(h.Tags),
 		Scheduled: h.TaskTime.GetScheduled(),
 		Deadline:  h.TaskTime.GetDeadline(),
 		Closed:    h.TaskTime.GetClosed(),
-		LogBook:   GetLogBookFromDrawer(h.LogBook),
 		Children:  []storage.Headline{},
 	}
 
 	parseHeadlineProperty(&head, h.Properties)
+
+	head.Tags = getTags(h.Tags, head.ID)
+	head.LogBook = GetLogBookFromDrawer(h.LogBook, head.ID)
 
 	// 深度优先遍历
 	for {
@@ -111,7 +112,7 @@ func (s *OrgParserSql) parseHeadline(h Headline) {
 }
 
 // change org.Logbook class to storage.Clock.
-func GetLogBookFromDrawer(logBook *LogBookDrawer) []*storage.Clock {
+func GetLogBookFromDrawer(logBook *LogBookDrawer, orgid string) []*storage.Clock {
 	if logBook == nil {
 		return nil
 	} else if len(logBook.Clocks) == 0 {
@@ -120,8 +121,9 @@ func GetLogBookFromDrawer(logBook *LogBookDrawer) []*storage.Clock {
 	logs := make([]*storage.Clock, 0)
 	for _, c := range logBook.Clocks {
 		log := &storage.Clock{
-			Start: c.GetStart(),
-			End:   c.GetEnd(),
+			HeadlineID: orgid,
+			Start:      c.GetStart(),
+			End:        c.GetEnd(),
 		}
 		logs = append(logs, log)
 	}

@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
-	"gorm.io/gen/field"
 	"gorm.io/gorm"
 	"memo/cmd/options"
 	"memo/pkg/logger"
@@ -34,7 +33,7 @@ func (h *OrgHeadlineDB) UpdatePropertyByID(id string, currentProperties []storag
 	}
 	dbHashMap := linkedhashmap.New()
 	for _, dbProperty := range dbProperties {
-		dbHashMap.Put(dbProperty.Key, dbProperty)
+		dbHashMap.Put(dbProperty.Key, *dbProperty)
 	}
 	for _, currentProperty := range currentProperties {
 		if dbProperty, ok := dbHashMap.Get(currentProperty.Key); ok {
@@ -71,7 +70,7 @@ func (h *OrgHeadlineDB) UpdateTagByID(id string, tags []storage.Tag) error {
 	}
 	dbHashMap := linkedhashmap.New()
 	for _, dbTag := range dbTags {
-		dbHashMap.Put(dbTag.Name, dbTag)
+		dbHashMap.Put(dbTag.Name, *dbTag)
 	}
 	for _, tag := range tags {
 		if _, ok := dbHashMap.Get(tag.Name); ok {
@@ -85,8 +84,8 @@ func (h *OrgHeadlineDB) UpdateTagByID(id string, tags []storage.Tag) error {
 	}
 	it := dbHashMap.Iterator()
 	for it.Begin(); it.Next(); {
-		tag := it.Value().(*storage.Tag)
-		_, err := t.WithContext(context.Background()).Delete(tag)
+		tag := it.Value().(storage.Tag)
+		_, err := t.WithContext(context.Background()).Delete(&tag)
 		if err != nil {
 			return logger.Errorf("Delete headline %s tag %s error: %v", id, tag.Name, err)
 		}
@@ -136,7 +135,11 @@ func (h *OrgHeadlineDB) Create(Data storage.Headline) error {
 }
 
 func (h *OrgHeadlineDB) Delete(Data storage.Headline) error {
-	err := h.db.Select(field.AssociationFields).Delete(&Data).Error
+	head := h.query.Headline
+	_, err := head.WithContext(context.Background()).Unscoped().
+		Select(head.Properties.Field(), head.Tags.Field(), head.LogBook.Field()).
+		Delete(&Data)
+
 	if err != nil {
 		return logger.Errorf("Delete head %s error: %v", Data.ID, err)
 	}

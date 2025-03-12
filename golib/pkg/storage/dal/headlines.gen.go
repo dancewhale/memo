@@ -143,16 +143,16 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		RelationField: field.NewRelation("LogBook", "storage.Clock"),
 	}
 
+	_headline.Tags = headlineHasManyTags{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("Tags", "storage.Tag"),
+	}
+
 	_headline.File = headlineBelongsToFile{
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("File", "storage.File"),
-	}
-
-	_headline.Tags = headlineManyToManyTags{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("Tags", "storage.Tag"),
 	}
 
 	_headline.fillFieldMap()
@@ -190,9 +190,9 @@ type headline struct {
 
 	LogBook headlineHasManyLogBook
 
-	File headlineBelongsToFile
+	Tags headlineHasManyTags
 
-	Tags headlineManyToManyTags
+	File headlineBelongsToFile
 
 	fieldMap map[string]field.Expr
 }
@@ -520,6 +520,77 @@ func (a headlineHasManyLogBookTx) Count() int64 {
 	return a.tx.Count()
 }
 
+type headlineHasManyTags struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a headlineHasManyTags) Where(conds ...field.Expr) *headlineHasManyTags {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineHasManyTags) WithContext(ctx context.Context) *headlineHasManyTags {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineHasManyTags) Session(session *gorm.Session) *headlineHasManyTags {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineHasManyTags) Model(m *storage.Headline) *headlineHasManyTagsTx {
+	return &headlineHasManyTagsTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineHasManyTagsTx struct{ tx *gorm.Association }
+
+func (a headlineHasManyTagsTx) Find() (result []*storage.Tag, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineHasManyTagsTx) Append(values ...*storage.Tag) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineHasManyTagsTx) Replace(values ...*storage.Tag) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineHasManyTagsTx) Delete(values ...*storage.Tag) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineHasManyTagsTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineHasManyTagsTx) Count() int64 {
+	return a.tx.Count()
+}
+
 type headlineBelongsToFile struct {
 	db *gorm.DB
 
@@ -588,77 +659,6 @@ func (a headlineBelongsToFileTx) Clear() error {
 }
 
 func (a headlineBelongsToFileTx) Count() int64 {
-	return a.tx.Count()
-}
-
-type headlineManyToManyTags struct {
-	db *gorm.DB
-
-	field.RelationField
-}
-
-func (a headlineManyToManyTags) Where(conds ...field.Expr) *headlineManyToManyTags {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a headlineManyToManyTags) WithContext(ctx context.Context) *headlineManyToManyTags {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a headlineManyToManyTags) Session(session *gorm.Session) *headlineManyToManyTags {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a headlineManyToManyTags) Model(m *storage.Headline) *headlineManyToManyTagsTx {
-	return &headlineManyToManyTagsTx{a.db.Model(m).Association(a.Name())}
-}
-
-type headlineManyToManyTagsTx struct{ tx *gorm.Association }
-
-func (a headlineManyToManyTagsTx) Find() (result []*storage.Tag, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a headlineManyToManyTagsTx) Append(values ...*storage.Tag) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a headlineManyToManyTagsTx) Replace(values ...*storage.Tag) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a headlineManyToManyTagsTx) Delete(values ...*storage.Tag) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a headlineManyToManyTagsTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a headlineManyToManyTagsTx) Count() int64 {
 	return a.tx.Count()
 }
 

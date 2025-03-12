@@ -32,68 +32,6 @@ func newLocation(db *gorm.DB, opts ...gen.DOOption) location {
 	_location.Link = field.NewString(tableName, "link")
 	_location.ExLink = field.NewString(tableName, "ex_link")
 	_location.Type = field.NewString(tableName, "type")
-	_location.Headline = locationManyToManyHeadline{
-		db: db.Session(&gorm.Session{}),
-
-		RelationField: field.NewRelation("Headline", "storage.Headline"),
-		File: struct {
-			field.RelationField
-			Headlines struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Headline.File", "storage.File"),
-			Headlines: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Headline.File.Headlines", "storage.Headline"),
-			},
-		},
-		Properties: struct {
-			field.RelationField
-			Headline struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Headline.Properties", "storage.Property"),
-			Headline: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Headline.Properties.Headline", "storage.Headline"),
-			},
-		},
-		Children: struct {
-			field.RelationField
-		}{
-			RelationField: field.NewRelation("Headline.Children", "storage.Headline"),
-		},
-		LogBook: struct {
-			field.RelationField
-			Headline struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Headline.LogBook", "storage.Clock"),
-			Headline: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Headline.LogBook.Headline", "storage.Headline"),
-			},
-		},
-		Tags: struct {
-			field.RelationField
-			Headline struct {
-				field.RelationField
-			}
-		}{
-			RelationField: field.NewRelation("Headline.Tags", "storage.Tag"),
-			Headline: struct {
-				field.RelationField
-			}{
-				RelationField: field.NewRelation("Headline.Tags.Headline", "storage.Headline"),
-			},
-		},
-	}
 
 	_location.fillFieldMap()
 
@@ -109,7 +47,6 @@ type location struct {
 	Link     field.String
 	ExLink   field.String
 	Type     field.String
-	Headline locationManyToManyHeadline
 
 	fieldMap map[string]field.Expr
 }
@@ -147,13 +84,12 @@ func (l *location) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (l *location) fillFieldMap() {
-	l.fieldMap = make(map[string]field.Expr, 6)
+	l.fieldMap = make(map[string]field.Expr, 5)
 	l.fieldMap["id"] = l.ID
 	l.fieldMap["protocol"] = l.Protocol
 	l.fieldMap["link"] = l.Link
 	l.fieldMap["ex_link"] = l.ExLink
 	l.fieldMap["type"] = l.Type
-
 }
 
 func (l location) clone(db *gorm.DB) location {
@@ -164,105 +100,6 @@ func (l location) clone(db *gorm.DB) location {
 func (l location) replaceDB(db *gorm.DB) location {
 	l.locationDo.ReplaceDB(db)
 	return l
-}
-
-type locationManyToManyHeadline struct {
-	db *gorm.DB
-
-	field.RelationField
-
-	File struct {
-		field.RelationField
-		Headlines struct {
-			field.RelationField
-		}
-	}
-	Properties struct {
-		field.RelationField
-		Headline struct {
-			field.RelationField
-		}
-	}
-	Children struct {
-		field.RelationField
-	}
-	LogBook struct {
-		field.RelationField
-		Headline struct {
-			field.RelationField
-		}
-	}
-	Tags struct {
-		field.RelationField
-		Headline struct {
-			field.RelationField
-		}
-	}
-}
-
-func (a locationManyToManyHeadline) Where(conds ...field.Expr) *locationManyToManyHeadline {
-	if len(conds) == 0 {
-		return &a
-	}
-
-	exprs := make([]clause.Expression, 0, len(conds))
-	for _, cond := range conds {
-		exprs = append(exprs, cond.BeCond().(clause.Expression))
-	}
-	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
-	return &a
-}
-
-func (a locationManyToManyHeadline) WithContext(ctx context.Context) *locationManyToManyHeadline {
-	a.db = a.db.WithContext(ctx)
-	return &a
-}
-
-func (a locationManyToManyHeadline) Session(session *gorm.Session) *locationManyToManyHeadline {
-	a.db = a.db.Session(session)
-	return &a
-}
-
-func (a locationManyToManyHeadline) Model(m *storage.Location) *locationManyToManyHeadlineTx {
-	return &locationManyToManyHeadlineTx{a.db.Model(m).Association(a.Name())}
-}
-
-type locationManyToManyHeadlineTx struct{ tx *gorm.Association }
-
-func (a locationManyToManyHeadlineTx) Find() (result []*storage.Headline, err error) {
-	return result, a.tx.Find(&result)
-}
-
-func (a locationManyToManyHeadlineTx) Append(values ...*storage.Headline) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Append(targetValues...)
-}
-
-func (a locationManyToManyHeadlineTx) Replace(values ...*storage.Headline) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Replace(targetValues...)
-}
-
-func (a locationManyToManyHeadlineTx) Delete(values ...*storage.Headline) (err error) {
-	targetValues := make([]interface{}, len(values))
-	for i, v := range values {
-		targetValues[i] = v
-	}
-	return a.tx.Delete(targetValues...)
-}
-
-func (a locationManyToManyHeadlineTx) Clear() error {
-	return a.tx.Clear()
-}
-
-func (a locationManyToManyHeadlineTx) Count() int64 {
-	return a.tx.Count()
 }
 
 type locationDo struct{ gen.DO }
