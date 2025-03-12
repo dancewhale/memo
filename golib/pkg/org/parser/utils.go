@@ -1,6 +1,11 @@
 package parser
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"io"
+	"memo/pkg/logger"
+	"os"
 	"strconv"
 	"strings"
 
@@ -151,4 +156,39 @@ func GenerateID() string {
 	id := uuid.New().String()
 	ID := strings.ToUpper(id)
 	return ID
+}
+
+func HashFile(filePath string) (string, error) {
+	info, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		logger.Errorf("The file %s does not exist.", filePath)
+	}
+	if err != nil {
+		return "", logger.Errorf("The file %s stat failed: %v", filePath, err)
+	}
+
+	// Check if it is a regular file
+	if !info.Mode().IsRegular() {
+		return "", logger.Errorf("The fileHandler %s is not a regular file.", filePath)
+	}
+	// Try to open the file for reading
+	fileHandler, err := os.Open(filePath)
+	if err != nil {
+		return "", logger.Errorf("Open file %s failed: %v", filePath, err)
+	}
+	defer fileHandler.Close()
+
+	hash := md5.New()
+	_, err = io.Copy(hash, fileHandler)
+	if err != nil {
+		return "", logger.Errorf("Copy file content to buffer failed: %v", err.Error())
+	}
+	hashSting := hex.EncodeToString(hash.Sum(nil))
+	return hashSting, nil
+}
+
+func HashContent(content string) string {
+	hash := md5.New()
+	hash.Write([]byte(content))
+	return hex.EncodeToString(hash.Sum(nil))
 }

@@ -3,11 +3,12 @@ package org
 import (
 	"errors"
 	"fmt"
-	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"memo/pkg/logger"
 	"memo/pkg/org/db"
+	"memo/pkg/org/parser"
 	"memo/pkg/storage"
-	"memo/pkg/util"
+
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 )
 
 // 用于加载从硬盘文件读取的 headline 数据，用于和数据库 headline 数据进行比较。
@@ -60,7 +61,7 @@ func (h *HeadlineCacheMap) loadHead(headlines []storage.Headline) error {
 			h.DuplicateID = append(h.DuplicateID, head.ID)
 		} else {
 			// compute headline struct hash.
-			hash := util.HashContent(head.String())
+			hash := parser.HashContent(head.String())
 			if err != nil {
 				return logger.Errorf("Hash headline error: %v", err)
 			}
@@ -72,7 +73,6 @@ func (h *HeadlineCacheMap) loadHead(headlines []storage.Headline) error {
 }
 
 // 通过对比两个缓存，进行对比更新数据库中的headline
-// TODO: property  tag  和clock 在hash 时不会做计算和判断，导致不会自动更新。
 func (h *HeadlineCacheMap) UpdateHeadlineToDB(force bool) error {
 	fileHeads := h.HeadlinesFileCache.Iterator()
 	var err error

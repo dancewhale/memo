@@ -162,6 +162,40 @@ func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, e
 	return headlinesDBCache, nil
 }
 
+func (h *OrgHeadlineDB) GetHeadlineByID(id string) (*storage.Headline, error) {
+	headline := h.query.Headline
+	heads, err := headline.WithContext(context.Background()).
+		Where(headline.ID.Eq(id)).
+		Preload(headline.Properties).Preload(headline.Tags).Preload(headline.LogBook).
+		Find()
+	if err != nil {
+		return nil, logger.Errorf("Get headline by id %s error: %v", id, err)
+	}
+	if len(heads) == 1 {
+		return heads[0], nil
+	} else if len(heads) == 0 {
+		return nil, nil
+	} else {
+		return nil, logger.Errorf("Get headline by id %s error: more than one headline found.", id)
+	}
+}
+
+func (h *OrgHeadlineDB) UpdateHeadlineHash(id string) error {
+	head, err := h.GetHeadlineByID(id)
+	if err != nil {
+		return err
+	}
+	hash := parser.HashContent(head.String())
+	if head.Hash != hash {
+		hd := h.query.Headline
+		_, err = hd.WithContext(context.Background()).Where(hd.ID.Eq(id)).UpdateSimple(hd.Hash.Value(hash))
+		if err != nil {
+			return logger.Errorf("Update headline %s hash error: %v", id, err)
+		}
+	}
+	return nil
+}
+
 func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
 	headline := h.query.Headline
 	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
@@ -215,16 +249,6 @@ func (h *OrgHeadlineDB) GetFileByHeadlineID(headlineID string) (*storage.File, e
 		}
 		return f, nil
 	}
-}
-
-func UpdateHeadContentByID(headlineID, bodyContent string) error {
-	headline := dal.Use(storage.Engine).Headline
-	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).
-		UpdateSimple(headline.Content.Value(bodyContent))
-	if err != nil {
-		return logger.Errorf("Update headline %s body content error: %v", headlineID, err)
-	}
-	return nil
 }
 
 func UpdateHeadScheduleTypeByID(headlineID, stype string) error {

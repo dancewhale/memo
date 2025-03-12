@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"memo/pkg/storage"
-	"memo/pkg/util"
 	"os"
 	"path/filepath"
 
@@ -29,7 +28,7 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 		return nil, nil
 	}
 
-	hashSting, err := util.HashFile(filePath)
+	hashSting, err := parser.HashFile(filePath)
 	if err != nil {
 		return nil, err
 	}

@@ -176,6 +176,10 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
 		defer muteFile.Unlock()
 		o.ExportOrgFileToDiskByOrgID(orgid, "")
 	}()
+
+	go func() {
+		headdb.UpdateHeadlineHash(orgid)
+	}()
 	return util.Result{Data: true, Err: nil}
 }
 
@@ -192,6 +196,10 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
 		muteFile.Lock()
 		defer muteFile.Unlock()
 		o.ExportOrgFileToDiskByOrgID(orgid, "")
+	}()
+
+	go func() {
+		headdb.UpdateHeadlineHash(orgid)
 	}()
 	return util.Result{Data: true, Err: nil}
 }
