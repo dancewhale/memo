@@ -122,29 +122,33 @@ func (f *OrgFile) SaveToDiskFile(path string) error {
 	if path == "" {
 		path = f.file.FilePath
 	}
-	// Open the file with write-only, create if not exists, and truncate it if it exists
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return logger.Errorf("Failed to open file when save file: %w", err)
-	}
-	defer file.Close()
 
 	content := f.String()
 	hash := md5.New()
 	hash.Write([]byte(content))
 	HashString := hex.EncodeToString(hash.Sum(nil))
 
+	// 只有当内容发生变化时才写入文件
 	if f.hash != HashString {
+		// Open the file with write-only, create if not exists, and truncate it if it exists
+		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return logger.Errorf("Failed to open file when save file: %w", err)
+		}
+		defer file.Close()
+
 		// Write the content to the file
 		_, err = file.WriteString(content)
 		if err != nil {
 			return logger.Errorf("failed to write to file: %w", err)
 		}
-	}
-	if f.file.FilePath == path {
-		err = f.db.UpdateFileHash(f.file.ID, HashString)
-		if err != nil {
-			return err
+
+		// 只有当文件路径相同时才更新数据库中的哈希值
+		if f.file.FilePath == path {
+			err = f.db.UpdateFileHash(f.file.ID, HashString)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

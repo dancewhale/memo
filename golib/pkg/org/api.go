@@ -139,7 +139,7 @@ func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
 	if err != nil {
 		return err
 	}
-	err = file.SaveToDiskFile(file.path)
+	err = file.SaveToDiskFile(filePath)
 	if err != nil {
 		return err
 	}
