@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"memo/cmd/options"
+	"memo/pkg/storage/dal"
 
 	mlog "memo/pkg/logger"
 )
@@ -40,6 +41,7 @@ func InitDBEngine() (*gorm.DB, error) {
 	sqlDB.SetMaxIdleConns(options.Config.DBMaxIdleConn)
 	sqlDB.SetMaxOpenConns(options.Config.DBMaxOpenConn)
 	sqlDB.SetConnMaxLifetime(options.Config.DBConnMaxLifetime)
+	dal.SetDefault(Engine)
 
 	return Engine, err
 }

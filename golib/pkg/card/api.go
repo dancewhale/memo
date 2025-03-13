@@ -2,8 +2,9 @@ package card
 
 import (
 	"errors"
+	cardDB "memo/pkg/card/db"
 	"memo/pkg/logger"
-	"memo/pkg/org/db"
+	headDB "memo/pkg/org/db"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"memo/pkg/util"
@@ -16,13 +17,13 @@ import (
 func NewCardApi() (*CardApi, error) {
 	DB, err := storage.InitDBEngine()
 	return &CardApi{
-		Query: *dal.Use(DB),
-		db:    DB,
+		Q:  dal.Q,
+		db: DB,
 	}, err
 }
 
 type CardApi struct {
-	dal.Query
+	Q  *dal.Query
 	db *gorm.DB
 }
 
@@ -34,12 +35,12 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 
 // function to export to emacs rpc.
 func (api *CardApi) GetNextReviewNote() util.Result {
-	head := api.GetReviewCardByWeightDueTime()
+	head := cardDB.GetReviewCardByWeightDueTime()
 	if head == nil {
 		return util.Result{Data: nil, Err: errors.New("There is no card need review.")}
 	}
 
-	headDB, _ := db.NewOrgHeadlineDB()
+	headDB, _ := headDB.NewOrgHeadlineDB()
 	note := util.GetHeadStruct(head, headDB)
 
 	return util.Result{note, nil}
@@ -57,25 +58,4 @@ func (api *CardApi) ReviewNote(orgID string, rating string) util.Result {
 	} else {
 		return util.Result{true, nil}
 	}
-}
-
-func (api *CardApi) GetReviewCardByWeightDueTime() *storage.Headline {
-	fsrsDB, err := NewFsrsDB()
-	if err != nil {
-		return nil
-	}
-	for _, stype := range []string{storage.NORMAL, storage.POSTPONE} {
-		cards := fsrsDB.dueCardsInToday(stype)
-		if len(cards) == 0 {
-			cards = fsrsDB.dueCardsBeforeToday(stype)
-			if len(cards) == 0 {
-				continue
-			} else {
-				return cards[0]
-			}
-		} else {
-			return cards[0]
-		}
-	}
-	return nil
 }
