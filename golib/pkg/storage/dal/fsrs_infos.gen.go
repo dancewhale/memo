@@ -27,7 +27,7 @@ func newFsrsInfo(db *gorm.DB, opts ...gen.DOOption) fsrsInfo {
 
 	tableName := _fsrsInfo.fsrsInfoDo.TableName()
 	_fsrsInfo.ALL = field.NewAsterisk(tableName)
-	_fsrsInfo.ID = field.NewUint(tableName, "id")
+	_fsrsInfo.HeadlineID = field.NewString(tableName, "headline_id")
 	_fsrsInfo.CreatedAt = field.NewTime(tableName, "created_at")
 	_fsrsInfo.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_fsrsInfo.DeletedAt = field.NewField(tableName, "deleted_at")
@@ -40,7 +40,6 @@ func newFsrsInfo(db *gorm.DB, opts ...gen.DOOption) fsrsInfo {
 	_fsrsInfo.Lapses = field.NewUint64(tableName, "lapses")
 	_fsrsInfo.State = field.NewInt8(tableName, "state")
 	_fsrsInfo.LastReview = field.NewTime(tableName, "last_review")
-	_fsrsInfo.HeadlineID = field.NewString(tableName, "headline_id")
 
 	_fsrsInfo.fillFieldMap()
 
@@ -51,7 +50,7 @@ type fsrsInfo struct {
 	fsrsInfoDo
 
 	ALL           field.Asterisk
-	ID            field.Uint
+	HeadlineID    field.String
 	CreatedAt     field.Time
 	UpdatedAt     field.Time
 	DeletedAt     field.Field
@@ -64,7 +63,6 @@ type fsrsInfo struct {
 	Lapses        field.Uint64
 	State         field.Int8
 	LastReview    field.Time
-	HeadlineID    field.String
 
 	fieldMap map[string]field.Expr
 }
@@ -81,7 +79,7 @@ func (f fsrsInfo) As(alias string) *fsrsInfo {
 
 func (f *fsrsInfo) updateTableName(table string) *fsrsInfo {
 	f.ALL = field.NewAsterisk(table)
-	f.ID = field.NewUint(table, "id")
+	f.HeadlineID = field.NewString(table, "headline_id")
 	f.CreatedAt = field.NewTime(table, "created_at")
 	f.UpdatedAt = field.NewTime(table, "updated_at")
 	f.DeletedAt = field.NewField(table, "deleted_at")
@@ -94,7 +92,6 @@ func (f *fsrsInfo) updateTableName(table string) *fsrsInfo {
 	f.Lapses = field.NewUint64(table, "lapses")
 	f.State = field.NewInt8(table, "state")
 	f.LastReview = field.NewTime(table, "last_review")
-	f.HeadlineID = field.NewString(table, "headline_id")
 
 	f.fillFieldMap()
 
@@ -111,8 +108,8 @@ func (f *fsrsInfo) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (f *fsrsInfo) fillFieldMap() {
-	f.fieldMap = make(map[string]field.Expr, 14)
-	f.fieldMap["id"] = f.ID
+	f.fieldMap = make(map[string]field.Expr, 13)
+	f.fieldMap["headline_id"] = f.HeadlineID
 	f.fieldMap["created_at"] = f.CreatedAt
 	f.fieldMap["updated_at"] = f.UpdatedAt
 	f.fieldMap["deleted_at"] = f.DeletedAt
@@ -125,7 +122,6 @@ func (f *fsrsInfo) fillFieldMap() {
 	f.fieldMap["lapses"] = f.Lapses
 	f.fieldMap["state"] = f.State
 	f.fieldMap["last_review"] = f.LastReview
-	f.fieldMap["headline_id"] = f.HeadlineID
 }
 
 func (f fsrsInfo) clone(db *gorm.DB) fsrsInfo {

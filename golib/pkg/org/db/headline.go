@@ -180,6 +180,20 @@ func (h *OrgHeadlineDB) GetHeadlineByID(id string) (*storage.Headline, error) {
 	}
 }
 
+func (h *OrgHeadlineDB) GetFileIDByOrgID(orgid string) (*string, error) {
+	head := h.query.Headline
+	headlines, err := head.WithContext(context.Background()).Where(head.ID.Eq(orgid)).Find()
+	if err != nil {
+		return nil, logger.Errorf("Get headline by orgid failed: %v", err)
+	} else if len(headlines) == 0 {
+		return nil, logger.Errorf("Head with orgid %s is not exist.", orgid)
+	} else if len(headlines) == 1 {
+		return headlines[0].FileID, nil
+	} else {
+		return nil, logger.Errorf("The orgid %s has more than one headline attach to it.", orgid)
+	}
+}
+
 func (h *OrgHeadlineDB) UpdateHeadlineHash(id string) error {
 	head, err := h.GetHeadlineByID(id)
 	if err != nil {

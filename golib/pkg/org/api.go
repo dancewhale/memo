@@ -1,7 +1,6 @@
 package org
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -11,7 +10,6 @@ import (
 	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
-	"memo/pkg/storage/dal"
 	"memo/pkg/util"
 
 	"github.com/karrick/godirwalk"
@@ -117,23 +115,6 @@ func (o *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) util.Result 
 	return util.Result{Data: true, Err: nil}
 }
 
-// GetNote 获取一张卡片,首先判断org是否有fsrs学习记录，没有
-func (o *OrgApi) GetHeadlineByOrgID(orgid string) (*storage.Headline, error) {
-	h := dal.Use(o.db).Headline
-
-	headlines, err := h.WithContext(context.Background()).Preload(h.File).Order(h.UpdatedAt.Desc()).Where(h.ID.Eq(orgid)).Find()
-	if err != nil {
-		return nil, logger.Errorf("Get headline by orgid failed: %v", err)
-	} else if len(headlines) == 0 {
-		logger.Warnf("orgid %s has no headline attach to it.", orgid)
-		return nil, nil
-	} else if len(headlines) == 1 {
-		return headlines[0], nil
-	} else {
-		return nil, logger.Errorf("The orgid %s has more than one headline attach to it.", orgid)
-	}
-}
-
 func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
 	file, err := GetFileFromID(fileid)
 	if err != nil {
@@ -147,12 +128,13 @@ func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
 }
 
 func (o *OrgApi) ExportOrgFileToDiskByOrgID(orgid string, filePath string) error {
-	headline, err := o.GetHeadlineByOrgID(orgid)
+	headdb, err := db.NewOrgHeadlineDB()
+	fileID, err := headdb.GetFileIDByOrgID(orgid)
 	if err != nil {
 		return err
 	}
-	if headline.FileID != nil {
-		err = o.ExportOrgFileToDisk(*headline.FileID, filePath)
+	if fileID != nil {
+		err = o.ExportOrgFileToDisk(*fileID, filePath)
 		if err != nil {
 			return err
 		}

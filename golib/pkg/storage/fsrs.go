@@ -3,6 +3,7 @@ package storage
 import (
 	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 	"gorm.io/gorm"
+	"time"
 )
 
 // change string to fsrs.rate
@@ -54,9 +55,11 @@ func IntToRate(rate int8) gfsrs.Rating {
 }
 
 type FsrsInfo struct {
-	gorm.Model
+	HeadlineID string `gorm:"primaryKey"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  gorm.DeletedAt `gorm:"index"`
 	gfsrs.Card `gorm:"embedded"`
-	HeadlineID string
 }
 
 type ReviewLog struct {
