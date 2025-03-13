@@ -17,7 +17,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var muteDB = sync.Mutex{}
 var muteFile = sync.Mutex{}
 
 type OrgApi struct {
@@ -73,7 +72,7 @@ func (o *OrgApi) UploadFile(filePath string, fo int, batchMode int) util.Result 
 	}
 
 	if batchMode == 0 {
-		o.InitFsrs()
+		card.ScanInitFsrs()
 	}
 
 	if err != nil {
@@ -111,7 +110,7 @@ func (o *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) util.Result 
 	if err != nil {
 		return util.Result{Data: false, Err: err}
 	}
-	o.InitFsrs()
+	card.ScanInitFsrs()
 	return util.Result{Data: true, Err: nil}
 }
 
@@ -127,7 +126,7 @@ func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
 	return nil
 }
 
-func (o *OrgApi) ExportOrgFileToDiskByOrgID(orgid string, filePath string) error {
+func (o *OrgApi) exportOrgFileToDiskByOrgID(orgid string, filePath string) error {
 	headdb, err := db.NewOrgHeadlineDB()
 	fileID, err := headdb.GetFileIDByOrgID(orgid)
 	if err != nil {
@@ -156,7 +155,7 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
 	go func() {
 		muteFile.Lock()
 		defer muteFile.Unlock()
-		o.ExportOrgFileToDiskByOrgID(orgid, "")
+		o.exportOrgFileToDiskByOrgID(orgid, "")
 	}()
 
 	go func() {
@@ -177,7 +176,7 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
 	go func() {
 		muteFile.Lock()
 		defer muteFile.Unlock()
-		o.ExportOrgFileToDiskByOrgID(orgid, "")
+		o.exportOrgFileToDiskByOrgID(orgid, "")
 	}()
 
 	go func() {
@@ -195,7 +194,7 @@ func (o *OrgApi) CreateVirtHead(parentid, title, content string) util.Result {
 	if err != nil {
 		return util.Result{Data: false, Err: err}
 	}
-	o.InitFsrs()
+	card.ScanInitFsrs()
 	return util.Result{Data: true, Err: nil}
 }
 
@@ -210,18 +209,4 @@ func (o *OrgApi) GetVirtHeadByParentID(parentid string) util.Result {
 	}
 	Heads := util.GetHeadStructs(heads, headdb)
 	return util.Result{Data: Heads, Err: nil}
-}
-
-func (o *OrgApi) InitFsrs() {
-	cardApi, err := card.NewCardApi()
-	logger.Warnf("Failed to create CardApi instance: %v", err)
-	// 异步执行 scanHeadlineInitFsrs
-	go func() {
-		muteDB.Lock()
-		defer muteDB.Unlock()
-
-		if _, err := cardApi.ScanHeadlineInitFsrs(); err != nil {
-			logger.Warnf("Async scanHeadlineInitFsrs failed: %v", err)
-		}
-	}()
 }

@@ -2,34 +2,28 @@ package card
 
 import (
 	"errors"
-	"memo/pkg/org/db"
-	"time"
-
 	"memo/pkg/logger"
+	"memo/pkg/org/db"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"memo/pkg/util"
 
 	epc "github.com/kiwanami/go-elrpc"
-	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 	//	"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 )
 
 func NewCardApi() (*CardApi, error) {
 	DB, err := storage.InitDBEngine()
-	scheduler := *gfsrs.NewFSRS(gfsrs.DefaultParam())
 	return &CardApi{
-		Query:     *dal.Use(DB),
-		db:        DB,
-		scheduler: scheduler,
+		Query: *dal.Use(DB),
+		db:    DB,
 	}, err
 }
 
 type CardApi struct {
 	dal.Query
-	db        *gorm.DB
-	scheduler gfsrs.FSRS
+	db *gorm.DB
 }
 
 func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
@@ -65,11 +59,6 @@ func (api *CardApi) ReviewNote(orgID string, rating string) util.Result {
 	}
 }
 
-// CountCards 获取卡包中的闪卡数量。
-func (api *CardApi) CountCards() int {
-	return 0
-}
-
 func (api *CardApi) GetReviewCardByWeightDueTime() *storage.Headline {
 	fsrsDB, err := NewFsrsDB()
 	if err != nil {
@@ -89,64 +78,4 @@ func (api *CardApi) GetReviewCardByWeightDueTime() *storage.Headline {
 		}
 	}
 	return nil
-}
-
-// 给指定过期的闪卡打分进行review,返回复习后的闪卡
-func (api *CardApi) ReviewCard(orgID string, rating gfsrs.Rating) error {
-	db, err := NewFsrsDB()
-	if err != nil {
-		return err
-	}
-
-	logger.Debugf("Start Review Headline with orgID: %s, rating: %d", orgID, rating)
-	now := time.Now()
-	fsrs := db.getFsrsInfoByOrgID(orgID)
-	if fsrs == nil {
-		_ = logger.Errorf("not found card [orgid=%s] to review", orgID)
-		return nil
-	}
-
-	// review 状态为waitReview 的Card, 如果评价为easy,则设置为WaitCardInit
-	needReview, error := db.ifCardIsDue(orgID)
-
-	if needReview && error == nil {
-		schedulingInfo := api.scheduler.Repeat(fsrs.Card, now)
-		updatedCard := schedulingInfo[rating].Card
-
-		rLog := schedulingInfo[rating].ReviewLog
-
-		reviewlog := &storage.ReviewLog{HeadlineID: orgID, ReviewLog: rLog}
-
-		fsrs.Card = updatedCard
-		err := db.createReviewLog(reviewlog)
-		if err != nil {
-			return err
-		}
-
-		return db.updateFsrs(fsrs)
-	}
-	logger.Infof("Card %s no need to review.", orgID)
-	return nil
-}
-
-func (api *CardApi) ScanHeadlineInitFsrs() ([]*storage.Headline, error) {
-	logger.Infof("Start to scan org for headline init.")
-	fsrsDB, err := NewFsrsDB()
-	if err != nil {
-		return nil, err
-	}
-
-	heads := fsrsDB.getFsrsEmptyHeadline()
-	for _, head := range heads {
-		if head.Status == "" && head.Content != "" {
-			fsrsinfo := &storage.FsrsInfo{}
-			fsrsinfo.Card = gfsrs.NewCard()
-			fsrsinfo.HeadlineID = head.ID
-			err = fsrsDB.createFsrs(fsrsinfo)
-			if err != nil {
-				return nil, logger.Errorf("Create fsrs info for headline %s failed: %v", head.ID, err)
-			}
-		}
-	}
-	return heads, err
 }
