@@ -56,7 +56,7 @@ func (api *CardApi) ReviewNote(orgID string, rating string) util.Result {
 		return util.Result{nil, errors.New("orgID is empty When review note.")}
 	}
 	fsrsRate := storage.StringToRate(rating)
-	err := api.ReviewCard(orgID, fsrsRate)
+	err := ReviewCard(orgID, fsrsRate)
 	logger.Debugf("Review note success, orgID: %s, rating: %s", orgID, rating)
 	if err != nil {
 		return util.Result{false, err}
