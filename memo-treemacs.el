@@ -153,7 +153,7 @@ Otherwise returns value itself."
   :child-type
   'memo-treemacs-virtual-node
   :more-properties
-  (if (equal (memo-note-expandable item) 2)
+  (if (equal (memo-note-expandable item) 0)
       `(:note ,item :leaf t :no-tab? t)
     `(:note ,item))
   :async? t)
