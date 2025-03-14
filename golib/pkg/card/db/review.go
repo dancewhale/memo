@@ -10,14 +10,16 @@ import (
 )
 
 func GetReviewCardByWeightDueTime() *storage.Headline {
-	fsrsDB, err := NewFsrsDB()
+	var cards []*storage.Headline
+
+	cardDB, err := NewCardDB()
 	if err != nil {
 		return nil
 	}
 	for _, stype := range []string{storage.NORMAL, storage.POSTPONE} {
-		cards := fsrsDB.dueCardsInToday(stype)
+		cards, err = cardDB.JoinFsrs().DueAtDay(0).TypeFilter(stype).Find()
 		if len(cards) == 0 {
-			cards = fsrsDB.dueCardsBeforeToday(stype)
+			cards, err = cardDB.JoinFsrs().DueBeforeDay(0).TypeFilter(stype).Find()
 			if len(cards) == 0 {
 				continue
 			} else {
