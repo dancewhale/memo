@@ -104,95 +104,156 @@ func (l location) replaceDB(db *gorm.DB) location {
 
 type locationDo struct{ gen.DO }
 
-func (l locationDo) Debug() *locationDo {
+type ILocationDo interface {
+	gen.SubQuery
+	Debug() ILocationDo
+	WithContext(ctx context.Context) ILocationDo
+	WithResult(fc func(tx gen.Dao)) gen.ResultInfo
+	ReplaceDB(db *gorm.DB)
+	ReadDB() ILocationDo
+	WriteDB() ILocationDo
+	As(alias string) gen.Dao
+	Session(config *gorm.Session) ILocationDo
+	Columns(cols ...field.Expr) gen.Columns
+	Clauses(conds ...clause.Expression) ILocationDo
+	Not(conds ...gen.Condition) ILocationDo
+	Or(conds ...gen.Condition) ILocationDo
+	Select(conds ...field.Expr) ILocationDo
+	Where(conds ...gen.Condition) ILocationDo
+	Order(conds ...field.Expr) ILocationDo
+	Distinct(cols ...field.Expr) ILocationDo
+	Omit(cols ...field.Expr) ILocationDo
+	Join(table schema.Tabler, on ...field.Expr) ILocationDo
+	LeftJoin(table schema.Tabler, on ...field.Expr) ILocationDo
+	RightJoin(table schema.Tabler, on ...field.Expr) ILocationDo
+	Group(cols ...field.Expr) ILocationDo
+	Having(conds ...gen.Condition) ILocationDo
+	Limit(limit int) ILocationDo
+	Offset(offset int) ILocationDo
+	Count() (count int64, err error)
+	Scopes(funcs ...func(gen.Dao) gen.Dao) ILocationDo
+	Unscoped() ILocationDo
+	Create(values ...*storage.Location) error
+	CreateInBatches(values []*storage.Location, batchSize int) error
+	Save(values ...*storage.Location) error
+	First() (*storage.Location, error)
+	Take() (*storage.Location, error)
+	Last() (*storage.Location, error)
+	Find() ([]*storage.Location, error)
+	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*storage.Location, err error)
+	FindInBatches(result *[]*storage.Location, batchSize int, fc func(tx gen.Dao, batch int) error) error
+	Pluck(column field.Expr, dest interface{}) error
+	Delete(...*storage.Location) (info gen.ResultInfo, err error)
+	Update(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	Updates(value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumn(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumnSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	UpdateColumns(value interface{}) (info gen.ResultInfo, err error)
+	UpdateFrom(q gen.SubQuery) gen.Dao
+	Attrs(attrs ...field.AssignExpr) ILocationDo
+	Assign(attrs ...field.AssignExpr) ILocationDo
+	Joins(fields ...field.RelationField) ILocationDo
+	Preload(fields ...field.RelationField) ILocationDo
+	FirstOrInit() (*storage.Location, error)
+	FirstOrCreate() (*storage.Location, error)
+	FindByPage(offset int, limit int) (result []*storage.Location, count int64, err error)
+	ScanByPage(result interface{}, offset int, limit int) (count int64, err error)
+	Scan(result interface{}) (err error)
+	Returning(value interface{}, columns ...string) ILocationDo
+	UnderlyingDB() *gorm.DB
+	schema.Tabler
+}
+
+func (l locationDo) Debug() ILocationDo {
 	return l.withDO(l.DO.Debug())
 }
 
-func (l locationDo) WithContext(ctx context.Context) *locationDo {
+func (l locationDo) WithContext(ctx context.Context) ILocationDo {
 	return l.withDO(l.DO.WithContext(ctx))
 }
 
-func (l locationDo) ReadDB() *locationDo {
+func (l locationDo) ReadDB() ILocationDo {
 	return l.Clauses(dbresolver.Read)
 }
 
-func (l locationDo) WriteDB() *locationDo {
+func (l locationDo) WriteDB() ILocationDo {
 	return l.Clauses(dbresolver.Write)
 }
 
-func (l locationDo) Session(config *gorm.Session) *locationDo {
+func (l locationDo) Session(config *gorm.Session) ILocationDo {
 	return l.withDO(l.DO.Session(config))
 }
 
-func (l locationDo) Clauses(conds ...clause.Expression) *locationDo {
+func (l locationDo) Clauses(conds ...clause.Expression) ILocationDo {
 	return l.withDO(l.DO.Clauses(conds...))
 }
 
-func (l locationDo) Returning(value interface{}, columns ...string) *locationDo {
+func (l locationDo) Returning(value interface{}, columns ...string) ILocationDo {
 	return l.withDO(l.DO.Returning(value, columns...))
 }
 
-func (l locationDo) Not(conds ...gen.Condition) *locationDo {
+func (l locationDo) Not(conds ...gen.Condition) ILocationDo {
 	return l.withDO(l.DO.Not(conds...))
 }
 
-func (l locationDo) Or(conds ...gen.Condition) *locationDo {
+func (l locationDo) Or(conds ...gen.Condition) ILocationDo {
 	return l.withDO(l.DO.Or(conds...))
 }
 
-func (l locationDo) Select(conds ...field.Expr) *locationDo {
+func (l locationDo) Select(conds ...field.Expr) ILocationDo {
 	return l.withDO(l.DO.Select(conds...))
 }
 
-func (l locationDo) Where(conds ...gen.Condition) *locationDo {
+func (l locationDo) Where(conds ...gen.Condition) ILocationDo {
 	return l.withDO(l.DO.Where(conds...))
 }
 
-func (l locationDo) Order(conds ...field.Expr) *locationDo {
+func (l locationDo) Order(conds ...field.Expr) ILocationDo {
 	return l.withDO(l.DO.Order(conds...))
 }
 
-func (l locationDo) Distinct(cols ...field.Expr) *locationDo {
+func (l locationDo) Distinct(cols ...field.Expr) ILocationDo {
 	return l.withDO(l.DO.Distinct(cols...))
 }
 
-func (l locationDo) Omit(cols ...field.Expr) *locationDo {
+func (l locationDo) Omit(cols ...field.Expr) ILocationDo {
 	return l.withDO(l.DO.Omit(cols...))
 }
 
-func (l locationDo) Join(table schema.Tabler, on ...field.Expr) *locationDo {
+func (l locationDo) Join(table schema.Tabler, on ...field.Expr) ILocationDo {
 	return l.withDO(l.DO.Join(table, on...))
 }
 
-func (l locationDo) LeftJoin(table schema.Tabler, on ...field.Expr) *locationDo {
+func (l locationDo) LeftJoin(table schema.Tabler, on ...field.Expr) ILocationDo {
 	return l.withDO(l.DO.LeftJoin(table, on...))
 }
 
-func (l locationDo) RightJoin(table schema.Tabler, on ...field.Expr) *locationDo {
+func (l locationDo) RightJoin(table schema.Tabler, on ...field.Expr) ILocationDo {
 	return l.withDO(l.DO.RightJoin(table, on...))
 }
 
-func (l locationDo) Group(cols ...field.Expr) *locationDo {
+func (l locationDo) Group(cols ...field.Expr) ILocationDo {
 	return l.withDO(l.DO.Group(cols...))
 }
 
-func (l locationDo) Having(conds ...gen.Condition) *locationDo {
+func (l locationDo) Having(conds ...gen.Condition) ILocationDo {
 	return l.withDO(l.DO.Having(conds...))
 }
 
-func (l locationDo) Limit(limit int) *locationDo {
+func (l locationDo) Limit(limit int) ILocationDo {
 	return l.withDO(l.DO.Limit(limit))
 }
 
-func (l locationDo) Offset(offset int) *locationDo {
+func (l locationDo) Offset(offset int) ILocationDo {
 	return l.withDO(l.DO.Offset(offset))
 }
 
-func (l locationDo) Scopes(funcs ...func(gen.Dao) gen.Dao) *locationDo {
+func (l locationDo) Scopes(funcs ...func(gen.Dao) gen.Dao) ILocationDo {
 	return l.withDO(l.DO.Scopes(funcs...))
 }
 
-func (l locationDo) Unscoped() *locationDo {
+func (l locationDo) Unscoped() ILocationDo {
 	return l.withDO(l.DO.Unscoped())
 }
 
@@ -258,22 +319,22 @@ func (l locationDo) FindInBatches(result *[]*storage.Location, batchSize int, fc
 	return l.DO.FindInBatches(result, batchSize, fc)
 }
 
-func (l locationDo) Attrs(attrs ...field.AssignExpr) *locationDo {
+func (l locationDo) Attrs(attrs ...field.AssignExpr) ILocationDo {
 	return l.withDO(l.DO.Attrs(attrs...))
 }
 
-func (l locationDo) Assign(attrs ...field.AssignExpr) *locationDo {
+func (l locationDo) Assign(attrs ...field.AssignExpr) ILocationDo {
 	return l.withDO(l.DO.Assign(attrs...))
 }
 
-func (l locationDo) Joins(fields ...field.RelationField) *locationDo {
+func (l locationDo) Joins(fields ...field.RelationField) ILocationDo {
 	for _, _f := range fields {
 		l = *l.withDO(l.DO.Joins(_f))
 	}
 	return &l
 }
 
-func (l locationDo) Preload(fields ...field.RelationField) *locationDo {
+func (l locationDo) Preload(fields ...field.RelationField) ILocationDo {
 	for _, _f := range fields {
 		l = *l.withDO(l.DO.Preload(_f))
 	}

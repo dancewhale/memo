@@ -105,14 +105,14 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 }
 
 type queryCtx struct {
-	Clock     *clockDo
-	File      *fileDo
-	FsrsInfo  *fsrsInfoDo
-	Headline  *headlineDo
-	Location  *locationDo
-	Property  *propertyDo
-	ReviewLog *reviewLogDo
-	Tag       *tagDo
+	Clock     IClockDo
+	File      IFileDo
+	FsrsInfo  IFsrsInfoDo
+	Headline  IHeadlineDo
+	Location  ILocationDo
+	Property  IPropertyDo
+	ReviewLog IReviewLogDo
+	Tag       ITagDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {

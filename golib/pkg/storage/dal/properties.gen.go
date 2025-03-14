@@ -259,95 +259,156 @@ func (a propertyBelongsToHeadlineTx) Count() int64 {
 
 type propertyDo struct{ gen.DO }
 
-func (p propertyDo) Debug() *propertyDo {
+type IPropertyDo interface {
+	gen.SubQuery
+	Debug() IPropertyDo
+	WithContext(ctx context.Context) IPropertyDo
+	WithResult(fc func(tx gen.Dao)) gen.ResultInfo
+	ReplaceDB(db *gorm.DB)
+	ReadDB() IPropertyDo
+	WriteDB() IPropertyDo
+	As(alias string) gen.Dao
+	Session(config *gorm.Session) IPropertyDo
+	Columns(cols ...field.Expr) gen.Columns
+	Clauses(conds ...clause.Expression) IPropertyDo
+	Not(conds ...gen.Condition) IPropertyDo
+	Or(conds ...gen.Condition) IPropertyDo
+	Select(conds ...field.Expr) IPropertyDo
+	Where(conds ...gen.Condition) IPropertyDo
+	Order(conds ...field.Expr) IPropertyDo
+	Distinct(cols ...field.Expr) IPropertyDo
+	Omit(cols ...field.Expr) IPropertyDo
+	Join(table schema.Tabler, on ...field.Expr) IPropertyDo
+	LeftJoin(table schema.Tabler, on ...field.Expr) IPropertyDo
+	RightJoin(table schema.Tabler, on ...field.Expr) IPropertyDo
+	Group(cols ...field.Expr) IPropertyDo
+	Having(conds ...gen.Condition) IPropertyDo
+	Limit(limit int) IPropertyDo
+	Offset(offset int) IPropertyDo
+	Count() (count int64, err error)
+	Scopes(funcs ...func(gen.Dao) gen.Dao) IPropertyDo
+	Unscoped() IPropertyDo
+	Create(values ...*storage.Property) error
+	CreateInBatches(values []*storage.Property, batchSize int) error
+	Save(values ...*storage.Property) error
+	First() (*storage.Property, error)
+	Take() (*storage.Property, error)
+	Last() (*storage.Property, error)
+	Find() ([]*storage.Property, error)
+	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*storage.Property, err error)
+	FindInBatches(result *[]*storage.Property, batchSize int, fc func(tx gen.Dao, batch int) error) error
+	Pluck(column field.Expr, dest interface{}) error
+	Delete(...*storage.Property) (info gen.ResultInfo, err error)
+	Update(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	Updates(value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumn(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumnSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	UpdateColumns(value interface{}) (info gen.ResultInfo, err error)
+	UpdateFrom(q gen.SubQuery) gen.Dao
+	Attrs(attrs ...field.AssignExpr) IPropertyDo
+	Assign(attrs ...field.AssignExpr) IPropertyDo
+	Joins(fields ...field.RelationField) IPropertyDo
+	Preload(fields ...field.RelationField) IPropertyDo
+	FirstOrInit() (*storage.Property, error)
+	FirstOrCreate() (*storage.Property, error)
+	FindByPage(offset int, limit int) (result []*storage.Property, count int64, err error)
+	ScanByPage(result interface{}, offset int, limit int) (count int64, err error)
+	Scan(result interface{}) (err error)
+	Returning(value interface{}, columns ...string) IPropertyDo
+	UnderlyingDB() *gorm.DB
+	schema.Tabler
+}
+
+func (p propertyDo) Debug() IPropertyDo {
 	return p.withDO(p.DO.Debug())
 }
 
-func (p propertyDo) WithContext(ctx context.Context) *propertyDo {
+func (p propertyDo) WithContext(ctx context.Context) IPropertyDo {
 	return p.withDO(p.DO.WithContext(ctx))
 }
 
-func (p propertyDo) ReadDB() *propertyDo {
+func (p propertyDo) ReadDB() IPropertyDo {
 	return p.Clauses(dbresolver.Read)
 }
 
-func (p propertyDo) WriteDB() *propertyDo {
+func (p propertyDo) WriteDB() IPropertyDo {
 	return p.Clauses(dbresolver.Write)
 }
 
-func (p propertyDo) Session(config *gorm.Session) *propertyDo {
+func (p propertyDo) Session(config *gorm.Session) IPropertyDo {
 	return p.withDO(p.DO.Session(config))
 }
 
-func (p propertyDo) Clauses(conds ...clause.Expression) *propertyDo {
+func (p propertyDo) Clauses(conds ...clause.Expression) IPropertyDo {
 	return p.withDO(p.DO.Clauses(conds...))
 }
 
-func (p propertyDo) Returning(value interface{}, columns ...string) *propertyDo {
+func (p propertyDo) Returning(value interface{}, columns ...string) IPropertyDo {
 	return p.withDO(p.DO.Returning(value, columns...))
 }
 
-func (p propertyDo) Not(conds ...gen.Condition) *propertyDo {
+func (p propertyDo) Not(conds ...gen.Condition) IPropertyDo {
 	return p.withDO(p.DO.Not(conds...))
 }
 
-func (p propertyDo) Or(conds ...gen.Condition) *propertyDo {
+func (p propertyDo) Or(conds ...gen.Condition) IPropertyDo {
 	return p.withDO(p.DO.Or(conds...))
 }
 
-func (p propertyDo) Select(conds ...field.Expr) *propertyDo {
+func (p propertyDo) Select(conds ...field.Expr) IPropertyDo {
 	return p.withDO(p.DO.Select(conds...))
 }
 
-func (p propertyDo) Where(conds ...gen.Condition) *propertyDo {
+func (p propertyDo) Where(conds ...gen.Condition) IPropertyDo {
 	return p.withDO(p.DO.Where(conds...))
 }
 
-func (p propertyDo) Order(conds ...field.Expr) *propertyDo {
+func (p propertyDo) Order(conds ...field.Expr) IPropertyDo {
 	return p.withDO(p.DO.Order(conds...))
 }
 
-func (p propertyDo) Distinct(cols ...field.Expr) *propertyDo {
+func (p propertyDo) Distinct(cols ...field.Expr) IPropertyDo {
 	return p.withDO(p.DO.Distinct(cols...))
 }
 
-func (p propertyDo) Omit(cols ...field.Expr) *propertyDo {
+func (p propertyDo) Omit(cols ...field.Expr) IPropertyDo {
 	return p.withDO(p.DO.Omit(cols...))
 }
 
-func (p propertyDo) Join(table schema.Tabler, on ...field.Expr) *propertyDo {
+func (p propertyDo) Join(table schema.Tabler, on ...field.Expr) IPropertyDo {
 	return p.withDO(p.DO.Join(table, on...))
 }
 
-func (p propertyDo) LeftJoin(table schema.Tabler, on ...field.Expr) *propertyDo {
+func (p propertyDo) LeftJoin(table schema.Tabler, on ...field.Expr) IPropertyDo {
 	return p.withDO(p.DO.LeftJoin(table, on...))
 }
 
-func (p propertyDo) RightJoin(table schema.Tabler, on ...field.Expr) *propertyDo {
+func (p propertyDo) RightJoin(table schema.Tabler, on ...field.Expr) IPropertyDo {
 	return p.withDO(p.DO.RightJoin(table, on...))
 }
 
-func (p propertyDo) Group(cols ...field.Expr) *propertyDo {
+func (p propertyDo) Group(cols ...field.Expr) IPropertyDo {
 	return p.withDO(p.DO.Group(cols...))
 }
 
-func (p propertyDo) Having(conds ...gen.Condition) *propertyDo {
+func (p propertyDo) Having(conds ...gen.Condition) IPropertyDo {
 	return p.withDO(p.DO.Having(conds...))
 }
 
-func (p propertyDo) Limit(limit int) *propertyDo {
+func (p propertyDo) Limit(limit int) IPropertyDo {
 	return p.withDO(p.DO.Limit(limit))
 }
 
-func (p propertyDo) Offset(offset int) *propertyDo {
+func (p propertyDo) Offset(offset int) IPropertyDo {
 	return p.withDO(p.DO.Offset(offset))
 }
 
-func (p propertyDo) Scopes(funcs ...func(gen.Dao) gen.Dao) *propertyDo {
+func (p propertyDo) Scopes(funcs ...func(gen.Dao) gen.Dao) IPropertyDo {
 	return p.withDO(p.DO.Scopes(funcs...))
 }
 
-func (p propertyDo) Unscoped() *propertyDo {
+func (p propertyDo) Unscoped() IPropertyDo {
 	return p.withDO(p.DO.Unscoped())
 }
 
@@ -413,22 +474,22 @@ func (p propertyDo) FindInBatches(result *[]*storage.Property, batchSize int, fc
 	return p.DO.FindInBatches(result, batchSize, fc)
 }
 
-func (p propertyDo) Attrs(attrs ...field.AssignExpr) *propertyDo {
+func (p propertyDo) Attrs(attrs ...field.AssignExpr) IPropertyDo {
 	return p.withDO(p.DO.Attrs(attrs...))
 }
 
-func (p propertyDo) Assign(attrs ...field.AssignExpr) *propertyDo {
+func (p propertyDo) Assign(attrs ...field.AssignExpr) IPropertyDo {
 	return p.withDO(p.DO.Assign(attrs...))
 }
 
-func (p propertyDo) Joins(fields ...field.RelationField) *propertyDo {
+func (p propertyDo) Joins(fields ...field.RelationField) IPropertyDo {
 	for _, _f := range fields {
 		p = *p.withDO(p.DO.Joins(_f))
 	}
 	return &p
 }
 
-func (p propertyDo) Preload(fields ...field.RelationField) *propertyDo {
+func (p propertyDo) Preload(fields ...field.RelationField) IPropertyDo {
 	for _, _f := range fields {
 		p = *p.withDO(p.DO.Preload(_f))
 	}

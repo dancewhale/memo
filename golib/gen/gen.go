@@ -9,7 +9,7 @@ func main() {
 
 	g := gen.NewGenerator(gen.Config{
 		OutPath: "../pkg/storage/dal",
-		Mode:    gen.WithoutContext | gen.WithDefaultQuery,
+		Mode:    gen.WithoutContext | gen.WithDefaultQuery | gen.WithQueryInterface,
 	})
 
 	g.ApplyBasic(storage.FsrsInfo{}, storage.ReviewLog{}, storage.Headline{}, storage.File{},

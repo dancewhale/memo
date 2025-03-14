@@ -263,95 +263,156 @@ func (a clockBelongsToHeadlineTx) Count() int64 {
 
 type clockDo struct{ gen.DO }
 
-func (c clockDo) Debug() *clockDo {
+type IClockDo interface {
+	gen.SubQuery
+	Debug() IClockDo
+	WithContext(ctx context.Context) IClockDo
+	WithResult(fc func(tx gen.Dao)) gen.ResultInfo
+	ReplaceDB(db *gorm.DB)
+	ReadDB() IClockDo
+	WriteDB() IClockDo
+	As(alias string) gen.Dao
+	Session(config *gorm.Session) IClockDo
+	Columns(cols ...field.Expr) gen.Columns
+	Clauses(conds ...clause.Expression) IClockDo
+	Not(conds ...gen.Condition) IClockDo
+	Or(conds ...gen.Condition) IClockDo
+	Select(conds ...field.Expr) IClockDo
+	Where(conds ...gen.Condition) IClockDo
+	Order(conds ...field.Expr) IClockDo
+	Distinct(cols ...field.Expr) IClockDo
+	Omit(cols ...field.Expr) IClockDo
+	Join(table schema.Tabler, on ...field.Expr) IClockDo
+	LeftJoin(table schema.Tabler, on ...field.Expr) IClockDo
+	RightJoin(table schema.Tabler, on ...field.Expr) IClockDo
+	Group(cols ...field.Expr) IClockDo
+	Having(conds ...gen.Condition) IClockDo
+	Limit(limit int) IClockDo
+	Offset(offset int) IClockDo
+	Count() (count int64, err error)
+	Scopes(funcs ...func(gen.Dao) gen.Dao) IClockDo
+	Unscoped() IClockDo
+	Create(values ...*storage.Clock) error
+	CreateInBatches(values []*storage.Clock, batchSize int) error
+	Save(values ...*storage.Clock) error
+	First() (*storage.Clock, error)
+	Take() (*storage.Clock, error)
+	Last() (*storage.Clock, error)
+	Find() ([]*storage.Clock, error)
+	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*storage.Clock, err error)
+	FindInBatches(result *[]*storage.Clock, batchSize int, fc func(tx gen.Dao, batch int) error) error
+	Pluck(column field.Expr, dest interface{}) error
+	Delete(...*storage.Clock) (info gen.ResultInfo, err error)
+	Update(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	Updates(value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumn(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumnSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	UpdateColumns(value interface{}) (info gen.ResultInfo, err error)
+	UpdateFrom(q gen.SubQuery) gen.Dao
+	Attrs(attrs ...field.AssignExpr) IClockDo
+	Assign(attrs ...field.AssignExpr) IClockDo
+	Joins(fields ...field.RelationField) IClockDo
+	Preload(fields ...field.RelationField) IClockDo
+	FirstOrInit() (*storage.Clock, error)
+	FirstOrCreate() (*storage.Clock, error)
+	FindByPage(offset int, limit int) (result []*storage.Clock, count int64, err error)
+	ScanByPage(result interface{}, offset int, limit int) (count int64, err error)
+	Scan(result interface{}) (err error)
+	Returning(value interface{}, columns ...string) IClockDo
+	UnderlyingDB() *gorm.DB
+	schema.Tabler
+}
+
+func (c clockDo) Debug() IClockDo {
 	return c.withDO(c.DO.Debug())
 }
 
-func (c clockDo) WithContext(ctx context.Context) *clockDo {
+func (c clockDo) WithContext(ctx context.Context) IClockDo {
 	return c.withDO(c.DO.WithContext(ctx))
 }
 
-func (c clockDo) ReadDB() *clockDo {
+func (c clockDo) ReadDB() IClockDo {
 	return c.Clauses(dbresolver.Read)
 }
 
-func (c clockDo) WriteDB() *clockDo {
+func (c clockDo) WriteDB() IClockDo {
 	return c.Clauses(dbresolver.Write)
 }
 
-func (c clockDo) Session(config *gorm.Session) *clockDo {
+func (c clockDo) Session(config *gorm.Session) IClockDo {
 	return c.withDO(c.DO.Session(config))
 }
 
-func (c clockDo) Clauses(conds ...clause.Expression) *clockDo {
+func (c clockDo) Clauses(conds ...clause.Expression) IClockDo {
 	return c.withDO(c.DO.Clauses(conds...))
 }
 
-func (c clockDo) Returning(value interface{}, columns ...string) *clockDo {
+func (c clockDo) Returning(value interface{}, columns ...string) IClockDo {
 	return c.withDO(c.DO.Returning(value, columns...))
 }
 
-func (c clockDo) Not(conds ...gen.Condition) *clockDo {
+func (c clockDo) Not(conds ...gen.Condition) IClockDo {
 	return c.withDO(c.DO.Not(conds...))
 }
 
-func (c clockDo) Or(conds ...gen.Condition) *clockDo {
+func (c clockDo) Or(conds ...gen.Condition) IClockDo {
 	return c.withDO(c.DO.Or(conds...))
 }
 
-func (c clockDo) Select(conds ...field.Expr) *clockDo {
+func (c clockDo) Select(conds ...field.Expr) IClockDo {
 	return c.withDO(c.DO.Select(conds...))
 }
 
-func (c clockDo) Where(conds ...gen.Condition) *clockDo {
+func (c clockDo) Where(conds ...gen.Condition) IClockDo {
 	return c.withDO(c.DO.Where(conds...))
 }
 
-func (c clockDo) Order(conds ...field.Expr) *clockDo {
+func (c clockDo) Order(conds ...field.Expr) IClockDo {
 	return c.withDO(c.DO.Order(conds...))
 }
 
-func (c clockDo) Distinct(cols ...field.Expr) *clockDo {
+func (c clockDo) Distinct(cols ...field.Expr) IClockDo {
 	return c.withDO(c.DO.Distinct(cols...))
 }
 
-func (c clockDo) Omit(cols ...field.Expr) *clockDo {
+func (c clockDo) Omit(cols ...field.Expr) IClockDo {
 	return c.withDO(c.DO.Omit(cols...))
 }
 
-func (c clockDo) Join(table schema.Tabler, on ...field.Expr) *clockDo {
+func (c clockDo) Join(table schema.Tabler, on ...field.Expr) IClockDo {
 	return c.withDO(c.DO.Join(table, on...))
 }
 
-func (c clockDo) LeftJoin(table schema.Tabler, on ...field.Expr) *clockDo {
+func (c clockDo) LeftJoin(table schema.Tabler, on ...field.Expr) IClockDo {
 	return c.withDO(c.DO.LeftJoin(table, on...))
 }
 
-func (c clockDo) RightJoin(table schema.Tabler, on ...field.Expr) *clockDo {
+func (c clockDo) RightJoin(table schema.Tabler, on ...field.Expr) IClockDo {
 	return c.withDO(c.DO.RightJoin(table, on...))
 }
 
-func (c clockDo) Group(cols ...field.Expr) *clockDo {
+func (c clockDo) Group(cols ...field.Expr) IClockDo {
 	return c.withDO(c.DO.Group(cols...))
 }
 
-func (c clockDo) Having(conds ...gen.Condition) *clockDo {
+func (c clockDo) Having(conds ...gen.Condition) IClockDo {
 	return c.withDO(c.DO.Having(conds...))
 }
 
-func (c clockDo) Limit(limit int) *clockDo {
+func (c clockDo) Limit(limit int) IClockDo {
 	return c.withDO(c.DO.Limit(limit))
 }
 
-func (c clockDo) Offset(offset int) *clockDo {
+func (c clockDo) Offset(offset int) IClockDo {
 	return c.withDO(c.DO.Offset(offset))
 }
 
-func (c clockDo) Scopes(funcs ...func(gen.Dao) gen.Dao) *clockDo {
+func (c clockDo) Scopes(funcs ...func(gen.Dao) gen.Dao) IClockDo {
 	return c.withDO(c.DO.Scopes(funcs...))
 }
 
-func (c clockDo) Unscoped() *clockDo {
+func (c clockDo) Unscoped() IClockDo {
 	return c.withDO(c.DO.Unscoped())
 }
 
@@ -417,22 +478,22 @@ func (c clockDo) FindInBatches(result *[]*storage.Clock, batchSize int, fc func(
 	return c.DO.FindInBatches(result, batchSize, fc)
 }
 
-func (c clockDo) Attrs(attrs ...field.AssignExpr) *clockDo {
+func (c clockDo) Attrs(attrs ...field.AssignExpr) IClockDo {
 	return c.withDO(c.DO.Attrs(attrs...))
 }
 
-func (c clockDo) Assign(attrs ...field.AssignExpr) *clockDo {
+func (c clockDo) Assign(attrs ...field.AssignExpr) IClockDo {
 	return c.withDO(c.DO.Assign(attrs...))
 }
 
-func (c clockDo) Joins(fields ...field.RelationField) *clockDo {
+func (c clockDo) Joins(fields ...field.RelationField) IClockDo {
 	for _, _f := range fields {
 		c = *c.withDO(c.DO.Joins(_f))
 	}
 	return &c
 }
 
-func (c clockDo) Preload(fields ...field.RelationField) *clockDo {
+func (c clockDo) Preload(fields ...field.RelationField) IClockDo {
 	for _, _f := range fields {
 		c = *c.withDO(c.DO.Preload(_f))
 	}

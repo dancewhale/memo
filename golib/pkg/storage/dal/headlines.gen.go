@@ -664,95 +664,156 @@ func (a headlineBelongsToFileTx) Count() int64 {
 
 type headlineDo struct{ gen.DO }
 
-func (h headlineDo) Debug() *headlineDo {
+type IHeadlineDo interface {
+	gen.SubQuery
+	Debug() IHeadlineDo
+	WithContext(ctx context.Context) IHeadlineDo
+	WithResult(fc func(tx gen.Dao)) gen.ResultInfo
+	ReplaceDB(db *gorm.DB)
+	ReadDB() IHeadlineDo
+	WriteDB() IHeadlineDo
+	As(alias string) gen.Dao
+	Session(config *gorm.Session) IHeadlineDo
+	Columns(cols ...field.Expr) gen.Columns
+	Clauses(conds ...clause.Expression) IHeadlineDo
+	Not(conds ...gen.Condition) IHeadlineDo
+	Or(conds ...gen.Condition) IHeadlineDo
+	Select(conds ...field.Expr) IHeadlineDo
+	Where(conds ...gen.Condition) IHeadlineDo
+	Order(conds ...field.Expr) IHeadlineDo
+	Distinct(cols ...field.Expr) IHeadlineDo
+	Omit(cols ...field.Expr) IHeadlineDo
+	Join(table schema.Tabler, on ...field.Expr) IHeadlineDo
+	LeftJoin(table schema.Tabler, on ...field.Expr) IHeadlineDo
+	RightJoin(table schema.Tabler, on ...field.Expr) IHeadlineDo
+	Group(cols ...field.Expr) IHeadlineDo
+	Having(conds ...gen.Condition) IHeadlineDo
+	Limit(limit int) IHeadlineDo
+	Offset(offset int) IHeadlineDo
+	Count() (count int64, err error)
+	Scopes(funcs ...func(gen.Dao) gen.Dao) IHeadlineDo
+	Unscoped() IHeadlineDo
+	Create(values ...*storage.Headline) error
+	CreateInBatches(values []*storage.Headline, batchSize int) error
+	Save(values ...*storage.Headline) error
+	First() (*storage.Headline, error)
+	Take() (*storage.Headline, error)
+	Last() (*storage.Headline, error)
+	Find() ([]*storage.Headline, error)
+	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*storage.Headline, err error)
+	FindInBatches(result *[]*storage.Headline, batchSize int, fc func(tx gen.Dao, batch int) error) error
+	Pluck(column field.Expr, dest interface{}) error
+	Delete(...*storage.Headline) (info gen.ResultInfo, err error)
+	Update(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	Updates(value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumn(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumnSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	UpdateColumns(value interface{}) (info gen.ResultInfo, err error)
+	UpdateFrom(q gen.SubQuery) gen.Dao
+	Attrs(attrs ...field.AssignExpr) IHeadlineDo
+	Assign(attrs ...field.AssignExpr) IHeadlineDo
+	Joins(fields ...field.RelationField) IHeadlineDo
+	Preload(fields ...field.RelationField) IHeadlineDo
+	FirstOrInit() (*storage.Headline, error)
+	FirstOrCreate() (*storage.Headline, error)
+	FindByPage(offset int, limit int) (result []*storage.Headline, count int64, err error)
+	ScanByPage(result interface{}, offset int, limit int) (count int64, err error)
+	Scan(result interface{}) (err error)
+	Returning(value interface{}, columns ...string) IHeadlineDo
+	UnderlyingDB() *gorm.DB
+	schema.Tabler
+}
+
+func (h headlineDo) Debug() IHeadlineDo {
 	return h.withDO(h.DO.Debug())
 }
 
-func (h headlineDo) WithContext(ctx context.Context) *headlineDo {
+func (h headlineDo) WithContext(ctx context.Context) IHeadlineDo {
 	return h.withDO(h.DO.WithContext(ctx))
 }
 
-func (h headlineDo) ReadDB() *headlineDo {
+func (h headlineDo) ReadDB() IHeadlineDo {
 	return h.Clauses(dbresolver.Read)
 }
 
-func (h headlineDo) WriteDB() *headlineDo {
+func (h headlineDo) WriteDB() IHeadlineDo {
 	return h.Clauses(dbresolver.Write)
 }
 
-func (h headlineDo) Session(config *gorm.Session) *headlineDo {
+func (h headlineDo) Session(config *gorm.Session) IHeadlineDo {
 	return h.withDO(h.DO.Session(config))
 }
 
-func (h headlineDo) Clauses(conds ...clause.Expression) *headlineDo {
+func (h headlineDo) Clauses(conds ...clause.Expression) IHeadlineDo {
 	return h.withDO(h.DO.Clauses(conds...))
 }
 
-func (h headlineDo) Returning(value interface{}, columns ...string) *headlineDo {
+func (h headlineDo) Returning(value interface{}, columns ...string) IHeadlineDo {
 	return h.withDO(h.DO.Returning(value, columns...))
 }
 
-func (h headlineDo) Not(conds ...gen.Condition) *headlineDo {
+func (h headlineDo) Not(conds ...gen.Condition) IHeadlineDo {
 	return h.withDO(h.DO.Not(conds...))
 }
 
-func (h headlineDo) Or(conds ...gen.Condition) *headlineDo {
+func (h headlineDo) Or(conds ...gen.Condition) IHeadlineDo {
 	return h.withDO(h.DO.Or(conds...))
 }
 
-func (h headlineDo) Select(conds ...field.Expr) *headlineDo {
+func (h headlineDo) Select(conds ...field.Expr) IHeadlineDo {
 	return h.withDO(h.DO.Select(conds...))
 }
 
-func (h headlineDo) Where(conds ...gen.Condition) *headlineDo {
+func (h headlineDo) Where(conds ...gen.Condition) IHeadlineDo {
 	return h.withDO(h.DO.Where(conds...))
 }
 
-func (h headlineDo) Order(conds ...field.Expr) *headlineDo {
+func (h headlineDo) Order(conds ...field.Expr) IHeadlineDo {
 	return h.withDO(h.DO.Order(conds...))
 }
 
-func (h headlineDo) Distinct(cols ...field.Expr) *headlineDo {
+func (h headlineDo) Distinct(cols ...field.Expr) IHeadlineDo {
 	return h.withDO(h.DO.Distinct(cols...))
 }
 
-func (h headlineDo) Omit(cols ...field.Expr) *headlineDo {
+func (h headlineDo) Omit(cols ...field.Expr) IHeadlineDo {
 	return h.withDO(h.DO.Omit(cols...))
 }
 
-func (h headlineDo) Join(table schema.Tabler, on ...field.Expr) *headlineDo {
+func (h headlineDo) Join(table schema.Tabler, on ...field.Expr) IHeadlineDo {
 	return h.withDO(h.DO.Join(table, on...))
 }
 
-func (h headlineDo) LeftJoin(table schema.Tabler, on ...field.Expr) *headlineDo {
+func (h headlineDo) LeftJoin(table schema.Tabler, on ...field.Expr) IHeadlineDo {
 	return h.withDO(h.DO.LeftJoin(table, on...))
 }
 
-func (h headlineDo) RightJoin(table schema.Tabler, on ...field.Expr) *headlineDo {
+func (h headlineDo) RightJoin(table schema.Tabler, on ...field.Expr) IHeadlineDo {
 	return h.withDO(h.DO.RightJoin(table, on...))
 }
 
-func (h headlineDo) Group(cols ...field.Expr) *headlineDo {
+func (h headlineDo) Group(cols ...field.Expr) IHeadlineDo {
 	return h.withDO(h.DO.Group(cols...))
 }
 
-func (h headlineDo) Having(conds ...gen.Condition) *headlineDo {
+func (h headlineDo) Having(conds ...gen.Condition) IHeadlineDo {
 	return h.withDO(h.DO.Having(conds...))
 }
 
-func (h headlineDo) Limit(limit int) *headlineDo {
+func (h headlineDo) Limit(limit int) IHeadlineDo {
 	return h.withDO(h.DO.Limit(limit))
 }
 
-func (h headlineDo) Offset(offset int) *headlineDo {
+func (h headlineDo) Offset(offset int) IHeadlineDo {
 	return h.withDO(h.DO.Offset(offset))
 }
 
-func (h headlineDo) Scopes(funcs ...func(gen.Dao) gen.Dao) *headlineDo {
+func (h headlineDo) Scopes(funcs ...func(gen.Dao) gen.Dao) IHeadlineDo {
 	return h.withDO(h.DO.Scopes(funcs...))
 }
 
-func (h headlineDo) Unscoped() *headlineDo {
+func (h headlineDo) Unscoped() IHeadlineDo {
 	return h.withDO(h.DO.Unscoped())
 }
 
@@ -818,22 +879,22 @@ func (h headlineDo) FindInBatches(result *[]*storage.Headline, batchSize int, fc
 	return h.DO.FindInBatches(result, batchSize, fc)
 }
 
-func (h headlineDo) Attrs(attrs ...field.AssignExpr) *headlineDo {
+func (h headlineDo) Attrs(attrs ...field.AssignExpr) IHeadlineDo {
 	return h.withDO(h.DO.Attrs(attrs...))
 }
 
-func (h headlineDo) Assign(attrs ...field.AssignExpr) *headlineDo {
+func (h headlineDo) Assign(attrs ...field.AssignExpr) IHeadlineDo {
 	return h.withDO(h.DO.Assign(attrs...))
 }
 
-func (h headlineDo) Joins(fields ...field.RelationField) *headlineDo {
+func (h headlineDo) Joins(fields ...field.RelationField) IHeadlineDo {
 	for _, _f := range fields {
 		h = *h.withDO(h.DO.Joins(_f))
 	}
 	return &h
 }
 
-func (h headlineDo) Preload(fields ...field.RelationField) *headlineDo {
+func (h headlineDo) Preload(fields ...field.RelationField) IHeadlineDo {
 	for _, _f := range fields {
 		h = *h.withDO(h.DO.Preload(_f))
 	}

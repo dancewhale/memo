@@ -136,95 +136,156 @@ func (f fsrsInfo) replaceDB(db *gorm.DB) fsrsInfo {
 
 type fsrsInfoDo struct{ gen.DO }
 
-func (f fsrsInfoDo) Debug() *fsrsInfoDo {
+type IFsrsInfoDo interface {
+	gen.SubQuery
+	Debug() IFsrsInfoDo
+	WithContext(ctx context.Context) IFsrsInfoDo
+	WithResult(fc func(tx gen.Dao)) gen.ResultInfo
+	ReplaceDB(db *gorm.DB)
+	ReadDB() IFsrsInfoDo
+	WriteDB() IFsrsInfoDo
+	As(alias string) gen.Dao
+	Session(config *gorm.Session) IFsrsInfoDo
+	Columns(cols ...field.Expr) gen.Columns
+	Clauses(conds ...clause.Expression) IFsrsInfoDo
+	Not(conds ...gen.Condition) IFsrsInfoDo
+	Or(conds ...gen.Condition) IFsrsInfoDo
+	Select(conds ...field.Expr) IFsrsInfoDo
+	Where(conds ...gen.Condition) IFsrsInfoDo
+	Order(conds ...field.Expr) IFsrsInfoDo
+	Distinct(cols ...field.Expr) IFsrsInfoDo
+	Omit(cols ...field.Expr) IFsrsInfoDo
+	Join(table schema.Tabler, on ...field.Expr) IFsrsInfoDo
+	LeftJoin(table schema.Tabler, on ...field.Expr) IFsrsInfoDo
+	RightJoin(table schema.Tabler, on ...field.Expr) IFsrsInfoDo
+	Group(cols ...field.Expr) IFsrsInfoDo
+	Having(conds ...gen.Condition) IFsrsInfoDo
+	Limit(limit int) IFsrsInfoDo
+	Offset(offset int) IFsrsInfoDo
+	Count() (count int64, err error)
+	Scopes(funcs ...func(gen.Dao) gen.Dao) IFsrsInfoDo
+	Unscoped() IFsrsInfoDo
+	Create(values ...*storage.FsrsInfo) error
+	CreateInBatches(values []*storage.FsrsInfo, batchSize int) error
+	Save(values ...*storage.FsrsInfo) error
+	First() (*storage.FsrsInfo, error)
+	Take() (*storage.FsrsInfo, error)
+	Last() (*storage.FsrsInfo, error)
+	Find() ([]*storage.FsrsInfo, error)
+	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*storage.FsrsInfo, err error)
+	FindInBatches(result *[]*storage.FsrsInfo, batchSize int, fc func(tx gen.Dao, batch int) error) error
+	Pluck(column field.Expr, dest interface{}) error
+	Delete(...*storage.FsrsInfo) (info gen.ResultInfo, err error)
+	Update(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	Updates(value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumn(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumnSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	UpdateColumns(value interface{}) (info gen.ResultInfo, err error)
+	UpdateFrom(q gen.SubQuery) gen.Dao
+	Attrs(attrs ...field.AssignExpr) IFsrsInfoDo
+	Assign(attrs ...field.AssignExpr) IFsrsInfoDo
+	Joins(fields ...field.RelationField) IFsrsInfoDo
+	Preload(fields ...field.RelationField) IFsrsInfoDo
+	FirstOrInit() (*storage.FsrsInfo, error)
+	FirstOrCreate() (*storage.FsrsInfo, error)
+	FindByPage(offset int, limit int) (result []*storage.FsrsInfo, count int64, err error)
+	ScanByPage(result interface{}, offset int, limit int) (count int64, err error)
+	Scan(result interface{}) (err error)
+	Returning(value interface{}, columns ...string) IFsrsInfoDo
+	UnderlyingDB() *gorm.DB
+	schema.Tabler
+}
+
+func (f fsrsInfoDo) Debug() IFsrsInfoDo {
 	return f.withDO(f.DO.Debug())
 }
 
-func (f fsrsInfoDo) WithContext(ctx context.Context) *fsrsInfoDo {
+func (f fsrsInfoDo) WithContext(ctx context.Context) IFsrsInfoDo {
 	return f.withDO(f.DO.WithContext(ctx))
 }
 
-func (f fsrsInfoDo) ReadDB() *fsrsInfoDo {
+func (f fsrsInfoDo) ReadDB() IFsrsInfoDo {
 	return f.Clauses(dbresolver.Read)
 }
 
-func (f fsrsInfoDo) WriteDB() *fsrsInfoDo {
+func (f fsrsInfoDo) WriteDB() IFsrsInfoDo {
 	return f.Clauses(dbresolver.Write)
 }
 
-func (f fsrsInfoDo) Session(config *gorm.Session) *fsrsInfoDo {
+func (f fsrsInfoDo) Session(config *gorm.Session) IFsrsInfoDo {
 	return f.withDO(f.DO.Session(config))
 }
 
-func (f fsrsInfoDo) Clauses(conds ...clause.Expression) *fsrsInfoDo {
+func (f fsrsInfoDo) Clauses(conds ...clause.Expression) IFsrsInfoDo {
 	return f.withDO(f.DO.Clauses(conds...))
 }
 
-func (f fsrsInfoDo) Returning(value interface{}, columns ...string) *fsrsInfoDo {
+func (f fsrsInfoDo) Returning(value interface{}, columns ...string) IFsrsInfoDo {
 	return f.withDO(f.DO.Returning(value, columns...))
 }
 
-func (f fsrsInfoDo) Not(conds ...gen.Condition) *fsrsInfoDo {
+func (f fsrsInfoDo) Not(conds ...gen.Condition) IFsrsInfoDo {
 	return f.withDO(f.DO.Not(conds...))
 }
 
-func (f fsrsInfoDo) Or(conds ...gen.Condition) *fsrsInfoDo {
+func (f fsrsInfoDo) Or(conds ...gen.Condition) IFsrsInfoDo {
 	return f.withDO(f.DO.Or(conds...))
 }
 
-func (f fsrsInfoDo) Select(conds ...field.Expr) *fsrsInfoDo {
+func (f fsrsInfoDo) Select(conds ...field.Expr) IFsrsInfoDo {
 	return f.withDO(f.DO.Select(conds...))
 }
 
-func (f fsrsInfoDo) Where(conds ...gen.Condition) *fsrsInfoDo {
+func (f fsrsInfoDo) Where(conds ...gen.Condition) IFsrsInfoDo {
 	return f.withDO(f.DO.Where(conds...))
 }
 
-func (f fsrsInfoDo) Order(conds ...field.Expr) *fsrsInfoDo {
+func (f fsrsInfoDo) Order(conds ...field.Expr) IFsrsInfoDo {
 	return f.withDO(f.DO.Order(conds...))
 }
 
-func (f fsrsInfoDo) Distinct(cols ...field.Expr) *fsrsInfoDo {
+func (f fsrsInfoDo) Distinct(cols ...field.Expr) IFsrsInfoDo {
 	return f.withDO(f.DO.Distinct(cols...))
 }
 
-func (f fsrsInfoDo) Omit(cols ...field.Expr) *fsrsInfoDo {
+func (f fsrsInfoDo) Omit(cols ...field.Expr) IFsrsInfoDo {
 	return f.withDO(f.DO.Omit(cols...))
 }
 
-func (f fsrsInfoDo) Join(table schema.Tabler, on ...field.Expr) *fsrsInfoDo {
+func (f fsrsInfoDo) Join(table schema.Tabler, on ...field.Expr) IFsrsInfoDo {
 	return f.withDO(f.DO.Join(table, on...))
 }
 
-func (f fsrsInfoDo) LeftJoin(table schema.Tabler, on ...field.Expr) *fsrsInfoDo {
+func (f fsrsInfoDo) LeftJoin(table schema.Tabler, on ...field.Expr) IFsrsInfoDo {
 	return f.withDO(f.DO.LeftJoin(table, on...))
 }
 
-func (f fsrsInfoDo) RightJoin(table schema.Tabler, on ...field.Expr) *fsrsInfoDo {
+func (f fsrsInfoDo) RightJoin(table schema.Tabler, on ...field.Expr) IFsrsInfoDo {
 	return f.withDO(f.DO.RightJoin(table, on...))
 }
 
-func (f fsrsInfoDo) Group(cols ...field.Expr) *fsrsInfoDo {
+func (f fsrsInfoDo) Group(cols ...field.Expr) IFsrsInfoDo {
 	return f.withDO(f.DO.Group(cols...))
 }
 
-func (f fsrsInfoDo) Having(conds ...gen.Condition) *fsrsInfoDo {
+func (f fsrsInfoDo) Having(conds ...gen.Condition) IFsrsInfoDo {
 	return f.withDO(f.DO.Having(conds...))
 }
 
-func (f fsrsInfoDo) Limit(limit int) *fsrsInfoDo {
+func (f fsrsInfoDo) Limit(limit int) IFsrsInfoDo {
 	return f.withDO(f.DO.Limit(limit))
 }
 
-func (f fsrsInfoDo) Offset(offset int) *fsrsInfoDo {
+func (f fsrsInfoDo) Offset(offset int) IFsrsInfoDo {
 	return f.withDO(f.DO.Offset(offset))
 }
 
-func (f fsrsInfoDo) Scopes(funcs ...func(gen.Dao) gen.Dao) *fsrsInfoDo {
+func (f fsrsInfoDo) Scopes(funcs ...func(gen.Dao) gen.Dao) IFsrsInfoDo {
 	return f.withDO(f.DO.Scopes(funcs...))
 }
 
-func (f fsrsInfoDo) Unscoped() *fsrsInfoDo {
+func (f fsrsInfoDo) Unscoped() IFsrsInfoDo {
 	return f.withDO(f.DO.Unscoped())
 }
 
@@ -290,22 +351,22 @@ func (f fsrsInfoDo) FindInBatches(result *[]*storage.FsrsInfo, batchSize int, fc
 	return f.DO.FindInBatches(result, batchSize, fc)
 }
 
-func (f fsrsInfoDo) Attrs(attrs ...field.AssignExpr) *fsrsInfoDo {
+func (f fsrsInfoDo) Attrs(attrs ...field.AssignExpr) IFsrsInfoDo {
 	return f.withDO(f.DO.Attrs(attrs...))
 }
 
-func (f fsrsInfoDo) Assign(attrs ...field.AssignExpr) *fsrsInfoDo {
+func (f fsrsInfoDo) Assign(attrs ...field.AssignExpr) IFsrsInfoDo {
 	return f.withDO(f.DO.Assign(attrs...))
 }
 
-func (f fsrsInfoDo) Joins(fields ...field.RelationField) *fsrsInfoDo {
+func (f fsrsInfoDo) Joins(fields ...field.RelationField) IFsrsInfoDo {
 	for _, _f := range fields {
 		f = *f.withDO(f.DO.Joins(_f))
 	}
 	return &f
 }
 
-func (f fsrsInfoDo) Preload(fields ...field.RelationField) *fsrsInfoDo {
+func (f fsrsInfoDo) Preload(fields ...field.RelationField) IFsrsInfoDo {
 	for _, _f := range fields {
 		f = *f.withDO(f.DO.Preload(_f))
 	}

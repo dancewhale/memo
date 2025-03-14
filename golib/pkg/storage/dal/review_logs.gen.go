@@ -124,95 +124,156 @@ func (r reviewLog) replaceDB(db *gorm.DB) reviewLog {
 
 type reviewLogDo struct{ gen.DO }
 
-func (r reviewLogDo) Debug() *reviewLogDo {
+type IReviewLogDo interface {
+	gen.SubQuery
+	Debug() IReviewLogDo
+	WithContext(ctx context.Context) IReviewLogDo
+	WithResult(fc func(tx gen.Dao)) gen.ResultInfo
+	ReplaceDB(db *gorm.DB)
+	ReadDB() IReviewLogDo
+	WriteDB() IReviewLogDo
+	As(alias string) gen.Dao
+	Session(config *gorm.Session) IReviewLogDo
+	Columns(cols ...field.Expr) gen.Columns
+	Clauses(conds ...clause.Expression) IReviewLogDo
+	Not(conds ...gen.Condition) IReviewLogDo
+	Or(conds ...gen.Condition) IReviewLogDo
+	Select(conds ...field.Expr) IReviewLogDo
+	Where(conds ...gen.Condition) IReviewLogDo
+	Order(conds ...field.Expr) IReviewLogDo
+	Distinct(cols ...field.Expr) IReviewLogDo
+	Omit(cols ...field.Expr) IReviewLogDo
+	Join(table schema.Tabler, on ...field.Expr) IReviewLogDo
+	LeftJoin(table schema.Tabler, on ...field.Expr) IReviewLogDo
+	RightJoin(table schema.Tabler, on ...field.Expr) IReviewLogDo
+	Group(cols ...field.Expr) IReviewLogDo
+	Having(conds ...gen.Condition) IReviewLogDo
+	Limit(limit int) IReviewLogDo
+	Offset(offset int) IReviewLogDo
+	Count() (count int64, err error)
+	Scopes(funcs ...func(gen.Dao) gen.Dao) IReviewLogDo
+	Unscoped() IReviewLogDo
+	Create(values ...*storage.ReviewLog) error
+	CreateInBatches(values []*storage.ReviewLog, batchSize int) error
+	Save(values ...*storage.ReviewLog) error
+	First() (*storage.ReviewLog, error)
+	Take() (*storage.ReviewLog, error)
+	Last() (*storage.ReviewLog, error)
+	Find() ([]*storage.ReviewLog, error)
+	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*storage.ReviewLog, err error)
+	FindInBatches(result *[]*storage.ReviewLog, batchSize int, fc func(tx gen.Dao, batch int) error) error
+	Pluck(column field.Expr, dest interface{}) error
+	Delete(...*storage.ReviewLog) (info gen.ResultInfo, err error)
+	Update(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	Updates(value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumn(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumnSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	UpdateColumns(value interface{}) (info gen.ResultInfo, err error)
+	UpdateFrom(q gen.SubQuery) gen.Dao
+	Attrs(attrs ...field.AssignExpr) IReviewLogDo
+	Assign(attrs ...field.AssignExpr) IReviewLogDo
+	Joins(fields ...field.RelationField) IReviewLogDo
+	Preload(fields ...field.RelationField) IReviewLogDo
+	FirstOrInit() (*storage.ReviewLog, error)
+	FirstOrCreate() (*storage.ReviewLog, error)
+	FindByPage(offset int, limit int) (result []*storage.ReviewLog, count int64, err error)
+	ScanByPage(result interface{}, offset int, limit int) (count int64, err error)
+	Scan(result interface{}) (err error)
+	Returning(value interface{}, columns ...string) IReviewLogDo
+	UnderlyingDB() *gorm.DB
+	schema.Tabler
+}
+
+func (r reviewLogDo) Debug() IReviewLogDo {
 	return r.withDO(r.DO.Debug())
 }
 
-func (r reviewLogDo) WithContext(ctx context.Context) *reviewLogDo {
+func (r reviewLogDo) WithContext(ctx context.Context) IReviewLogDo {
 	return r.withDO(r.DO.WithContext(ctx))
 }
 
-func (r reviewLogDo) ReadDB() *reviewLogDo {
+func (r reviewLogDo) ReadDB() IReviewLogDo {
 	return r.Clauses(dbresolver.Read)
 }
 
-func (r reviewLogDo) WriteDB() *reviewLogDo {
+func (r reviewLogDo) WriteDB() IReviewLogDo {
 	return r.Clauses(dbresolver.Write)
 }
 
-func (r reviewLogDo) Session(config *gorm.Session) *reviewLogDo {
+func (r reviewLogDo) Session(config *gorm.Session) IReviewLogDo {
 	return r.withDO(r.DO.Session(config))
 }
 
-func (r reviewLogDo) Clauses(conds ...clause.Expression) *reviewLogDo {
+func (r reviewLogDo) Clauses(conds ...clause.Expression) IReviewLogDo {
 	return r.withDO(r.DO.Clauses(conds...))
 }
 
-func (r reviewLogDo) Returning(value interface{}, columns ...string) *reviewLogDo {
+func (r reviewLogDo) Returning(value interface{}, columns ...string) IReviewLogDo {
 	return r.withDO(r.DO.Returning(value, columns...))
 }
 
-func (r reviewLogDo) Not(conds ...gen.Condition) *reviewLogDo {
+func (r reviewLogDo) Not(conds ...gen.Condition) IReviewLogDo {
 	return r.withDO(r.DO.Not(conds...))
 }
 
-func (r reviewLogDo) Or(conds ...gen.Condition) *reviewLogDo {
+func (r reviewLogDo) Or(conds ...gen.Condition) IReviewLogDo {
 	return r.withDO(r.DO.Or(conds...))
 }
 
-func (r reviewLogDo) Select(conds ...field.Expr) *reviewLogDo {
+func (r reviewLogDo) Select(conds ...field.Expr) IReviewLogDo {
 	return r.withDO(r.DO.Select(conds...))
 }
 
-func (r reviewLogDo) Where(conds ...gen.Condition) *reviewLogDo {
+func (r reviewLogDo) Where(conds ...gen.Condition) IReviewLogDo {
 	return r.withDO(r.DO.Where(conds...))
 }
 
-func (r reviewLogDo) Order(conds ...field.Expr) *reviewLogDo {
+func (r reviewLogDo) Order(conds ...field.Expr) IReviewLogDo {
 	return r.withDO(r.DO.Order(conds...))
 }
 
-func (r reviewLogDo) Distinct(cols ...field.Expr) *reviewLogDo {
+func (r reviewLogDo) Distinct(cols ...field.Expr) IReviewLogDo {
 	return r.withDO(r.DO.Distinct(cols...))
 }
 
-func (r reviewLogDo) Omit(cols ...field.Expr) *reviewLogDo {
+func (r reviewLogDo) Omit(cols ...field.Expr) IReviewLogDo {
 	return r.withDO(r.DO.Omit(cols...))
 }
 
-func (r reviewLogDo) Join(table schema.Tabler, on ...field.Expr) *reviewLogDo {
+func (r reviewLogDo) Join(table schema.Tabler, on ...field.Expr) IReviewLogDo {
 	return r.withDO(r.DO.Join(table, on...))
 }
 
-func (r reviewLogDo) LeftJoin(table schema.Tabler, on ...field.Expr) *reviewLogDo {
+func (r reviewLogDo) LeftJoin(table schema.Tabler, on ...field.Expr) IReviewLogDo {
 	return r.withDO(r.DO.LeftJoin(table, on...))
 }
 
-func (r reviewLogDo) RightJoin(table schema.Tabler, on ...field.Expr) *reviewLogDo {
+func (r reviewLogDo) RightJoin(table schema.Tabler, on ...field.Expr) IReviewLogDo {
 	return r.withDO(r.DO.RightJoin(table, on...))
 }
 
-func (r reviewLogDo) Group(cols ...field.Expr) *reviewLogDo {
+func (r reviewLogDo) Group(cols ...field.Expr) IReviewLogDo {
 	return r.withDO(r.DO.Group(cols...))
 }
 
-func (r reviewLogDo) Having(conds ...gen.Condition) *reviewLogDo {
+func (r reviewLogDo) Having(conds ...gen.Condition) IReviewLogDo {
 	return r.withDO(r.DO.Having(conds...))
 }
 
-func (r reviewLogDo) Limit(limit int) *reviewLogDo {
+func (r reviewLogDo) Limit(limit int) IReviewLogDo {
 	return r.withDO(r.DO.Limit(limit))
 }
 
-func (r reviewLogDo) Offset(offset int) *reviewLogDo {
+func (r reviewLogDo) Offset(offset int) IReviewLogDo {
 	return r.withDO(r.DO.Offset(offset))
 }
 
-func (r reviewLogDo) Scopes(funcs ...func(gen.Dao) gen.Dao) *reviewLogDo {
+func (r reviewLogDo) Scopes(funcs ...func(gen.Dao) gen.Dao) IReviewLogDo {
 	return r.withDO(r.DO.Scopes(funcs...))
 }
 
-func (r reviewLogDo) Unscoped() *reviewLogDo {
+func (r reviewLogDo) Unscoped() IReviewLogDo {
 	return r.withDO(r.DO.Unscoped())
 }
 
@@ -278,22 +339,22 @@ func (r reviewLogDo) FindInBatches(result *[]*storage.ReviewLog, batchSize int, 
 	return r.DO.FindInBatches(result, batchSize, fc)
 }
 
-func (r reviewLogDo) Attrs(attrs ...field.AssignExpr) *reviewLogDo {
+func (r reviewLogDo) Attrs(attrs ...field.AssignExpr) IReviewLogDo {
 	return r.withDO(r.DO.Attrs(attrs...))
 }
 
-func (r reviewLogDo) Assign(attrs ...field.AssignExpr) *reviewLogDo {
+func (r reviewLogDo) Assign(attrs ...field.AssignExpr) IReviewLogDo {
 	return r.withDO(r.DO.Assign(attrs...))
 }
 
-func (r reviewLogDo) Joins(fields ...field.RelationField) *reviewLogDo {
+func (r reviewLogDo) Joins(fields ...field.RelationField) IReviewLogDo {
 	for _, _f := range fields {
 		r = *r.withDO(r.DO.Joins(_f))
 	}
 	return &r
 }
 
-func (r reviewLogDo) Preload(fields ...field.RelationField) *reviewLogDo {
+func (r reviewLogDo) Preload(fields ...field.RelationField) IReviewLogDo {
 	for _, _f := range fields {
 		r = *r.withDO(r.DO.Preload(_f))
 	}

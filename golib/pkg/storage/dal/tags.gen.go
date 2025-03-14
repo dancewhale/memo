@@ -255,95 +255,156 @@ func (a tagBelongsToHeadlineTx) Count() int64 {
 
 type tagDo struct{ gen.DO }
 
-func (t tagDo) Debug() *tagDo {
+type ITagDo interface {
+	gen.SubQuery
+	Debug() ITagDo
+	WithContext(ctx context.Context) ITagDo
+	WithResult(fc func(tx gen.Dao)) gen.ResultInfo
+	ReplaceDB(db *gorm.DB)
+	ReadDB() ITagDo
+	WriteDB() ITagDo
+	As(alias string) gen.Dao
+	Session(config *gorm.Session) ITagDo
+	Columns(cols ...field.Expr) gen.Columns
+	Clauses(conds ...clause.Expression) ITagDo
+	Not(conds ...gen.Condition) ITagDo
+	Or(conds ...gen.Condition) ITagDo
+	Select(conds ...field.Expr) ITagDo
+	Where(conds ...gen.Condition) ITagDo
+	Order(conds ...field.Expr) ITagDo
+	Distinct(cols ...field.Expr) ITagDo
+	Omit(cols ...field.Expr) ITagDo
+	Join(table schema.Tabler, on ...field.Expr) ITagDo
+	LeftJoin(table schema.Tabler, on ...field.Expr) ITagDo
+	RightJoin(table schema.Tabler, on ...field.Expr) ITagDo
+	Group(cols ...field.Expr) ITagDo
+	Having(conds ...gen.Condition) ITagDo
+	Limit(limit int) ITagDo
+	Offset(offset int) ITagDo
+	Count() (count int64, err error)
+	Scopes(funcs ...func(gen.Dao) gen.Dao) ITagDo
+	Unscoped() ITagDo
+	Create(values ...*storage.Tag) error
+	CreateInBatches(values []*storage.Tag, batchSize int) error
+	Save(values ...*storage.Tag) error
+	First() (*storage.Tag, error)
+	Take() (*storage.Tag, error)
+	Last() (*storage.Tag, error)
+	Find() ([]*storage.Tag, error)
+	FindInBatch(batchSize int, fc func(tx gen.Dao, batch int) error) (results []*storage.Tag, err error)
+	FindInBatches(result *[]*storage.Tag, batchSize int, fc func(tx gen.Dao, batch int) error) error
+	Pluck(column field.Expr, dest interface{}) error
+	Delete(...*storage.Tag) (info gen.ResultInfo, err error)
+	Update(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	Updates(value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumn(column field.Expr, value interface{}) (info gen.ResultInfo, err error)
+	UpdateColumnSimple(columns ...field.AssignExpr) (info gen.ResultInfo, err error)
+	UpdateColumns(value interface{}) (info gen.ResultInfo, err error)
+	UpdateFrom(q gen.SubQuery) gen.Dao
+	Attrs(attrs ...field.AssignExpr) ITagDo
+	Assign(attrs ...field.AssignExpr) ITagDo
+	Joins(fields ...field.RelationField) ITagDo
+	Preload(fields ...field.RelationField) ITagDo
+	FirstOrInit() (*storage.Tag, error)
+	FirstOrCreate() (*storage.Tag, error)
+	FindByPage(offset int, limit int) (result []*storage.Tag, count int64, err error)
+	ScanByPage(result interface{}, offset int, limit int) (count int64, err error)
+	Scan(result interface{}) (err error)
+	Returning(value interface{}, columns ...string) ITagDo
+	UnderlyingDB() *gorm.DB
+	schema.Tabler
+}
+
+func (t tagDo) Debug() ITagDo {
 	return t.withDO(t.DO.Debug())
 }
 
-func (t tagDo) WithContext(ctx context.Context) *tagDo {
+func (t tagDo) WithContext(ctx context.Context) ITagDo {
 	return t.withDO(t.DO.WithContext(ctx))
 }
 
-func (t tagDo) ReadDB() *tagDo {
+func (t tagDo) ReadDB() ITagDo {
 	return t.Clauses(dbresolver.Read)
 }
 
-func (t tagDo) WriteDB() *tagDo {
+func (t tagDo) WriteDB() ITagDo {
 	return t.Clauses(dbresolver.Write)
 }
 
-func (t tagDo) Session(config *gorm.Session) *tagDo {
+func (t tagDo) Session(config *gorm.Session) ITagDo {
 	return t.withDO(t.DO.Session(config))
 }
 
-func (t tagDo) Clauses(conds ...clause.Expression) *tagDo {
+func (t tagDo) Clauses(conds ...clause.Expression) ITagDo {
 	return t.withDO(t.DO.Clauses(conds...))
 }
 
-func (t tagDo) Returning(value interface{}, columns ...string) *tagDo {
+func (t tagDo) Returning(value interface{}, columns ...string) ITagDo {
 	return t.withDO(t.DO.Returning(value, columns...))
 }
 
-func (t tagDo) Not(conds ...gen.Condition) *tagDo {
+func (t tagDo) Not(conds ...gen.Condition) ITagDo {
 	return t.withDO(t.DO.Not(conds...))
 }
 
-func (t tagDo) Or(conds ...gen.Condition) *tagDo {
+func (t tagDo) Or(conds ...gen.Condition) ITagDo {
 	return t.withDO(t.DO.Or(conds...))
 }
 
-func (t tagDo) Select(conds ...field.Expr) *tagDo {
+func (t tagDo) Select(conds ...field.Expr) ITagDo {
 	return t.withDO(t.DO.Select(conds...))
 }
 
-func (t tagDo) Where(conds ...gen.Condition) *tagDo {
+func (t tagDo) Where(conds ...gen.Condition) ITagDo {
 	return t.withDO(t.DO.Where(conds...))
 }
 
-func (t tagDo) Order(conds ...field.Expr) *tagDo {
+func (t tagDo) Order(conds ...field.Expr) ITagDo {
 	return t.withDO(t.DO.Order(conds...))
 }
 
-func (t tagDo) Distinct(cols ...field.Expr) *tagDo {
+func (t tagDo) Distinct(cols ...field.Expr) ITagDo {
 	return t.withDO(t.DO.Distinct(cols...))
 }
 
-func (t tagDo) Omit(cols ...field.Expr) *tagDo {
+func (t tagDo) Omit(cols ...field.Expr) ITagDo {
 	return t.withDO(t.DO.Omit(cols...))
 }
 
-func (t tagDo) Join(table schema.Tabler, on ...field.Expr) *tagDo {
+func (t tagDo) Join(table schema.Tabler, on ...field.Expr) ITagDo {
 	return t.withDO(t.DO.Join(table, on...))
 }
 
-func (t tagDo) LeftJoin(table schema.Tabler, on ...field.Expr) *tagDo {
+func (t tagDo) LeftJoin(table schema.Tabler, on ...field.Expr) ITagDo {
 	return t.withDO(t.DO.LeftJoin(table, on...))
 }
 
-func (t tagDo) RightJoin(table schema.Tabler, on ...field.Expr) *tagDo {
+func (t tagDo) RightJoin(table schema.Tabler, on ...field.Expr) ITagDo {
 	return t.withDO(t.DO.RightJoin(table, on...))
 }
 
-func (t tagDo) Group(cols ...field.Expr) *tagDo {
+func (t tagDo) Group(cols ...field.Expr) ITagDo {
 	return t.withDO(t.DO.Group(cols...))
 }
 
-func (t tagDo) Having(conds ...gen.Condition) *tagDo {
+func (t tagDo) Having(conds ...gen.Condition) ITagDo {
 	return t.withDO(t.DO.Having(conds...))
 }
 
-func (t tagDo) Limit(limit int) *tagDo {
+func (t tagDo) Limit(limit int) ITagDo {
 	return t.withDO(t.DO.Limit(limit))
 }
 
-func (t tagDo) Offset(offset int) *tagDo {
+func (t tagDo) Offset(offset int) ITagDo {
 	return t.withDO(t.DO.Offset(offset))
 }
 
-func (t tagDo) Scopes(funcs ...func(gen.Dao) gen.Dao) *tagDo {
+func (t tagDo) Scopes(funcs ...func(gen.Dao) gen.Dao) ITagDo {
 	return t.withDO(t.DO.Scopes(funcs...))
 }
 
-func (t tagDo) Unscoped() *tagDo {
+func (t tagDo) Unscoped() ITagDo {
 	return t.withDO(t.DO.Unscoped())
 }
 
@@ -409,22 +470,22 @@ func (t tagDo) FindInBatches(result *[]*storage.Tag, batchSize int, fc func(tx g
 	return t.DO.FindInBatches(result, batchSize, fc)
 }
 
-func (t tagDo) Attrs(attrs ...field.AssignExpr) *tagDo {
+func (t tagDo) Attrs(attrs ...field.AssignExpr) ITagDo {
 	return t.withDO(t.DO.Attrs(attrs...))
 }
 
-func (t tagDo) Assign(attrs ...field.AssignExpr) *tagDo {
+func (t tagDo) Assign(attrs ...field.AssignExpr) ITagDo {
 	return t.withDO(t.DO.Assign(attrs...))
 }
 
-func (t tagDo) Joins(fields ...field.RelationField) *tagDo {
+func (t tagDo) Joins(fields ...field.RelationField) ITagDo {
 	for _, _f := range fields {
 		t = *t.withDO(t.DO.Joins(_f))
 	}
 	return &t
 }
 
-func (t tagDo) Preload(fields ...field.RelationField) *tagDo {
+func (t tagDo) Preload(fields ...field.RelationField) ITagDo {
 	for _, _f := range fields {
 		t = *t.withDO(t.DO.Preload(_f))
 	}
