@@ -14,12 +14,14 @@ func NewOrgFileDB() (*OrgFileDB, error) {
 	if err != nil {
 		return nil, logger.Errorf("Init db engine error: %v", err)
 	}
-	return &OrgFileDB{query: dal.Use(db), db: db}, nil
+	if dal.File == nil {
+		dal.SetDefault(db)
+	}
+	return &OrgFileDB{db: db}, nil
 }
 
 type OrgFileDB struct {
-	query *dal.Query
-	db    *gorm.DB
+	db *gorm.DB
 }
 
 func preload(d *gorm.DB) *gorm.DB {
@@ -39,7 +41,7 @@ func (f *OrgFileDB) GetHeadTree(fileID string) ([]storage.Headline, error) {
 }
 
 func (f *OrgFileDB) GetFileByHash(hash string) (*storage.File, error) {
-	file := f.query.File
+	file := dal.File
 	files, err := file.WithContext(context.Background()).Where(file.Hash.Eq(hash)).Find()
 	if err != nil {
 		return nil, logger.Errorf("Get file by hash %s error: %v", hash, err)
@@ -51,7 +53,7 @@ func (f *OrgFileDB) GetFileByHash(hash string) (*storage.File, error) {
 }
 
 func (f *OrgFileDB) UpdateFileHash(fileid, hash string) error {
-	file := f.query.File
+	file := dal.File
 	_, err := file.WithContext(context.Background()).Where(file.ID.Eq(fileid)).UpdateSimple(file.Hash.Value(hash))
 	if err != nil {
 		return logger.Errorf("Update file hash error: %v", err)
@@ -61,7 +63,7 @@ func (f *OrgFileDB) UpdateFileHash(fileid, hash string) error {
 
 func (f *OrgFileDB) GetFileByID(id string) (*storage.File, error) {
 	ctx := context.Background()
-	file := f.query.File
+	file := dal.File
 	files, err := file.WithContext(ctx).Where(file.ID.Eq(id)).Find()
 	if err != nil {
 		return nil, logger.Errorf("Get file by id %s error: %v", id, err)

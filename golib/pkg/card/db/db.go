@@ -13,16 +13,18 @@ func NewFsrsDB() (*FsrsDB, error) {
 	if err != nil {
 		return nil, logger.Errorf("Init db engine error: %v", err)
 	}
-	return &FsrsDB{q: dal.Q, db: db}, nil
+	if dal.FsrsInfo != nil {
+		dal.SetDefault(db)
+	}
+	return &FsrsDB{db: db}, nil
 }
 
 type FsrsDB struct {
-	q  *dal.Query
 	db *gorm.DB
 }
 
 func (f *FsrsDB) CreateFsrs(fsrsInfo *storage.FsrsInfo) error {
-	fsrs := f.q.FsrsInfo
+	fsrs := dal.FsrsInfo
 	err := fsrs.WithContext(context.Background()).Create(fsrsInfo)
 	if err != nil {
 		return logger.Errorf("Create fsrs info for headline %s failed: %v", fsrsInfo.HeadlineID, err)
@@ -35,7 +37,7 @@ func (f *FsrsDB) UpdateFsrs(Fsrs *storage.FsrsInfo) error {
 	if Fsrs == nil {
 		return nil
 	}
-	fsrs := f.q.FsrsInfo
+	fsrs := dal.FsrsInfo
 	_, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(Fsrs.HeadlineID)).Updates(Fsrs)
 	if err != nil {
 		logger.Errorf("Update %s Headline FsrsInfo in database failed: %v", Fsrs.HeadlineID, err)
@@ -46,7 +48,7 @@ func (f *FsrsDB) UpdateFsrs(Fsrs *storage.FsrsInfo) error {
 
 // 获取一张卡片的fsrs信息
 func (f *FsrsDB) GetFsrsInfoByOrgID(orgid string) *storage.FsrsInfo {
-	fsrs := f.q.FsrsInfo
+	fsrs := dal.FsrsInfo
 	FsrsInfo, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(orgid)).First()
 	if err != nil {
 		logger.Errorf("Get FsrsInfo by orgid failed: %v", err)
@@ -57,8 +59,8 @@ func (f *FsrsDB) GetFsrsInfoByOrgID(orgid string) *storage.FsrsInfo {
 
 // 移除一张卡片,包括所有学习记录。
 func (f *FsrsDB) removeFsrs(orgid string) error {
-	fsrs := f.q.FsrsInfo
-	r := f.q.ReviewLog
+	fsrs := dal.FsrsInfo
+	r := dal.ReviewLog
 
 	_, err := fsrs.WithContext(context.Background()).Unscoped().Where(fsrs.HeadlineID.Eq(orgid)).Delete()
 	if err != nil {
@@ -72,7 +74,7 @@ func (f *FsrsDB) removeFsrs(orgid string) error {
 }
 
 func (f *FsrsDB) CreateReviewLog(rlog *storage.ReviewLog) error {
-	r := f.q.ReviewLog
+	r := dal.ReviewLog
 
 	if rlog.HeadlineID == "" {
 		return logger.Errorf("Add review log failed: headlineID is empty.")
@@ -87,8 +89,8 @@ func (f *FsrsDB) CreateReviewLog(rlog *storage.ReviewLog) error {
 
 // get heads that need init fsrs info.
 func (f *FsrsDB) GetFsrsEmptyHeadline() []*storage.Headline {
-	headline := f.q.Headline
-	fsrsInfo := f.q.FsrsInfo
+	headline := dal.Headline
+	fsrsInfo := dal.FsrsInfo
 
 	heads, err := headline.WithContext(context.Background()).
 		LeftJoin(fsrsInfo, fsrsInfo.HeadlineID.EqCol(headline.ID)).

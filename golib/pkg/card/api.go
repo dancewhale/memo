@@ -6,7 +6,6 @@ import (
 	"memo/pkg/logger"
 	headDB "memo/pkg/org/db"
 	"memo/pkg/storage"
-	"memo/pkg/storage/dal"
 	"memo/pkg/util"
 
 	epc "github.com/kiwanami/go-elrpc"
@@ -17,13 +16,11 @@ import (
 func NewCardApi() (*CardApi, error) {
 	DB, err := storage.InitDBEngine()
 	return &CardApi{
-		Q:  dal.Q,
 		db: DB,
 	}, err
 }
 
 type CardApi struct {
-	Q  *dal.Query
 	db *gorm.DB
 }
 

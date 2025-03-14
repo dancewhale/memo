@@ -17,16 +17,18 @@ func NewOrgHeadlineDB() (*OrgHeadlineDB, error) {
 	if err != nil {
 		return nil, logger.Errorf("Init db engine error: %v", err)
 	}
-	return &OrgHeadlineDB{query: dal.Use(db), db: db}, nil
+	if dal.Headline == nil {
+		dal.SetDefault(db)
+	}
+	return &OrgHeadlineDB{db: db}, nil
 }
 
 type OrgHeadlineDB struct {
-	query *dal.Query
-	db    *gorm.DB
+	db *gorm.DB
 }
 
 func (h *OrgHeadlineDB) UpdatePropertyByID(id string, currentProperties []storage.Property) error {
-	p := h.query.Property
+	p := dal.Property
 	dbProperties, err := p.WithContext(context.Background()).Where(p.HeadlineID.Eq(id)).Find()
 	if err != nil {
 		return logger.Errorf("Get headline %s property error: %v", id, err)
@@ -63,7 +65,7 @@ func (h *OrgHeadlineDB) UpdatePropertyByID(id string, currentProperties []storag
 }
 
 func (h *OrgHeadlineDB) UpdateTagByID(id string, tags []storage.Tag) error {
-	t := h.query.Tag
+	t := dal.Tag
 	dbTags, err := t.WithContext(context.Background()).Where(t.HeadlineID.Eq(id)).Find()
 	if err != nil {
 		return logger.Errorf("Get headline %s tag error: %v", id, err)
@@ -94,7 +96,7 @@ func (h *OrgHeadlineDB) UpdateTagByID(id string, tags []storage.Tag) error {
 }
 
 func (h *OrgHeadlineDB) UpdateClockByID(id string, clocks []*storage.Clock) error {
-	c := h.query.Clock
+	c := dal.Clock
 	_, err := c.WithContext(context.Background()).Where(c.HeadlineID.Eq(id)).Delete()
 	if err != nil {
 		return logger.Errorf("Delete headline %s clock error: %v", id, err)
@@ -125,7 +127,7 @@ func (h *OrgHeadlineDB) UpdateHeadline(Data storage.Headline) error {
 
 // Create headline record.
 func (h *OrgHeadlineDB) Create(Data storage.Headline) error {
-	headline := h.query.Headline
+	headline := dal.Headline
 
 	err := headline.WithContext(context.Background()).Create(&Data)
 	if err != nil {
@@ -135,7 +137,7 @@ func (h *OrgHeadlineDB) Create(Data storage.Headline) error {
 }
 
 func (h *OrgHeadlineDB) Delete(Data storage.Headline) error {
-	head := h.query.Headline
+	head := dal.Headline
 	_, err := head.WithContext(context.Background()).Unscoped().
 		Select(head.Properties.Field(), head.Tags.Field(), head.LogBook.Field()).
 		Delete(&Data)
@@ -149,7 +151,7 @@ func (h *OrgHeadlineDB) Delete(Data storage.Headline) error {
 // Load all headline attach to id from database.
 func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, error) {
 	headlinesDBCache := linkedhashmap.New()
-	headline := h.query.Headline
+	headline := dal.Headline
 	headlines, err := headline.WithContext(context.Background()).
 		Preload(headline.Properties).Preload(headline.LogBook).Preload(headline.Tags).
 		Where(headline.FileID.Eq(fileID)).Find()
@@ -163,7 +165,7 @@ func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, e
 }
 
 func (h *OrgHeadlineDB) GetHeadlineByID(id string) (*storage.Headline, error) {
-	headline := h.query.Headline
+	headline := dal.Headline
 	heads, err := headline.WithContext(context.Background()).
 		Where(headline.ID.Eq(id)).
 		Preload(headline.Properties).Preload(headline.Tags).Preload(headline.LogBook).
@@ -181,7 +183,7 @@ func (h *OrgHeadlineDB) GetHeadlineByID(id string) (*storage.Headline, error) {
 }
 
 func (h *OrgHeadlineDB) GetFileIDByOrgID(orgid string) (*string, error) {
-	head := h.query.Headline
+	head := dal.Headline
 	headlines, err := head.WithContext(context.Background()).Where(head.ID.Eq(orgid)).Find()
 	if err != nil {
 		return nil, logger.Errorf("Get headline by orgid failed: %v", err)
@@ -201,7 +203,7 @@ func (h *OrgHeadlineDB) UpdateHeadlineHash(id string) error {
 	}
 	hash := parser.HashContent(head.String())
 	if head.Hash != hash {
-		hd := h.query.Headline
+		hd := dal.Headline
 		_, err = hd.WithContext(context.Background()).Where(hd.ID.Eq(id)).UpdateSimple(hd.Hash.Value(hash))
 		if err != nil {
 			return logger.Errorf("Update headline %s hash error: %v", id, err)
@@ -211,7 +213,7 @@ func (h *OrgHeadlineDB) UpdateHeadlineHash(id string) error {
 }
 
 func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
-	headline := h.query.Headline
+	headline := dal.Headline
 	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
 		UpdateSimple(headline.Content.Value(body))
 	if err != nil {
@@ -221,7 +223,7 @@ func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
 }
 
 func (h *OrgHeadlineDB) UpdateProperty(id, key, value string) error {
-	headline := h.query.Headline
+	headline := dal.Headline
 	if key == options.EmacsPropertyID {
 		return logger.Errorf("ID is not allowed to update.")
 	} else if key == options.EmacsPropertySource {
@@ -248,7 +250,7 @@ func (h *OrgHeadlineDB) UpdateProperty(id, key, value string) error {
 }
 
 func (h *OrgHeadlineDB) GetFileByHeadlineID(headlineID string) (*storage.File, error) {
-	headline := h.query.Headline
+	headline := dal.Headline
 	head, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).First()
 	if err != nil {
 		return nil, logger.Errorf("Get headline by id %s error: %v", headlineID, err)
@@ -282,7 +284,7 @@ func UpdateHeadScheduleTypeByID(headlineID, stype string) error {
 }
 
 func (h *OrgHeadlineDB) CreateVirtualHead(parentID, title, content string) error {
-	head := h.query.Headline
+	head := dal.Headline
 	source := "[[id:" + parentID + "]]"
 
 	count, err := head.WithContext(context.Background()).Where(head.ID.Eq(parentID)).
@@ -306,7 +308,7 @@ func (h *OrgHeadlineDB) CreateVirtualHead(parentID, title, content string) error
 }
 
 func (h *OrgHeadlineDB) GetVirtualHeadByParentID(parentID string) ([]*storage.Headline, error) {
-	head := h.query.Headline
+	head := dal.Headline
 	headlines, err := head.WithContext(context.Background()).Where(head.ParentID.Eq(parentID)).
 		Where(head.Type.Eq(storage.VirtualHead)).Find()
 	if err != nil {
@@ -316,7 +318,7 @@ func (h *OrgHeadlineDB) GetVirtualHeadByParentID(parentID string) ([]*storage.He
 }
 
 func (h *OrgHeadlineDB) IfVirtualHeadExpandable(id string) (int, error) {
-	head := h.query.Headline
+	head := dal.Headline
 	count, err := head.WithContext(context.Background()).Where(head.ParentID.Eq(id)).Count()
 	if err != nil {
 		return 0, logger.Errorf("Get headline by id %s error: %v", id, err)

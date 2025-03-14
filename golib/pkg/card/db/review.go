@@ -5,6 +5,7 @@ import (
 	"github.com/maniartech/gotime"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
+	"memo/pkg/storage/dal"
 	"time"
 )
 
@@ -31,7 +32,7 @@ func GetReviewCardByWeightDueTime() *storage.Headline {
 
 // 传入参数orgid,当对应的Card 卡片已经到期则返回true,否则返回false
 func (f *FsrsDB) IfCardIsDue(orgid string) (bool, error) {
-	fsrs := f.q.FsrsInfo
+	fsrs := dal.FsrsInfo
 
 	china, _ := time.LoadLocation("Asia/Shanghai")
 	today := time.Now().In(china)
@@ -51,8 +52,8 @@ func (f *FsrsDB) IfCardIsDue(orgid string) (bool, error) {
 
 // 获取已经到期且已经延期的卡片
 func (f *FsrsDB) dueCardsBeforeToday(stype string) []*storage.Headline {
-	h := f.q.Headline
-	fsrs := f.q.FsrsInfo
+	h := dal.Headline
+	fsrs := dal.FsrsInfo
 
 	var err error
 	var heads []*storage.Headline
@@ -84,8 +85,8 @@ func (f *FsrsDB) dueCardsBeforeToday(stype string) []*storage.Headline {
 
 // 获取在之后第day天当天到期，当天应该复习的所有闪卡，+1表示明天，-1表示昨天
 func (f *FsrsDB) DueCardsInDay(day int64) []*storage.Headline {
-	h := f.q.Headline
-	fsrs := f.q.FsrsInfo
+	h := dal.Headline
+	fsrs := dal.FsrsInfo
 
 	china, _ := time.LoadLocation("Asia/Shanghai")
 	dueDay := time.Now().In(china).AddDate(0, 0, int(day))
@@ -107,8 +108,8 @@ func (f *FsrsDB) DueCardsInDay(day int64) []*storage.Headline {
 
 // get card which due time is today
 func (f *FsrsDB) dueCardsInToday(stype string) []*storage.Headline {
-	h := f.q.Headline
-	fsrs := f.q.FsrsInfo
+	h := dal.Headline
+	fsrs := dal.FsrsInfo
 
 	var err error
 	var heads []*storage.Headline
