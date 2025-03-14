@@ -6,6 +6,7 @@ import (
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+	"memo/pkg/util"
 )
 
 func NewFsrsDB() (*FsrsDB, error) {
@@ -71,6 +72,24 @@ func (f *FsrsDB) removeFsrs(orgid string) error {
 		return logger.Errorf("Remove ReviewLog in by %s failed: %v", orgid, err)
 	}
 	return nil
+}
+
+// 传入参数orgid,当对应的Card 卡片已经到期则返回true,否则返回false
+func (f *FsrsDB) IfCardIsDue(orgid string) (bool, error) {
+	fsrs := dal.FsrsInfo
+
+	_, todayEnd := util.GetDayTime(0)
+
+	heads, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(orgid)).
+		Where(fsrs.Due.Lte(todayEnd)).Find()
+
+	if err != nil {
+		return false, logger.Errorf("Check orgid %s if is due Card failed: %v", orgid, err)
+	} else if len(heads) == 0 {
+		return false, nil
+	} else {
+		return true, nil
+	}
 }
 
 func (f *FsrsDB) CreateReviewLog(rlog *storage.ReviewLog) error {
