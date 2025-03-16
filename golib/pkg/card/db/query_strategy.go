@@ -50,6 +50,26 @@ func (s *FileFilterStrategy) Apply(db *CardDB) *CardDB {
 	return db.FileFilter(s.FileID)
 }
 
+// ParentFilterStrategy 父卡片过滤策略
+type ParentFilterStrategy struct {
+	ParentID string
+}
+
+// Apply 实现QueryStrategy接口
+func (s *ParentFilterStrategy) Apply(db *CardDB) *CardDB {
+	return db.ParentFilter(s.ParentID)
+}
+
+// AncestorFilterStrategy 祖先卡片过滤策略
+type AncestorFilterStrategy struct {
+	AncestorID string
+}
+
+// Apply 实现QueryStrategy接口
+func (s *AncestorFilterStrategy) Apply(db *CardDB) *CardDB {
+	return db.AncestorFilter(s.AncestorID)
+}
+
 // TagFilterStrategy 标签过滤策略
 type TagFilterStrategy struct {
 	Tag string
@@ -131,6 +151,22 @@ func (b *QueryBuilder) WithDueTime(dayOffset int64, timeRange string) *QueryBuil
 func (b *QueryBuilder) WithTypeFilter(cardType string) *QueryBuilder {
 	b.strategies = append(b.strategies, &TypeFilterStrategy{
 		Type: cardType,
+	})
+	return b
+}
+
+// WithParentFilter 添加父卡片过滤策略
+func (b *QueryBuilder) WithParentFilter(parentID string) *QueryBuilder {
+	b.strategies = append(b.strategies, &ParentFilterStrategy{
+		ParentID: parentID,
+	})
+	return b
+}
+
+// WithAncestorFilter 添加祖先卡片过滤策略
+func (b *QueryBuilder) WithAncestorFilter(ancestorID string) *QueryBuilder {
+	b.strategies = append(b.strategies, &AncestorFilterStrategy{
+		AncestorID: ancestorID,
 	})
 	return b
 }

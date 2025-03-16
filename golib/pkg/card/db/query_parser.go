@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"memo/pkg/logger"
 	"strconv"
 	"strings"
 )
@@ -48,14 +47,15 @@ const (
 
 // 定义过滤器类型
 const (
-	FileIDFilter    = "fileid"
-	DueAtFilter     = "dueAt"
-	DueBeforeFilter = "dueBefore"
-	DueAfterFilter  = "dueAfter"
-	ParentIDFilter  = "parentid"
-	TypeFilter      = "type"
-	TagFilter       = "tag"
-	PropertyFilter  = "property"
+	FileIDFilter     = "fileid"
+	AncestorIDFilter = "ancestorid"
+	DueAtFilter      = "dueAt"
+	DueBeforeFilter  = "dueBefore"
+	DueAfterFilter   = "dueAfter"
+	ParentIDFilter   = "parentid"
+	TypeFilter       = "type"
+	TagFilter        = "tag"
+	PropertyFilter   = "property"
 )
 
 // 查询语法单元
@@ -250,9 +250,10 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 				queryBuilder = queryBuilder.WithPropertyFilter(unit.SubField, unit.Value)
 
 			case ParentIDFilter:
-				// 这里需要实现ParentID过滤策略
-				// TODO: 实现ParentID过滤
-				logger.Warnf("ParentID过滤尚未实现: %s", unit.Value)
+				queryBuilder = queryBuilder.WithParentFilter(unit.Value)
+
+			case AncestorIDFilter:
+				queryBuilder = queryBuilder.WithAncestorFilter(unit.Value)
 
 			}
 		}
@@ -283,14 +284,15 @@ func isValidOrderDirection(direction string) bool {
 // 验证过滤字段是否有效
 func isValidFilterField(field string) bool {
 	validFields := map[string]bool{
-		FileIDFilter:    true,
-		DueAtFilter:     true,
-		DueBeforeFilter: true,
-		DueAfterFilter:  true,
-		ParentIDFilter:  true,
-		TypeFilter:      true,
-		TagFilter:       true,
-		PropertyFilter:  true,
+		FileIDFilter:     true,
+		AncestorIDFilter: true,
+		ParentIDFilter:   true,
+		DueAtFilter:      true,
+		DueBeforeFilter:  true,
+		DueAfterFilter:   true,
+		TypeFilter:       true,
+		TagFilter:        true,
+		PropertyFilter:   true,
 	}
 
 	_, valid := validFields[field]

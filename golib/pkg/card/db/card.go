@@ -112,6 +112,17 @@ func (c *CardDB) FileFilter(fileID string) *CardDB {
 	return c
 }
 
+func (c *CardDB) ParentFilter(parentID string) *CardDB {
+	c.headDO = c.headDO.Where(dal.Headline.ParentID.Eq(parentID))
+	return c
+}
+
+func (c *CardDB) AncestorFilter(ancestorID string) *CardDB {
+	idList := getHeadIDByAncestorID(ancestorID)
+	c.headDO = c.headDO.Where(dal.Headline.ID.In(idList...))
+	return c
+}
+
 func (c *CardDB) OrderByWeight(order string) *CardDB {
 	if order == AscOrder {
 		c.headDO = c.headDO.Order(dal.Headline.Weight.Asc())
