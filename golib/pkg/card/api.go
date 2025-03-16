@@ -27,7 +27,7 @@ type CardApi struct {
 func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
 	service.RegisterMethod(epc.MakeMethod("GetNextReviewNote", api.GetNextReviewNote, "string", "Get next review note"))
 	service.RegisterMethod(epc.MakeMethod("ReviewNote", api.ReviewNote, "string", "Review note"))
-	service.RegisterMethod(epc.MakeMethod("FindNextNote", api.FindNextNote, "string", "Find note with query"))
+	service.RegisterMethod(epc.MakeMethod("FindNoteFirst", api.FindNoteFirst, "string", "Find note with query"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteList", api.FindNoteList, "string", "Find notes with query"))
 	return service
 }
@@ -65,7 +65,7 @@ func (api *CardApi) FindNoteList(q []string) util.Result {
 	return util.Result{Data: notes, Err: nil}
 }
 
-func (api *CardApi) FindNextNote(q []string) util.Result {
+func (api *CardApi) FindNoteFirst(q []string) util.Result {
 	hDB, err := headDB.NewOrgHeadlineDB()
 	if err != nil {
 		return util.Result{Data: nil, Err: err}

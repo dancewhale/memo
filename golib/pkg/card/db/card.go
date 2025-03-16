@@ -89,7 +89,7 @@ func (c *CardDB) TypeFilter(stype string) *CardDB {
 	return c
 }
 
-func (c *CardDB) FilterTag(tag string) *CardDB {
+func (c *CardDB) TagFilter(tag string) *CardDB {
 	h := dal.Headline
 	t := dal.Tag
 
@@ -98,6 +98,17 @@ func (c *CardDB) FilterTag(tag string) *CardDB {
 
 	// 使用 In 操作符筛选这些 ID
 	c.headDO.Where(h.Columns(h.ID).In(tagQuery))
+	return c
+}
+
+func (c *CardDB) PropertyFilter(key, value string) *CardDB {
+	h := dal.Headline
+	p := dal.Property
+
+	// 使用子查询获取包含指定标签的 headline ID
+	propertyQuery := p.WithContext(context.Background()).Select(p.HeadlineID).Where(p.Key.Eq(key), p.Value.Eq(value))
+	// 使用 In 操作符筛选这些 ID
+	c.headDO.Where(h.Columns(h.ID).In(propertyQuery))
 	return c
 }
 

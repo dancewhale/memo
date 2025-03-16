@@ -48,6 +48,7 @@ const (
 	ParentIDFilter  = "parentid"
 	TypeFilter      = "type"
 	TagFilter       = "tag"
+	PropertyFilter  = "property"
 )
 
 // 查询语法单元
@@ -141,7 +142,12 @@ func (p *QueryParser) parseQueryUnit(query string) (QueryUnit, error) {
 		}
 
 		unit.Field = parts[1]
-		unit.Value = parts[2]
+		if len(parts) == 3 {
+			unit.Value = parts[2]
+		} else if len(parts) == 4 {
+			unit.SubField = parts[2]
+			unit.Value = parts[3]
+		}
 
 		// 验证过滤字段
 		if !isValidFilterField(unit.Field) {
@@ -205,16 +211,8 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 				// 随机排序特殊处理
 				queryBuilder.cardDB = queryBuilder.cardDB.OrderByRandom()
 			} else {
-				// 确定排序方向
-				var orderDirection string
-				if unit.SubField == AscOrder || unit.SubField == DescOrder {
-					orderDirection = AscOrder
-				} else {
-					orderDirection = DescOrder
-				}
-
 				// 添加排序策略
-				queryBuilder = queryBuilder.WithOrder(unit.Field, orderDirection)
+				queryBuilder = queryBuilder.WithOrder(unit.Field, unit.SubField)
 			}
 
 		case FilterType:
@@ -240,6 +238,9 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 
 			case TagFilter:
 				queryBuilder = queryBuilder.WithTagFilter(unit.Value)
+
+			case PropertyFilter:
+				queryBuilder = queryBuilder.WithPropertyFilter(unit.SubField, unit.Value)
 
 			case ParentIDFilter:
 				// 这里需要实现ParentID过滤策略
@@ -285,6 +286,7 @@ func isValidFilterField(field string) bool {
 		ParentIDFilter:  true,
 		TypeFilter:      true,
 		TagFilter:       true,
+		PropertyFilter:  true,
 	}
 
 	_, valid := validFields[field]

@@ -57,7 +57,18 @@ type TagFilterStrategy struct {
 
 // Apply 实现QueryStrategy接口
 func (s *TagFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.FilterTag(s.Tag)
+	return db.TagFilter(s.Tag)
+}
+
+// PropertyFilterStrategy 属性过滤策略
+type PropertyFilterStrategy struct {
+	Key   string
+	Value string
+}
+
+// PropertyFilterStrategy 实现QueryStrategy接口
+func (s *PropertyFilterStrategy) Apply(db *CardDB) *CardDB {
+	return db.PropertyFilter(s.Key, s.Value)
 }
 
 // OrderStrategy 排序策略
@@ -124,6 +135,15 @@ func (b *QueryBuilder) WithTypeFilter(cardType string) *QueryBuilder {
 func (b *QueryBuilder) WithTagFilter(tag string) *QueryBuilder {
 	b.strategies = append(b.strategies, &TagFilterStrategy{
 		Tag: tag,
+	})
+	return b
+}
+
+// WithPropertyFilter 添加属性过滤策略
+func (b *QueryBuilder) WithPropertyFilter(key, value string) *QueryBuilder {
+	b.strategies = append(b.strategies, &PropertyFilterStrategy{
+		Key:   key,
+		Value: value,
 	})
 	return b
 }
