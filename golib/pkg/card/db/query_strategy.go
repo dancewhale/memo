@@ -73,8 +73,8 @@ func (s *PropertyFilterStrategy) Apply(db *CardDB) *CardDB {
 
 // OrderStrategy 排序策略
 type OrderStrategy struct {
-	OrderBy string // "weight", "due"
-	Order   string // AscOrder, DescOrder, RandomOrder
+	OrderBy string // "weight", "due" "level", "seq" "random"
+	Order   string // AscOrder, DescOrder
 }
 
 // Apply 实现QueryStrategy接口
@@ -84,6 +84,10 @@ func (s *OrderStrategy) Apply(db *CardDB) *CardDB {
 		return db.OrderByWeight(s.Order)
 	case "due":
 		return db.OrderByDue(s.Order)
+	case "level":
+		return db.OrderByLevel(s.Order)
+	case "seq":
+		return db.OrderBySeq(s.Order)
 	default:
 		return db.OrderByWeight(s.Order)
 	}

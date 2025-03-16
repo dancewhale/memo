@@ -11,11 +11,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-const (
-	AscOrder  = "asc"
-	DescOrder = "desc"
-)
-
 func NewCardDB() (*CardDB, error) {
 	db, err := storage.InitDBEngine()
 	if err != nil {
@@ -135,7 +130,31 @@ func (c *CardDB) OrderByDue(order string) *CardDB {
 	} else if order == DescOrder {
 		c.headDO = c.headDO.Order(fsrs.Due.Desc())
 	} else {
-		c.headDO = c.headDO.Order(fsrs.Due.Asc())
+		c.headDO = c.headDO.Order(fsrs.Due.Desc())
+	}
+	return c
+}
+
+func (c *CardDB) OrderByLevel(order string) *CardDB {
+	h := dal.Headline
+	if order == AscOrder {
+		c.headDO = c.headDO.Order(h.Level.Asc())
+	} else if order == DescOrder {
+		c.headDO = c.headDO.Order(h.Level.Desc())
+	} else {
+		c.headDO = c.headDO.Order(h.Level.Desc())
+	}
+	return c
+}
+
+func (c *CardDB) OrderBySeq(order string) *CardDB {
+	h := dal.Headline
+	if order == AscOrder {
+		c.headDO = c.headDO.Order(h.Order_.Asc())
+	} else if order == DescOrder {
+		c.headDO = c.headDO.Order(h.Order_.Desc())
+	} else {
+		c.headDO = c.headDO.Order(h.Order_.Desc())
 	}
 	return c
 }

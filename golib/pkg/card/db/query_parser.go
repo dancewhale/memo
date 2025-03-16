@@ -35,12 +35,19 @@ const (
 const (
 	WeightOrder = "weight"
 	DueOrder    = "due"
+	LevelOrder  = "level"
+	SeqOrder    = "seq"
 	RandomOrder = "random"
+)
+
+// 定义排序方向
+const (
+	AscOrder  = "asc"
+	DescOrder = "desc"
 )
 
 // 定义过滤器类型
 const (
-	OrgIDFilter     = "orgid"
 	FileIDFilter    = "fileid"
 	DueAtFilter     = "dueAt"
 	DueBeforeFilter = "dueBefore"
@@ -247,10 +254,6 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 				// TODO: 实现ParentID过滤
 				logger.Warnf("ParentID过滤尚未实现: %s", unit.Value)
 
-			case OrgIDFilter:
-				// 这里需要实现OrgID过滤策略
-				// TODO: 实现OrgID过滤
-				logger.Warnf("OrgID过滤尚未实现: %s", unit.Value)
 			}
 		}
 	}
@@ -264,6 +267,8 @@ func isValidOrderField(field string) bool {
 		WeightOrder: true,
 		DueOrder:    true,
 		RandomOrder: true,
+		LevelOrder:  true,
+		SeqOrder:    true,
 	}
 
 	_, valid := validFields[field]
@@ -278,7 +283,6 @@ func isValidOrderDirection(direction string) bool {
 // 验证过滤字段是否有效
 func isValidFilterField(field string) bool {
 	validFields := map[string]bool{
-		OrgIDFilter:     true,
 		FileIDFilter:    true,
 		DueAtFilter:     true,
 		DueBeforeFilter: true,
