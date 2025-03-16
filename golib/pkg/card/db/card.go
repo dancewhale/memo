@@ -2,12 +2,13 @@ package db
 
 import (
 	"context"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"memo/pkg/util"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -85,6 +86,18 @@ func (c *CardDB) TypeFilter(stype string) *CardDB {
 	default:
 		c.headDO = c.headDO.Where(h.ScheduledType.Eq(storage.NORMAL))
 	}
+	return c
+}
+
+func (c *CardDB) FilterTag(tag string) *CardDB {
+	h := dal.Headline
+	t := dal.Tag
+
+	// 使用子查询获取包含指定标签的 headline ID
+	tagQuery := t.WithContext(context.Background()).Select(t.HeadlineID).Where(t.Name.Eq(tag))
+
+	// 使用 In 操作符筛选这些 ID
+	c.headDO.Where(h.Columns(h.ID).In(tagQuery))
 	return c
 }
 

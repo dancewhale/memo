@@ -47,6 +47,7 @@ const (
 	DueAfterFilter  = "dueAfter"
 	ParentIDFilter  = "parentid"
 	TypeFilter      = "type"
+	TagFilter       = "tag"
 )
 
 // 查询语法单元
@@ -237,6 +238,9 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 				dayOffset, _ := strconv.ParseInt(unit.Value, 10, 64)
 				queryBuilder = queryBuilder.WithDueTime(dayOffset, "after")
 
+			case TagFilter:
+				queryBuilder = queryBuilder.WithTagFilter(unit.Value)
+
 			case ParentIDFilter:
 				// 这里需要实现ParentID过滤策略
 				// TODO: 实现ParentID过滤
@@ -280,6 +284,7 @@ func isValidFilterField(field string) bool {
 		DueAfterFilter:  true,
 		ParentIDFilter:  true,
 		TypeFilter:      true,
+		TagFilter:       true,
 	}
 
 	_, valid := validFields[field]

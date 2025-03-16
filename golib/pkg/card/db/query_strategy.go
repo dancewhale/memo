@@ -50,6 +50,16 @@ func (s *FileFilterStrategy) Apply(db *CardDB) *CardDB {
 	return db.FileFilter(s.FileID)
 }
 
+// TagFilterStrategy 标签过滤策略
+type TagFilterStrategy struct {
+	Tag string
+}
+
+// Apply 实现QueryStrategy接口
+func (s *TagFilterStrategy) Apply(db *CardDB) *CardDB {
+	return db.FilterTag(s.Tag)
+}
+
 // OrderStrategy 排序策略
 type OrderStrategy struct {
 	OrderBy string // "weight", "due"
@@ -106,6 +116,14 @@ func (b *QueryBuilder) WithDueTime(dayOffset int64, timeRange string) *QueryBuil
 func (b *QueryBuilder) WithTypeFilter(cardType string) *QueryBuilder {
 	b.strategies = append(b.strategies, &TypeFilterStrategy{
 		Type: cardType,
+	})
+	return b
+}
+
+// WithTagFilter 添加标签过滤策略
+func (b *QueryBuilder) WithTagFilter(tag string) *QueryBuilder {
+	b.strategies = append(b.strategies, &TagFilterStrategy{
+		Tag: tag,
 	})
 	return b
 }
