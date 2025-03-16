@@ -2,17 +2,18 @@ package db
 
 import (
 	"context"
-	"gorm.io/gen/field"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"memo/pkg/util"
 )
 
-var AscOrder = 1
-var DescOrder = 2
-var RandomOrder = 3
+const (
+	AscOrder  = "asc"
+	DescOrder = "desc"
+)
 
 func NewCardDB() (*CardDB, error) {
 	db, err := storage.InitDBEngine()
@@ -92,30 +93,33 @@ func (c *CardDB) FileFilter(fileID string) *CardDB {
 	return c
 }
 
-func (c *CardDB) OrderByWeight(order int) *CardDB {
+func (c *CardDB) OrderByWeight(order string) *CardDB {
 	if order == AscOrder {
 		c.headDO = c.headDO.Order(dal.Headline.Weight.Asc())
 	} else if order == DescOrder {
 		c.headDO = c.headDO.Order(dal.Headline.Weight.Desc())
-	} else if order == RandomOrder {
-		c.headDO = c.headDO.Order(field.Func.Rand())
 	} else {
 		c.headDO = c.headDO.Order(dal.Headline.Weight.Desc())
 	}
 	return c
 }
 
-func (c *CardDB) OrderByDue(order int) *CardDB {
+func (c *CardDB) OrderByDue(order string) *CardDB {
 	fsrs := dal.FsrsInfo
 	if order == AscOrder {
 		c.headDO = c.headDO.Order(fsrs.Due.Asc())
 	} else if order == DescOrder {
 		c.headDO = c.headDO.Order(fsrs.Due.Desc())
-	} else if order == RandomOrder {
-		c.headDO = c.headDO.Order(field.Func.Rand())
 	} else {
 		c.headDO = c.headDO.Order(fsrs.Due.Asc())
 	}
+	return c
+}
+
+func (c *CardDB) OrderByRandom() *CardDB {
+	DB := c.headDO.UnderlyingDB().
+		Clauses(clause.OrderBy{Expression: clause.Expr{SQL: "RANDOM()"}})
+	c.headDO.ReplaceDB(DB)
 	return c
 }
 

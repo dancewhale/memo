@@ -7,9 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/blevesearch/bleve v1.0.14
 	github.com/emirpasic/gods v1.18.1
-	github.com/gohugoio/hashstructure v0.5.0
 	github.com/google/uuid v1.6.0
-	github.com/jinzhu/copier v0.4.0
 	github.com/karrick/godirwalk v1.17.0
 	github.com/kiwanami/go-elrpc v0.0.0-20170427044253-ec829274c742
 	github.com/maniartech/gotime v1.1.0

@@ -27,6 +27,7 @@ type CardApi struct {
 func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
 	service.RegisterMethod(epc.MakeMethod("GetNextReviewNote", api.GetNextReviewNote, "string", "Get next review note"))
 	service.RegisterMethod(epc.MakeMethod("ReviewNote", api.ReviewNote, "string", "Review note"))
+	service.RegisterMethod(epc.MakeMethod("FindNextNote", api.FindNextNote, "string", "Find note"))
 	return service
 }
 
@@ -34,25 +35,42 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 func (api *CardApi) GetNextReviewNote() util.Result {
 	head := cardDB.GetReviewCardByWeightDueTime()
 	if head == nil {
-		return util.Result{Data: nil, Err: errors.New("There is no card need review.")}
+		return util.Result{Data: nil, Err: errors.New("There is no card need review")}
 	}
 
-	headDB, _ := headDB.NewOrgHeadlineDB()
-	note := util.GetHeadStruct(head, headDB)
+	hDB, _ := headDB.NewOrgHeadlineDB()
+	note := util.GetHeadStruct(head, hDB)
 
-	return util.Result{note, nil}
+	return util.Result{Data: note, Err: nil}
+}
+
+func (api *CardApi) FindNextNote(q []string) util.Result {
+	hDB, err := headDB.NewOrgHeadlineDB()
+	if err != nil {
+		return util.Result{Data: nil, Err: err}
+	}
+	query, err := cardDB.BuildQueryFromSyntax(q)
+	if err != nil {
+		return util.Result{Data: nil, Err: err}
+	}
+	head, err := query.ExecuteFirst()
+	if err != nil {
+		return util.Result{Data: nil, Err: err}
+	}
+	note := util.GetHeadStruct(head, hDB)
+	return util.Result{Data: note, Err: nil}
 }
 
 func (api *CardApi) ReviewNote(orgID string, rating string) util.Result {
 	if orgID == "" {
-		return util.Result{nil, errors.New("orgID is empty When review note.")}
+		return util.Result{Data: nil, Err: errors.New("orgID is empty When review note")}
 	}
 	fsrsRate := storage.StringToRate(rating)
 	err := ReviewCard(orgID, fsrsRate)
 	logger.Debugf("Review note success, orgID: %s, rating: %s", orgID, rating)
 	if err != nil {
-		return util.Result{false, err}
+		return util.Result{Data: false, Err: err}
 	} else {
-		return util.Result{true, nil}
+		return util.Result{Data: true, Err: nil}
 	}
 }
