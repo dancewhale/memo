@@ -45,6 +45,7 @@ type Headline struct {
 
 // change
 func GetHeadStruct(headline *storage.Headline, db *db.OrgHeadlineDB) Headline {
+	var filePath string
 	if headline == nil {
 		return Headline{}
 	}
@@ -52,11 +53,20 @@ func GetHeadStruct(headline *storage.Headline, db *db.OrgHeadlineDB) Headline {
 	if err != nil {
 		return Headline{}
 	}
+	file, err := db.GetFileByHeadlineID(headline.ID)
+	if err != nil {
+		return Headline{}
+	}
+	if file == nil {
+		filePath = ""
+	} else {
+		filePath = file.FilePath
+	}
 	return Headline{
 		ID: headline.ID, Weight: headline.Weight, Source: headline.Source, ScheduledType: headline.ScheduledType,
 		Type: headline.Type, Title: headline.Title, Hash: headline.Hash, Content: headline.Content,
 		ParentID: headline.ParentID, Level: headline.Level, Order: headline.Order, Status: headline.Status,
-		Priority: headline.Priority, FileID: headline.FileID, FilePath: headline.File.FilePath, Expandable: ifExpand,
+		Priority: headline.Priority, FileID: headline.FileID, FilePath: filePath, Expandable: ifExpand,
 	}
 
 }
