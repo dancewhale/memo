@@ -7,6 +7,7 @@ import (
 	"memo/pkg/storage/dal"
 	"memo/pkg/util"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -44,82 +45,129 @@ func (c *CardDB) JoinFsrs() *CardDB {
 	return c
 }
 
-func (c *CardDB) DueBeforeDay(n int64) *CardDB {
+func (c *CardDB) DueBeforeDay(op string, n int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
 	dayStart, _ := util.GetDayTime(n)
-	c.headDO = c.headDO.Where(fsrs.Due.Lte(dayStart))
-	return c
-}
-
-// the card is due at that day.
-func (c *CardDB) DueAtDay(n int64) *CardDB {
-	fsrs := dal.FsrsInfo
-	dayStart, dayEnd := util.GetDayTime(n)
-	c.headDO = c.headDO.Where(fsrs.Due.Gte(dayStart)).Where(fsrs.Due.Lte(dayEnd))
-	return c
-}
-
-func (c *CardDB) DueAfterDay(n int64) *CardDB {
-	fsrs := dal.FsrsInfo
-
-	_, dayEnd := util.GetDayTime(n)
-	c.headDO = c.headDO.Where(fsrs.Due.Gte(dayEnd))
-	return c
-}
-
-// get card which due time is today
-func (c *CardDB) TypeFilter(stype string) *CardDB {
-	h := dal.Headline
-	switch stype {
-	case storage.NORMAL:
-		c.headDO = c.headDO.Where(h.ScheduledType.Eq(storage.NORMAL))
-	case storage.POSTPONE:
-		c.headDO = c.headDO.Where(h.ScheduledType.Eq(storage.POSTPONE))
-	case storage.DELTED:
-		c.headDO = c.headDO.Where(h.ScheduledType.Eq(storage.DELTED))
-	default:
-		c.headDO = c.headDO.Where(h.ScheduledType.Eq(storage.NORMAL))
+	if op == "-" {
+		c.headDO = c.headDO.Where(fsrs.Due.Gte(dayStart))
+	} else {
+		c.headDO = c.headDO.Where(fsrs.Due.Lte(dayStart))
 	}
 	return c
 }
 
-func (c *CardDB) TagFilter(tag string) *CardDB {
+// the card is due at that day.
+func (c *CardDB) DueAtDays(op string, n []int64) *CardDB {
+	fsrs := dal.FsrsInfo
+
+	var headIDs []string
+	for _, n := range n {
+		dayStart, dayEnd := util.GetDayTime(n)
+		f, err := fsrs.WithContext(context.Background()).Where(fsrs.Due.Gte(dayStart)).
+			Where(fsrs.Due.Lte(dayEnd)).Find()
+
+		if err != nil {
+			logger.Errorf("Get card DueAtDay %d error: %v", n, err)
+		}
+		headIDs = append(headIDs, lo.Map(f, func(f *storage.FsrsInfo, index int) string {
+			return f.HeadlineID
+		})...)
+	}
+	if op == "-" {
+		c.headDO = c.headDO.Where(fsrs.HeadlineID.In(headIDs...))
+	} else {
+		c.headDO = c.headDO.Where(fsrs.HeadlineID.NotIn(headIDs...))
+	}
+
+	return c
+}
+
+func (c *CardDB) DueAfterDay(op string, n int64) *CardDB {
+	fsrs := dal.FsrsInfo
+
+	_, dayEnd := util.GetDayTime(n)
+	if op == "-" {
+		c.headDO = c.headDO.Where(fsrs.Due.Lte(dayEnd))
+	} else {
+		c.headDO = c.headDO.Where(fsrs.Due.Gte(dayEnd))
+	}
+	return c
+}
+
+// get card which due time is today
+// op: '+' means include types (In), '-' means exclude types (Not In)
+func (c *CardDB) TypeFilter(op string, stype []string) *CardDB {
+	h := dal.Headline
+	if op == "-" {
+		c.headDO = c.headDO.Not(h.ScheduledType.In(stype...))
+	} else {
+		c.headDO = c.headDO.Where(h.ScheduledType.In(stype...))
+	}
+	return c
+}
+
+func (c *CardDB) TagFilter(op string, tag []string) *CardDB {
 	h := dal.Headline
 	t := dal.Tag
 
 	// 使用子查询获取包含指定标签的 headline ID
-	tagQuery := t.WithContext(context.Background()).Select(t.HeadlineID).Where(t.Name.Eq(tag))
+	tagQuery := t.WithContext(context.Background()).Select(t.HeadlineID).Where(t.Name.In(tag...))
 
-	// 使用 In 操作符筛选这些 ID
-	c.headDO.Where(h.Columns(h.ID).In(tagQuery))
+	if op == "-" {
+		c.headDO = c.headDO.Not(h.Columns(h.ID).In(tagQuery))
+	} else {
+		c.headDO = c.headDO.Where(h.Columns(h.ID).In(tagQuery))
+	}
 	return c
 }
 
-func (c *CardDB) PropertyFilter(key, value string) *CardDB {
+// get card which has specific properties
+// op: '+' means include properties (In), '-' means exclude properties (Not In)
+// properties: map of key-value pairs to filter by
+func (c *CardDB) PropertyFilter(op, key, value string) *CardDB {
 	h := dal.Headline
 	p := dal.Property
 
-	// 使用子查询获取包含指定标签的 headline ID
-	propertyQuery := p.WithContext(context.Background()).Select(p.HeadlineID).Where(p.Key.Eq(key), p.Value.Eq(value))
-	// 使用 In 操作符筛选这些 ID
-	c.headDO.Where(h.Columns(h.ID).In(propertyQuery))
+	// 使用子查询获取包含指定属性的 headline ID
+	propertyQuery := p.WithContext(context.Background()).Select(p.HeadlineID).
+		Where(p.Key.Eq(key), p.Value.Eq(value))
+
+	// 根据操作符决定使用 In 还是 Not In
+	if op == "-" {
+		c.headDO = c.headDO.Not(h.Columns(h.ID).In(propertyQuery))
+	} else {
+		c.headDO = c.headDO.Where(h.Columns(h.ID).In(propertyQuery))
+	}
 	return c
 }
 
-func (c *CardDB) FileFilter(fileID string) *CardDB {
-	c.headDO = c.headDO.Where(dal.Headline.FileID.Eq(fileID))
+func (c *CardDB) FileFilter(op string, fileID []string) *CardDB {
+	if op == "-" {
+		c.headDO = c.headDO.Where(dal.Headline.FileID.NotIn(fileID...))
+	} else {
+		c.headDO = c.headDO.Where(dal.Headline.FileID.In(fileID...))
+	}
+
 	return c
 }
 
-func (c *CardDB) ParentFilter(parentID string) *CardDB {
-	c.headDO = c.headDO.Where(dal.Headline.ParentID.Eq(parentID))
+func (c *CardDB) ParentFilter(op string, parentID []string) *CardDB {
+	if op == "-" {
+		c.headDO = c.headDO.Where(dal.Headline.ParentID.NotIn(parentID...))
+	} else {
+		c.headDO = c.headDO.Where(dal.Headline.ParentID.In(parentID...))
+	}
 	return c
 }
 
-func (c *CardDB) AncestorFilter(ancestorID string) *CardDB {
-	idList := getHeadIDByAncestorID(ancestorID)
-	c.headDO = c.headDO.Where(dal.Headline.ID.In(idList...))
+func (c *CardDB) AncestorFilter(op string, ancestorID []string) *CardDB {
+	idList := getHeadIDByAncestorIDs(ancestorID)
+	if op == "-" {
+		c.headDO = c.headDO.Where(dal.Headline.ID.NotIn(idList...))
+	} else {
+		c.headDO = c.headDO.Where(dal.Headline.ID.In(idList...))
+	}
 	return c
 }
 

@@ -2,9 +2,11 @@ package db
 
 import (
 	"context"
-	"github.com/samber/lo"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+	"strconv"
+
+	"github.com/samber/lo"
 )
 
 func getHeadIDByAncestorID(ancestorID string) []string {
@@ -22,4 +24,21 @@ func getHeadIDByAncestorID(ancestorID string) []string {
 	}
 
 	return headIDs
+}
+
+func getHeadIDByAncestorIDs(ancestorID []string) []string {
+	var headIDs []string
+	for _, ancID := range ancestorID {
+		headIDs = append(headIDs, getHeadIDByAncestorID(ancID)...)
+	}
+	// distinct headIDs
+	headIDs = lo.Uniq(headIDs)
+	return headIDs
+}
+
+func ParseIntForList(values []string) []int64 {
+	return lo.Map(values, func(value string, index int) int64 {
+		num, _ := strconv.ParseInt(value, 10, 64)
+		return num
+	})
 }

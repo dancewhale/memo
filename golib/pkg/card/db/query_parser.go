@@ -60,11 +60,12 @@ const (
 
 // 查询语法单元
 type QueryUnit struct {
-	Type      string // order 或 filter
-	Field     string // 字段名
-	SubField  string // 子字段名（可选）
-	Value     string // 值
-	RawSyntax string // 原始语法字符串
+	Type      string   // order 或 filter
+	Operater  string   //
+	Field     string   // 字段名
+	SubField  string   // 子字段名（可选）
+	Values    []string // 值
+	RawSyntax string   // 原始语法字符串
 }
 
 // 查询解析器
@@ -150,10 +151,11 @@ func (p *QueryParser) parseQueryUnit(query string) (QueryUnit, error) {
 
 		unit.Field = parts[1]
 		if len(parts) == 3 {
-			unit.Value = parts[2]
+			unit.Values = strings.Split(parts[2], ",")
 		} else if len(parts) == 4 {
+			//property with key and value.
 			unit.SubField = parts[2]
-			unit.Value = parts[3]
+			unit.Values = []string{parts[3]}
 		}
 
 		// 验证过滤字段
@@ -162,7 +164,7 @@ func (p *QueryParser) parseQueryUnit(query string) (QueryUnit, error) {
 		}
 
 		// 验证过滤值
-		if err := validateFilterValue(unit.Field, unit.Value); err != nil {
+		if err := validateFilterValue(unit.Field, unit.Values); err != nil {
 			return QueryUnit{}, err
 		}
 
@@ -226,35 +228,34 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 			// 应用过滤策略
 			switch unit.Field {
 			case FileIDFilter:
-				queryBuilder = queryBuilder.WithFileFilter(unit.Value)
+				queryBuilder = queryBuilder.WithFileFilter(unit.Operater, unit.Values)
 
 			case TypeFilter:
-				queryBuilder = queryBuilder.WithTypeFilter(unit.Value)
+				queryBuilder = queryBuilder.WithTypeFilter(unit.Operater, unit.Values)
 
 			case DueAtFilter:
-				dayOffset, _ := strconv.ParseInt(unit.Value, 10, 64)
+				dayOffset := ParseIntForList(unit.Values)
 				queryBuilder = queryBuilder.WithDueTime(dayOffset, "at")
 
 			case DueBeforeFilter:
-				dayOffset, _ := strconv.ParseInt(unit.Value, 10, 64)
+				dayOffset := ParseIntForList(unit.Values)
 				queryBuilder = queryBuilder.WithDueTime(dayOffset, "before")
 
 			case DueAfterFilter:
-				dayOffset, _ := strconv.ParseInt(unit.Value, 10, 64)
+				dayOffset := ParseIntForList(unit.Values)
 				queryBuilder = queryBuilder.WithDueTime(dayOffset, "after")
 
 			case TagFilter:
-				queryBuilder = queryBuilder.WithTagFilter(unit.Value)
+				queryBuilder = queryBuilder.WithTagFilter(unit.Operater, unit.Values)
 
 			case PropertyFilter:
-				queryBuilder = queryBuilder.WithPropertyFilter(unit.SubField, unit.Value)
+				queryBuilder = queryBuilder.WithPropertyFilter(unit.Operater, unit.SubField, unit.Values[0])
 
 			case ParentIDFilter:
-				queryBuilder = queryBuilder.WithParentFilter(unit.Value)
+				queryBuilder = queryBuilder.WithParentFilter(unit.Operater, unit.Values)
 
 			case AncestorIDFilter:
-				queryBuilder = queryBuilder.WithAncestorFilter(unit.Value)
-
+				queryBuilder = queryBuilder.WithAncestorFilter(unit.Operater, unit.Values)
 			}
 		}
 	}
@@ -300,13 +301,15 @@ func isValidFilterField(field string) bool {
 }
 
 // 验证过滤值
-func validateFilterValue(field, value string) error {
+func validateFilterValue(field string, values []string) error {
 	switch field {
 	case DueAtFilter, DueBeforeFilter, DueAfterFilter:
 		// 验证日期偏移值是否为整数
-		_, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			return &QuerySyntaxError{Message: fmt.Sprintf("日期偏移值必须是整数: %s", value)}
+		for _, value := range values {
+			_, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return &QuerySyntaxError{Message: fmt.Sprintf("日期偏移值必须是整数: %s", value)}
+			}
 		}
 	}
 

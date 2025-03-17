@@ -12,83 +12,89 @@ type QueryStrategy interface {
 
 // DueTimeStrategy 到期时间查询策略
 type DueTimeStrategy struct {
-	DayOffset int64  // 相对于今天的天数偏移，0表示今天
-	TimeRange string // "at", "before", "after"
+	DayOffset []int64 // 相对于今天的天数偏移，0表示今天
+	TimeRange string  // "at", "before", "after"
+	Operater  string  // "+", "-"
 }
 
 // Apply 实现QueryStrategy接口
 func (s *DueTimeStrategy) Apply(db *CardDB) *CardDB {
 	switch s.TimeRange {
 	case "at":
-		return db.DueAtDay(s.DayOffset)
+		return db.DueAtDays(s.Operater, s.DayOffset)
 	case "before":
-		return db.DueBeforeDay(s.DayOffset)
+		return db.DueBeforeDay(s.Operater, s.DayOffset[0])
 	case "after":
-		return db.DueAfterDay(s.DayOffset)
+		return db.DueAfterDay(s.Operater, s.DayOffset[0])
 	default:
-		return db.DueAtDay(s.DayOffset)
+		return db.DueAtDays(s.Operater, s.DayOffset)
 	}
 }
 
 // TypeFilterStrategy 类型过滤策略
 type TypeFilterStrategy struct {
-	Type string
+	Type     []string
+	Operater string // "+", "-"
 }
 
 // Apply 实现QueryStrategy接口
 func (s *TypeFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.TypeFilter(s.Type)
+	return db.TypeFilter(s.Operater, s.Type)
 }
 
 // FileFilterStrategy 文件过滤策略
 type FileFilterStrategy struct {
-	FileID string
+	FileID   []string
+	Operater string // "+", "-"
 }
 
 // Apply 实现QueryStrategy接口
 func (s *FileFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.FileFilter(s.FileID)
+	return db.FileFilter(OrderType, s.FileID)
 }
 
 // ParentFilterStrategy 父卡片过滤策略
 type ParentFilterStrategy struct {
-	ParentID string
+	ParentID []string
+	Operater string // "+", "-"
 }
 
 // Apply 实现QueryStrategy接口
 func (s *ParentFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.ParentFilter(s.ParentID)
+	return db.ParentFilter(s.Operater, s.ParentID)
 }
 
 // AncestorFilterStrategy 祖先卡片过滤策略
 type AncestorFilterStrategy struct {
-	AncestorID string
+	AncestorID []string
+	Operater   string // "+", "-"
 }
 
 // Apply 实现QueryStrategy接口
 func (s *AncestorFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.AncestorFilter(s.AncestorID)
+	return db.AncestorFilter(s.Operater, s.AncestorID)
 }
 
 // TagFilterStrategy 标签过滤策略
 type TagFilterStrategy struct {
-	Tag string
+	Tag      []string
+	Operater string // "+", "-"
 }
 
 // Apply 实现QueryStrategy接口
 func (s *TagFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.TagFilter(s.Tag)
+	return db.TagFilter(s.Operater, s.Tag)
 }
 
 // PropertyFilterStrategy 属性过滤策略
 type PropertyFilterStrategy struct {
-	Key   string
-	Value string
+	Operater   string // "+", "-"
+	Key, Value string
 }
 
 // PropertyFilterStrategy 实现QueryStrategy接口
 func (s *PropertyFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.PropertyFilter(s.Key, s.Value)
+	return db.PropertyFilter(s.Operater, s.Key, s.Value)
 }
 
 // OrderStrategy 排序策略
@@ -139,7 +145,7 @@ func (b *QueryBuilder) WithJoinFsrs() *QueryBuilder {
 }
 
 // WithDueTime 添加到期时间策略
-func (b *QueryBuilder) WithDueTime(dayOffset int64, timeRange string) *QueryBuilder {
+func (b *QueryBuilder) WithDueTime(dayOffset []int64, timeRange string) *QueryBuilder {
 	b.strategies = append(b.strategies, &DueTimeStrategy{
 		DayOffset: dayOffset,
 		TimeRange: timeRange,
@@ -148,50 +154,56 @@ func (b *QueryBuilder) WithDueTime(dayOffset int64, timeRange string) *QueryBuil
 }
 
 // WithTypeFilter 添加类型过滤策略
-func (b *QueryBuilder) WithTypeFilter(cardType string) *QueryBuilder {
+func (b *QueryBuilder) WithTypeFilter(operater string, cardType []string) *QueryBuilder {
 	b.strategies = append(b.strategies, &TypeFilterStrategy{
-		Type: cardType,
+		Type:     cardType,
+		Operater: operater,
 	})
 	return b
 }
 
 // WithParentFilter 添加父卡片过滤策略
-func (b *QueryBuilder) WithParentFilter(parentID string) *QueryBuilder {
+func (b *QueryBuilder) WithParentFilter(operater string, parentID []string) *QueryBuilder {
 	b.strategies = append(b.strategies, &ParentFilterStrategy{
 		ParentID: parentID,
+		Operater: operater,
 	})
 	return b
 }
 
 // WithAncestorFilter 添加祖先卡片过滤策略
-func (b *QueryBuilder) WithAncestorFilter(ancestorID string) *QueryBuilder {
+func (b *QueryBuilder) WithAncestorFilter(operater string, ancestorID []string) *QueryBuilder {
 	b.strategies = append(b.strategies, &AncestorFilterStrategy{
 		AncestorID: ancestorID,
+		Operater:   operater,
 	})
 	return b
 }
 
 // WithTagFilter 添加标签过滤策略
-func (b *QueryBuilder) WithTagFilter(tag string) *QueryBuilder {
+func (b *QueryBuilder) WithTagFilter(operater string, tag []string) *QueryBuilder {
 	b.strategies = append(b.strategies, &TagFilterStrategy{
-		Tag: tag,
+		Tag:      tag,
+		Operater: operater,
 	})
 	return b
 }
 
 // WithPropertyFilter 添加属性过滤策略
-func (b *QueryBuilder) WithPropertyFilter(key, value string) *QueryBuilder {
+func (b *QueryBuilder) WithPropertyFilter(operater, key, value string) *QueryBuilder {
 	b.strategies = append(b.strategies, &PropertyFilterStrategy{
-		Key:   key,
-		Value: value,
+		Key:      key,
+		Value:    value,
+		Operater: operater,
 	})
 	return b
 }
 
 // WithFileFilter 添加文件过滤策略
-func (b *QueryBuilder) WithFileFilter(fileID string) *QueryBuilder {
+func (b *QueryBuilder) WithFileFilter(operator string, fileID []string) *QueryBuilder {
 	b.strategies = append(b.strategies, &FileFilterStrategy{
-		FileID: fileID,
+		FileID:   fileID,
+		Operater: operator,
 	})
 	return b
 }
