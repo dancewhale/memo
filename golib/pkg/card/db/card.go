@@ -75,9 +75,9 @@ func (c *CardDB) DueAtDays(op string, n []int64) *CardDB {
 		})...)
 	}
 	if op == "-" {
-		c.headDO = c.headDO.Where(fsrs.HeadlineID.In(headIDs...))
-	} else {
 		c.headDO = c.headDO.Where(fsrs.HeadlineID.NotIn(headIDs...))
+	} else {
+		c.headDO = c.headDO.Where(fsrs.HeadlineID.In(headIDs...))
 	}
 
 	return c
