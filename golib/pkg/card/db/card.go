@@ -45,7 +45,7 @@ func (c *CardDB) JoinFsrs() *CardDB {
 	return c
 }
 
-func (c *CardDB) DueBeforeDay(op string, n int64) *CardDB {
+func (c *CardDB) DueBeforeDayFilter(op string, n int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
 	dayStart, _ := util.GetDayTime(n)
@@ -58,7 +58,7 @@ func (c *CardDB) DueBeforeDay(op string, n int64) *CardDB {
 }
 
 // the card is due at that day.
-func (c *CardDB) DueAtDays(op string, n []int64) *CardDB {
+func (c *CardDB) DueAtDaysFilter(op string, n []int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
 	var headIDs []string
@@ -83,7 +83,7 @@ func (c *CardDB) DueAtDays(op string, n []int64) *CardDB {
 	return c
 }
 
-func (c *CardDB) DueAfterDay(op string, n int64) *CardDB {
+func (c *CardDB) DueAfterDayFilter(op string, n int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
 	_, dayEnd := util.GetDayTime(n)
@@ -91,6 +91,17 @@ func (c *CardDB) DueAfterDay(op string, n int64) *CardDB {
 		c.headDO = c.headDO.Where(fsrs.Due.Lte(dayEnd))
 	} else {
 		c.headDO = c.headDO.Where(fsrs.Due.Gte(dayEnd))
+	}
+	return c
+}
+
+func (c *CardDB) StateFilter(op string, states []string) *CardDB {
+	fsrs := dal.FsrsInfo
+	stateList := ParseStateList(states)
+	if op == "-" {
+		c.headDO = c.headDO.Where(fsrs.State.NotIn(stateList...))
+	} else {
+		c.headDO = c.headDO.Where(fsrs.State.In(stateList...))
 	}
 	return c
 }

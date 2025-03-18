@@ -54,6 +54,7 @@ const (
 	DueAfterFilter   = "dueAfter"
 	ParentIDFilter   = "parentid"
 	TypeFilter       = "type"
+	StateFilter      = "state"
 	TagFilter        = "tag"
 	PropertyFilter   = "property"
 )
@@ -233,6 +234,9 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 			case TypeFilter:
 				queryBuilder = queryBuilder.WithTypeFilter(unit.Operater, unit.Values)
 
+			case StateFilter:
+				queryBuilder = queryBuilder.WithStateFilter(unit.Operater, unit.Values)
+
 			case DueAtFilter:
 				dayOffset := ParseIntForList(unit.Values)
 				queryBuilder = queryBuilder.WithDueTime(dayOffset, "at")
@@ -292,6 +296,7 @@ func isValidFilterField(field string) bool {
 		DueBeforeFilter:  true,
 		DueAfterFilter:   true,
 		TypeFilter:       true,
+		StateFilter:      true,
 		TagFilter:        true,
 		PropertyFilter:   true,
 	}

@@ -21,13 +21,13 @@ type DueTimeStrategy struct {
 func (s *DueTimeStrategy) Apply(db *CardDB) *CardDB {
 	switch s.TimeRange {
 	case "at":
-		return db.DueAtDays(s.Operater, s.DayOffset)
+		return db.DueAtDaysFilter(s.Operater, s.DayOffset)
 	case "before":
-		return db.DueBeforeDay(s.Operater, s.DayOffset[0])
+		return db.DueBeforeDayFilter(s.Operater, s.DayOffset[0])
 	case "after":
-		return db.DueAfterDay(s.Operater, s.DayOffset[0])
+		return db.DueAfterDayFilter(s.Operater, s.DayOffset[0])
 	default:
-		return db.DueAtDays(s.Operater, s.DayOffset)
+		return db.DueAtDaysFilter(s.Operater, s.DayOffset)
 	}
 }
 
@@ -40,6 +40,17 @@ type TypeFilterStrategy struct {
 // Apply 实现QueryStrategy接口
 func (s *TypeFilterStrategy) Apply(db *CardDB) *CardDB {
 	return db.TypeFilter(s.Operater, s.Type)
+}
+
+// StateFilterStrategy 状态过滤策略
+type StateFilterStrategy struct {
+	State    []string
+	Operater string // "+", "-"
+}
+
+// Apply 实现QueryStrategy接口
+func (s *StateFilterStrategy) Apply(db *CardDB) *CardDB {
+	return db.StateFilter(s.Operater, s.State)
 }
 
 // FileFilterStrategy 文件过滤策略
@@ -157,6 +168,15 @@ func (b *QueryBuilder) WithDueTime(dayOffset []int64, timeRange string) *QueryBu
 func (b *QueryBuilder) WithTypeFilter(operater string, cardType []string) *QueryBuilder {
 	b.strategies = append(b.strategies, &TypeFilterStrategy{
 		Type:     cardType,
+		Operater: operater,
+	})
+	return b
+}
+
+// WithStateFilter 添加状态过滤策略
+func (b *QueryBuilder) WithStateFilter(operater string, states []string) *QueryBuilder {
+	b.strategies = append(b.strategies, &StateFilterStrategy{
+		State:    states,
 		Operater: operater,
 	})
 	return b
