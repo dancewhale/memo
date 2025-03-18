@@ -217,8 +217,8 @@ func (b *QueryBuilder) WithOrder(orderBy string, order string) *QueryBuilder {
 	return b
 }
 
-// Execute 执行查询
-func (b *QueryBuilder) Execute() ([]*storage.Headline, error) {
+// ExecuteList 执行查询
+func (b *QueryBuilder) ExecuteList() ([]*storage.Headline, error) {
 	// 应用所有策略
 	db := b.cardDB
 	for _, strategy := range b.strategies {
@@ -231,7 +231,7 @@ func (b *QueryBuilder) Execute() ([]*storage.Headline, error) {
 
 // ExecuteFirst 执行查询并返回第一个结果
 func (b *QueryBuilder) ExecuteFirst() (*storage.Headline, error) {
-	cards, err := b.Execute()
+	cards, err := b.ExecuteList()
 	if err != nil {
 		return nil, err
 	}
@@ -241,4 +241,16 @@ func (b *QueryBuilder) ExecuteFirst() (*storage.Headline, error) {
 	}
 
 	return cards[0], nil
+}
+
+// ExecuteCount 执行查询并返回结果数量
+func (b *QueryBuilder) ExecuteCount() (int64, error) {
+	// 应用所有策略
+	db := b.cardDB
+	for _, strategy := range b.strategies {
+		db = strategy.Apply(db)
+	}
+
+	// 执行查询
+	return db.Count()
 }

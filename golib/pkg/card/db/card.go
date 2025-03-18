@@ -232,3 +232,11 @@ func (c *CardDB) Find() ([]*storage.Headline, error) {
 	}
 	return cards, nil
 }
+
+func (c *CardDB) Count() (int64, error) {
+	count, err := c.headDO.Count()
+	if err != nil {
+		return 0, logger.Errorf("Count card failed: %v", err)
+	}
+	return count, nil
+}

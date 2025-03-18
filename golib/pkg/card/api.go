@@ -54,7 +54,7 @@ func (api *CardApi) FindNoteList(q []string) util.Result {
 	if err != nil {
 		return util.Result{Data: nil, Err: err}
 	}
-	heads, err := query.Execute()
+	heads, err := query.ExecuteList()
 	if err != nil {
 		return util.Result{Data: nil, Err: err}
 	}
