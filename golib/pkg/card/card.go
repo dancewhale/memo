@@ -1,13 +1,14 @@
-package db
+package card
 
 import (
+	"memo/pkg/card/db"
 	"memo/pkg/storage"
 )
 
 func GetReviewCardByWeightDueTime() *storage.Headline {
 	var cards []*storage.Headline
 
-	cardDB, err := NewCardDB()
+	cardDB, err := db.NewCardDB()
 	if err != nil {
 		return nil
 	}

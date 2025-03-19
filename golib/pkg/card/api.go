@@ -34,7 +34,7 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 
 // function to export to emacs rpc.
 func (api *CardApi) GetNextReviewNote() util.Result {
-	head := cardDB.GetReviewCardByWeightDueTime()
+	head := GetReviewCardByWeightDueTime()
 	if head == nil {
 		return util.Result{Data: nil, Err: errors.New("There is no card need review")}
 	}
