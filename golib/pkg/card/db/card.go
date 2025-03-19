@@ -159,6 +159,14 @@ func (c *CardDB) PropertyFilter(op, key, value string) *CardDB {
 }
 
 func (c *CardDB) FileFilter(op string, fileID []string) *CardDB {
+	if len(fileID) == 1 && fileID[0] == "NULL" {
+		if op == "-" {
+			c.headDO = c.headDO.Where(dal.Headline.FileID.IsNotNull())
+		} else {
+			c.headDO = c.headDO.Where(dal.Headline.FileID.IsNull())
+		}
+		return c
+	}
 	if op == "-" {
 		c.headDO = c.headDO.Where(dal.Headline.FileID.NotIn(fileID...))
 	} else {
@@ -169,6 +177,14 @@ func (c *CardDB) FileFilter(op string, fileID []string) *CardDB {
 }
 
 func (c *CardDB) ParentFilter(op string, parentID []string) *CardDB {
+	if len(parentID) == 1 && parentID[0] == "NULL" {
+		if op == "-" {
+			c.headDO = c.headDO.Where(dal.Headline.ParentID.IsNotNull())
+		} else {
+			c.headDO = c.headDO.Where(dal.Headline.ParentID.IsNull())
+		}
+		return c
+	}
 	if op == "-" {
 		c.headDO = c.headDO.Where(dal.Headline.ParentID.NotIn(parentID...))
 	} else {
