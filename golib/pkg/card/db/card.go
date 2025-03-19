@@ -95,6 +95,11 @@ func (c *CardDB) DueAfterDayFilter(op string, n int64) *CardDB {
 	return c
 }
 
+func (c *CardDB) LimitFilter(limit int) *CardDB {
+	c.headDO = c.headDO.Limit(limit)
+	return c
+}
+
 func (c *CardDB) StateFilter(op string, states []string) *CardDB {
 	fsrs := dal.FsrsInfo
 	stateList := ParseStateList(states)

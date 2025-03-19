@@ -54,6 +54,7 @@ const (
 	DueAfterFilter   = "dueAfter"
 	ParentIDFilter   = "parentid"
 	TypeFilter       = "type"
+	LimitFilter      = "limit"
 	StateFilter      = "state"
 	TagFilter        = "tag"
 	PropertyFilter   = "property"
@@ -231,6 +232,10 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 			case FileIDFilter:
 				queryBuilder = queryBuilder.WithFileFilter(unit.Operater, unit.Values)
 
+			case LimitFilter:
+				limit, _ := strconv.Atoi(unit.Values[0])
+				queryBuilder = queryBuilder.WithLimitFilter(limit)
+
 			case TypeFilter:
 				queryBuilder = queryBuilder.WithTypeFilter(unit.Operater, unit.Values)
 
@@ -296,6 +301,7 @@ func isValidFilterField(field string) bool {
 		DueBeforeFilter:  true,
 		DueAfterFilter:   true,
 		TypeFilter:       true,
+		LimitFilter:      true,
 		StateFilter:      true,
 		TagFilter:        true,
 		PropertyFilter:   true,
@@ -316,6 +322,13 @@ func validateFilterValue(field string, values []string) error {
 				return &QuerySyntaxError{Message: fmt.Sprintf("日期偏移值必须是整数: %s", value)}
 			}
 		}
+	case LimitFilter:
+		// 验证限制值是否为整数
+		_, err := strconv.ParseInt(values[0], 10, 64)
+		if err != nil {
+			return &QuerySyntaxError{Message: fmt.Sprintf("limitfilter限制值必须是整数: %s", values[0])}
+		}
+
 	}
 
 	return nil

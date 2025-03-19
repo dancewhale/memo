@@ -31,6 +31,16 @@ func (s *DueTimeStrategy) Apply(db *CardDB) *CardDB {
 	}
 }
 
+// LimitFilterStrategy 限制数量查询策略
+type LimitFilterStrategy struct {
+	Limit int
+}
+
+// Apply 实现QueryStrategy接口
+func (s *LimitFilterStrategy) Apply(db *CardDB) *CardDB {
+	return db.LimitFilter(s.Limit)
+}
+
 // TypeFilterStrategy 类型过滤策略
 type TypeFilterStrategy struct {
 	Type     []string
@@ -160,6 +170,14 @@ func (b *QueryBuilder) WithDueTime(dayOffset []int64, timeRange string) *QueryBu
 	b.strategies = append(b.strategies, &DueTimeStrategy{
 		DayOffset: dayOffset,
 		TimeRange: timeRange,
+	})
+	return b
+}
+
+// WithLimitFilter 添加限制数量策略
+func (b *QueryBuilder) WithLimitFilter(limit int) *QueryBuilder {
+	b.strategies = append(b.strategies, &LimitFilterStrategy{
+		Limit: limit,
 	})
 	return b
 }

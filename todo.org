@@ -1,7 +1,8 @@
 #+TITLE:  plan
 
 *  计划
-** TODO GC 函数和功能,更新当前完整状态,另外删除已经不存在的file,不再存在的headline
+** DONE GC 函数和功能,更新当前完整状态,另外删除已经不存在的file,不再存在的headline
+CLOSED: [2025-03-19 Wed 11:14]
 ** DONE review 增加跳过接口
 CLOSED: [2025-03-08 Sat 15:25]
 ** DONE memo db 的路径调整问题, 目前在home 目录
