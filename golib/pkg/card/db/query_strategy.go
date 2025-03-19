@@ -21,13 +21,13 @@ type DueTimeStrategy struct {
 func (s *DueTimeStrategy) Apply(db *CardDB) *CardDB {
 	switch s.TimeRange {
 	case "at":
-		return db.DueAtDaysFilter(s.Operater, s.DayOffset)
+		return db.dueAtDaysFilter(s.Operater, s.DayOffset)
 	case "before":
-		return db.DueBeforeDayFilter(s.Operater, s.DayOffset[0])
+		return db.dueBeforeDayFilter(s.Operater, s.DayOffset[0])
 	case "after":
-		return db.DueAfterDayFilter(s.Operater, s.DayOffset[0])
+		return db.dueAfterDayFilter(s.Operater, s.DayOffset[0])
 	default:
-		return db.DueAtDaysFilter(s.Operater, s.DayOffset)
+		return db.dueAtDaysFilter(s.Operater, s.DayOffset)
 	}
 }
 
@@ -38,7 +38,7 @@ type LimitFilterStrategy struct {
 
 // Apply 实现QueryStrategy接口
 func (s *LimitFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.LimitFilter(s.Limit)
+	return db.limitFilter(s.Limit)
 }
 
 // TypeFilterStrategy 类型过滤策略
@@ -49,7 +49,7 @@ type TypeFilterStrategy struct {
 
 // Apply 实现QueryStrategy接口
 func (s *TypeFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.TypeFilter(s.Operater, s.Type)
+	return db.typeFilter(s.Operater, s.Type)
 }
 
 // StateFilterStrategy 状态过滤策略
@@ -60,7 +60,7 @@ type StateFilterStrategy struct {
 
 // Apply 实现QueryStrategy接口
 func (s *StateFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.StateFilter(s.Operater, s.State)
+	return db.stateFilter(s.Operater, s.State)
 }
 
 // FileFilterStrategy 文件过滤策略
@@ -71,7 +71,7 @@ type FileFilterStrategy struct {
 
 // Apply 实现QueryStrategy接口
 func (s *FileFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.FileFilter(OrderType, s.FileID)
+	return db.fileFilter(OrderType, s.FileID)
 }
 
 // ParentFilterStrategy 父卡片过滤策略
@@ -82,7 +82,7 @@ type ParentFilterStrategy struct {
 
 // Apply 实现QueryStrategy接口
 func (s *ParentFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.ParentFilter(s.Operater, s.ParentID)
+	return db.parentFilter(s.Operater, s.ParentID)
 }
 
 // AncestorFilterStrategy 祖先卡片过滤策略
@@ -93,7 +93,7 @@ type AncestorFilterStrategy struct {
 
 // Apply 实现QueryStrategy接口
 func (s *AncestorFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.AncestorFilter(s.Operater, s.AncestorID)
+	return db.ancestorFilter(s.Operater, s.AncestorID)
 }
 
 // TagFilterStrategy 标签过滤策略
@@ -104,7 +104,7 @@ type TagFilterStrategy struct {
 
 // Apply 实现QueryStrategy接口
 func (s *TagFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.TagFilter(s.Operater, s.Tag)
+	return db.tagFilter(s.Operater, s.Tag)
 }
 
 // PropertyFilterStrategy 属性过滤策略
@@ -115,7 +115,7 @@ type PropertyFilterStrategy struct {
 
 // PropertyFilterStrategy 实现QueryStrategy接口
 func (s *PropertyFilterStrategy) Apply(db *CardDB) *CardDB {
-	return db.PropertyFilter(s.Operater, s.Key, s.Value)
+	return db.propertyFilter(s.Operater, s.Key, s.Value)
 }
 
 // OrderStrategy 排序策略
@@ -128,15 +128,15 @@ type OrderStrategy struct {
 func (s *OrderStrategy) Apply(db *CardDB) *CardDB {
 	switch s.OrderBy {
 	case "weight":
-		return db.OrderByWeight(s.Order)
+		return db.orderByWeight(s.Order)
 	case "due":
-		return db.OrderByDue(s.Order)
+		return db.orderByDue(s.Order)
 	case "level":
-		return db.OrderByLevel(s.Order)
+		return db.orderByLevel(s.Order)
 	case "seq":
-		return db.OrderBySeq(s.Order)
+		return db.orderBySeq(s.Order)
 	default:
-		return db.OrderByWeight(s.Order)
+		return db.orderByWeight(s.Order)
 	}
 }
 
@@ -161,7 +161,7 @@ func NewQueryBuilder() (*QueryBuilder, error) {
 
 // WithJoinFsrs 添加FSRS关联
 func (b *QueryBuilder) WithJoinFsrs() *QueryBuilder {
-	b.cardDB = b.cardDB.JoinFsrs()
+	b.cardDB = b.cardDB.joinFsrs()
 	return b
 }
 
@@ -264,7 +264,7 @@ func (b *QueryBuilder) ExecuteList() ([]*storage.Headline, error) {
 	}
 
 	// 执行查询
-	return db.Find()
+	return db.find()
 }
 
 // ExecuteFirst 执行查询并返回第一个结果
@@ -290,5 +290,5 @@ func (b *QueryBuilder) ExecuteCount() (int64, error) {
 	}
 
 	// 执行查询
-	return db.Count()
+	return db.count()
 }

@@ -35,7 +35,7 @@ type CardDB struct {
 	fsrsDO dal.IFsrsInfoDo
 }
 
-func (c *CardDB) JoinFsrs() *CardDB {
+func (c *CardDB) joinFsrs() *CardDB {
 	fsrs := dal.FsrsInfo
 
 	c.headDO = dal.Headline.WithContext(context.Background()).
@@ -45,7 +45,7 @@ func (c *CardDB) JoinFsrs() *CardDB {
 	return c
 }
 
-func (c *CardDB) DueBeforeDayFilter(op string, n int64) *CardDB {
+func (c *CardDB) dueBeforeDayFilter(op string, n int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
 	dayStart, _ := util.GetDayTime(n)
@@ -58,7 +58,7 @@ func (c *CardDB) DueBeforeDayFilter(op string, n int64) *CardDB {
 }
 
 // the card is due at that day.
-func (c *CardDB) DueAtDaysFilter(op string, n []int64) *CardDB {
+func (c *CardDB) dueAtDaysFilter(op string, n []int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
 	var headIDs []string
@@ -83,7 +83,7 @@ func (c *CardDB) DueAtDaysFilter(op string, n []int64) *CardDB {
 	return c
 }
 
-func (c *CardDB) DueAfterDayFilter(op string, n int64) *CardDB {
+func (c *CardDB) dueAfterDayFilter(op string, n int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
 	_, dayEnd := util.GetDayTime(n)
@@ -95,12 +95,12 @@ func (c *CardDB) DueAfterDayFilter(op string, n int64) *CardDB {
 	return c
 }
 
-func (c *CardDB) LimitFilter(limit int) *CardDB {
+func (c *CardDB) limitFilter(limit int) *CardDB {
 	c.headDO = c.headDO.Limit(limit)
 	return c
 }
 
-func (c *CardDB) StateFilter(op string, states []string) *CardDB {
+func (c *CardDB) stateFilter(op string, states []string) *CardDB {
 	fsrs := dal.FsrsInfo
 	stateList := ParseStateList(states)
 	if op == "-" {
@@ -113,7 +113,7 @@ func (c *CardDB) StateFilter(op string, states []string) *CardDB {
 
 // get card which due time is today
 // op: '+' means include types (In), '-' means exclude types (Not In)
-func (c *CardDB) TypeFilter(op string, stype []string) *CardDB {
+func (c *CardDB) typeFilter(op string, stype []string) *CardDB {
 	h := dal.Headline
 	if op == "-" {
 		c.headDO = c.headDO.Not(h.ScheduledType.In(stype...))
@@ -123,7 +123,7 @@ func (c *CardDB) TypeFilter(op string, stype []string) *CardDB {
 	return c
 }
 
-func (c *CardDB) TagFilter(op string, tag []string) *CardDB {
+func (c *CardDB) tagFilter(op string, tag []string) *CardDB {
 	h := dal.Headline
 	t := dal.Tag
 
@@ -141,7 +141,7 @@ func (c *CardDB) TagFilter(op string, tag []string) *CardDB {
 // get card which has specific properties
 // op: '+' means include properties (In), '-' means exclude properties (Not In)
 // properties: map of key-value pairs to filter by
-func (c *CardDB) PropertyFilter(op, key, value string) *CardDB {
+func (c *CardDB) propertyFilter(op, key, value string) *CardDB {
 	h := dal.Headline
 	p := dal.Property
 
@@ -158,7 +158,7 @@ func (c *CardDB) PropertyFilter(op, key, value string) *CardDB {
 	return c
 }
 
-func (c *CardDB) FileFilter(op string, fileID []string) *CardDB {
+func (c *CardDB) fileFilter(op string, fileID []string) *CardDB {
 	if len(fileID) == 1 && fileID[0] == "NULL" {
 		if op == "-" {
 			c.headDO = c.headDO.Where(dal.Headline.FileID.IsNotNull())
@@ -176,7 +176,7 @@ func (c *CardDB) FileFilter(op string, fileID []string) *CardDB {
 	return c
 }
 
-func (c *CardDB) ParentFilter(op string, parentID []string) *CardDB {
+func (c *CardDB) parentFilter(op string, parentID []string) *CardDB {
 	if len(parentID) == 1 && parentID[0] == "NULL" {
 		if op == "-" {
 			c.headDO = c.headDO.Where(dal.Headline.ParentID.IsNotNull())
@@ -193,7 +193,7 @@ func (c *CardDB) ParentFilter(op string, parentID []string) *CardDB {
 	return c
 }
 
-func (c *CardDB) AncestorFilter(op string, ancestorID []string) *CardDB {
+func (c *CardDB) ancestorFilter(op string, ancestorID []string) *CardDB {
 	idList := getHeadIDByAncestorIDs(ancestorID)
 	if op == "-" {
 		c.headDO = c.headDO.Where(dal.Headline.ID.NotIn(idList...))
@@ -203,7 +203,7 @@ func (c *CardDB) AncestorFilter(op string, ancestorID []string) *CardDB {
 	return c
 }
 
-func (c *CardDB) OrderByWeight(order string) *CardDB {
+func (c *CardDB) orderByWeight(order string) *CardDB {
 	if order == AscOrder {
 		c.headDO = c.headDO.Order(dal.Headline.Weight.Asc())
 	} else if order == DescOrder {
@@ -214,7 +214,7 @@ func (c *CardDB) OrderByWeight(order string) *CardDB {
 	return c
 }
 
-func (c *CardDB) OrderByDue(order string) *CardDB {
+func (c *CardDB) orderByDue(order string) *CardDB {
 	fsrs := dal.FsrsInfo
 	if order == AscOrder {
 		c.headDO = c.headDO.Order(fsrs.Due.Asc())
@@ -226,7 +226,7 @@ func (c *CardDB) OrderByDue(order string) *CardDB {
 	return c
 }
 
-func (c *CardDB) OrderByLevel(order string) *CardDB {
+func (c *CardDB) orderByLevel(order string) *CardDB {
 	h := dal.Headline
 	if order == AscOrder {
 		c.headDO = c.headDO.Order(h.Level.Asc())
@@ -238,7 +238,7 @@ func (c *CardDB) OrderByLevel(order string) *CardDB {
 	return c
 }
 
-func (c *CardDB) OrderBySeq(order string) *CardDB {
+func (c *CardDB) orderBySeq(order string) *CardDB {
 	h := dal.Headline
 	if order == AscOrder {
 		c.headDO = c.headDO.Order(h.Order_.Asc())
@@ -250,14 +250,14 @@ func (c *CardDB) OrderBySeq(order string) *CardDB {
 	return c
 }
 
-func (c *CardDB) OrderByRandom() *CardDB {
+func (c *CardDB) orderByRandom() *CardDB {
 	DB := c.headDO.UnderlyingDB().
 		Clauses(clause.OrderBy{Expression: clause.Expr{SQL: "RANDOM()"}})
 	c.headDO.ReplaceDB(DB)
 	return c
 }
 
-func (c *CardDB) Find() ([]*storage.Headline, error) {
+func (c *CardDB) find() ([]*storage.Headline, error) {
 	cards, err := c.headDO.Find()
 	if err != nil {
 		return nil, logger.Errorf("Get review card failed: %v", err)
@@ -265,7 +265,7 @@ func (c *CardDB) Find() ([]*storage.Headline, error) {
 	return cards, nil
 }
 
-func (c *CardDB) Count() (int64, error) {
+func (c *CardDB) count() (int64, error) {
 	count, err := c.headDO.Count()
 	if err != nil {
 		return 0, logger.Errorf("Count card failed: %v", err)

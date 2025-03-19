@@ -220,7 +220,7 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 		case OrderType:
 			if unit.Field == RandomOrder {
 				// 随机排序特殊处理
-				queryBuilder.cardDB = queryBuilder.cardDB.OrderByRandom()
+				queryBuilder.cardDB = queryBuilder.cardDB.orderByRandom()
 			} else {
 				// 添加排序策略
 				queryBuilder = queryBuilder.WithOrder(unit.Field, unit.SubField)
