@@ -5,6 +5,7 @@ import (
 	"memo/pkg/logger"
 	"memo/pkg/storage/dal"
 	"memo/pkg/util"
+	"sync"
 	"time"
 )
 
@@ -40,9 +41,33 @@ type HeadlineWithFsrs struct {
 
 // HeadlineCache 用于缓存文件中所有headline的树形结构和统计信息
 type HeadlineCache struct {
-	FileID    string                    // 文件ID
-	RootHeads []*HeadlineStats          // 根headline的统计信息
-	HeadMap   map[string]*HeadlineStats // 所有headline的映射，用于快速查找
+	FileID      string                    // 文件ID
+	RootHeads   []*HeadlineStats          // 根headline的统计信息
+	HeadMap     map[string]*HeadlineStats // 所有headline的映射，用于快速查找
+	Hash        string
+	LastUpdated time.Time // 最后更新时间
+}
+
+// HeadlineCacheManager 全局缓存管理器
+type HeadlineCacheManager struct {
+	caches map[string]*HeadlineCache // 文件ID到缓存的映射
+	mutex  sync.RWMutex              // 读写锁，保证并发安全
+	maxAge time.Duration             // 缓存最大有效期
+}
+
+// 全局缓存管理器实例
+var cacheManager *HeadlineCacheManager
+var cacheManagerOnce sync.Once
+
+// GetCacheManager 获取全局缓存管理器实例
+func GetCacheManager() *HeadlineCacheManager {
+	cacheManagerOnce.Do(func() {
+		cacheManager = &HeadlineCacheManager{
+			caches: make(map[string]*HeadlineCache),
+			maxAge: 5 * time.Minute, // 默认缓存有效期为5分钟
+		}
+	})
+	return cacheManager
 }
 
 // NewHeadlineCache 创建一个新的headline缓存
@@ -173,12 +198,12 @@ func (c *HeadlineCache) aggregateStats(stats *HeadlineStats) {
 }
 
 // GetHeadlineStats 获取指定headline的统计信息
-func (c *HeadlineCache) GetHeadlineStats(headlineID string) *HeadlineStats {
+func (c *HeadlineCache) getHeadlineStats(headlineID string) *HeadlineStats {
 	return c.HeadMap[headlineID]
 }
 
 // GetFileStats 获取整个文件的统计信息
-func (c *HeadlineCache) GetFileStats() (totalCards, expiredCards, waitingCards, reviewingCards int) {
+func (c *HeadlineCache) getFileStats() (totalCards, expiredCards, waitingCards, reviewingCards int) {
 	for _, rootHead := range c.RootHeads {
 		totalCards += rootHead.TotalCards
 		expiredCards += rootHead.ExpiredCards
@@ -188,14 +213,75 @@ func (c *HeadlineCache) GetFileStats() (totalCards, expiredCards, waitingCards, 
 	return
 }
 
-// GetFileStatsByHeadlineID 获取指定headline及其所有子headline的统计信息
-func GetFileStatsByHeadlineID(fileID string, headlineID string) (*HeadlineStats, error) {
-	cache, err := NewHeadlineCache(fileID)
+// GetCache 从缓存管理器获取指定文件的缓存，如果不存在或已过期则创建新缓存
+func (m *HeadlineCacheManager) GetCache(fileID string) (*HeadlineCache, error) {
+	// 先尝试读取缓存
+	m.mutex.RLock()
+	cache, exists := m.caches[fileID]
+	m.mutex.RUnlock()
+
+	// 如果缓存存在且未过期，直接返回
+	if exists && time.Since(cache.LastUpdated) < m.maxAge {
+		return cache, nil
+	}
+
+	// 缓存不存在或已过期，创建新缓存
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	// 双重检查，避免在获取锁的过程中其他协程已经创建了缓存
+	cache, exists = m.caches[fileID]
+	if exists && time.Since(cache.LastUpdated) < m.maxAge {
+		return cache, nil
+	}
+
+	// 创建新缓存
+	newCache, err := NewHeadlineCache(fileID)
 	if err != nil {
 		return nil, err
 	}
 
-	stats := cache.GetHeadlineStats(headlineID)
+	// 设置最后更新时间
+	newCache.LastUpdated = time.Now()
+
+	// 更新缓存
+	m.caches[fileID] = newCache
+	return newCache, nil
+}
+
+// InvalidateCache 使指定文件的缓存失效
+func (m *HeadlineCacheManager) InvalidateCache(fileID string) {
+	m.mutex.Lock()
+	delete(m.caches, fileID)
+	m.mutex.Unlock()
+}
+
+// InvalidateCacheByHeadlineID 根据HeadlineID使相关缓存失效
+func (m *HeadlineCacheManager) InvalidateCacheByHeadlineID(headlineID string) error {
+	// 查询headline所属的文件ID
+	headline := dal.Headline
+	heads, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).Find()
+	if err != nil || len(heads) == 0 {
+		return logger.Errorf("Find headline %s failed: %v", headlineID, err)
+	}
+
+	// 使相关文件的缓存失效
+	if heads[0].FileID != nil {
+		m.InvalidateCache(*heads[0].FileID)
+	}
+
+	return nil
+}
+
+// GetFileStatsByHeadlineID 获取指定headline及其所有子headline的统计信息
+func GetFileStatsByHeadlineID(fileID string, headlineID string) (*HeadlineStats, error) {
+	// 从缓存管理器获取缓存
+	cache, err := GetCacheManager().GetCache(fileID)
+	if err != nil {
+		return nil, err
+	}
+
+	stats := cache.getHeadlineStats(headlineID)
 	if stats == nil {
 		return nil, logger.Errorf("Headline %s not found", headlineID)
 	}
@@ -205,11 +291,12 @@ func GetFileStatsByHeadlineID(fileID string, headlineID string) (*HeadlineStats,
 
 // GetFileStats 获取整个文件的统计信息
 func GetFileStats(fileID string) (totalCards, expiredCards, waitingCards, reviewingCards int, err error) {
-	cache, err := NewHeadlineCache(fileID)
+	// 从缓存管理器获取缓存
+	cache, err := GetCacheManager().GetCache(fileID)
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
 
-	totalCards, expiredCards, waitingCards, reviewingCards = cache.GetFileStats()
+	totalCards, expiredCards, waitingCards, reviewingCards = cache.getFileStats()
 	return
 }
