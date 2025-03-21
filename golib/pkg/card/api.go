@@ -29,7 +29,20 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("ReviewNote", api.ReviewNote, "string", "Review note"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteFirst", api.FindNoteFirst, "string", "Find note with query"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteList", api.FindNoteList, "string", "Find notes with query"))
+	service.RegisterMethod(epc.MakeMethod("GetFileHasNewCard", api.GetFileHasNewCard, "string", "Get file has new card"))
 	return service
+}
+
+func (api *CardApi) GetFileHasNewCard() util.Result {
+	cDB, err := cardDB.NewCardDB()
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	files, err := cDB.GetFileHasNewCard()
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	return util.Result{Data: files, Err: nil}
 }
 
 // function to export to emacs rpc.

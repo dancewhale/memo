@@ -265,10 +265,39 @@ func (c *CardDB) find() ([]*storage.Headline, error) {
 	return cards, nil
 }
 
+func (c *CardDB) Scan(result interface{}) error {
+	return c.headDO.Scan(result)
+}
+
 func (c *CardDB) count() (int64, error) {
 	count, err := c.headDO.Count()
 	if err != nil {
 		return 0, logger.Errorf("Count card failed: %v", err)
 	}
 	return count, nil
+}
+
+// Use in other module to get card list
+func (c *CardDB) GetFileHasNewCard() ([]*storage.File, error) {
+	head := dal.Headline
+	fsrs := dal.FsrsInfo
+	file := dal.File
+
+	heads, err := head.WithContext(context.Background()).
+		Join(fsrs, head.ID.EqCol(fsrs.HeadlineID)).
+		Select(head.FileID).Distinct().
+		Where(fsrs.State.Eq(0)).Where(head.FileID.IsNotNull()).Find()
+	if err != nil {
+		return nil, logger.Errorf("Get file has new card error: %v", err)
+	}
+	fileIDList := lo.Map(heads, func(item *storage.Headline, index int) string {
+		return *item.FileID
+	})
+
+	files, err := file.WithContext(context.Background()).
+		Where(file.ID.In(fileIDList...)).Find()
+	if err != nil {
+		return nil, logger.Errorf("Get file has new card error: %v", err)
+	}
+	return files, nil
 }

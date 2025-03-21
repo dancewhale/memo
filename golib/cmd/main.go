@@ -6,12 +6,11 @@ import (
 	"log"
 	"memo/cmd/options"
 	"memo/pkg/card"
-	"memo/pkg/util"
-	"os"
-	"runtime/pprof"
-
+	"memo/pkg/card/db"
 	"memo/pkg/logger"
 	"memo/pkg/org"
+	"memo/pkg/util"
+	"os"
 
 	"github.com/kiwanami/go-elrpc"
 	"github.com/urfave/cli/v3"
