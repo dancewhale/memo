@@ -300,3 +300,77 @@ func GetFileStats(fileID string) (totalCards, expiredCards, waitingCards, review
 	totalCards, expiredCards, waitingCards, reviewingCards = cache.getFileStats()
 	return
 }
+
+// getChildrenIDs 递归获取指定headline的所有子headline ID
+func (c *HeadlineCache) getChildrenIDs(headlineID string) []string {
+	var childrenIDs []string
+
+	// 获取当前headline的统计信息
+	stats := c.getHeadlineStats(headlineID)
+	if stats == nil {
+		return childrenIDs
+	}
+
+	// 递归获取所有子headline的ID
+	for _, child := range stats.Children {
+		childrenIDs = append(childrenIDs, child.HeadlineID)
+		childrenIDs = append(childrenIDs, c.getChildrenIDs(child.HeadlineID)...)
+	}
+
+	return childrenIDs
+}
+
+// GetHeadIDByAncestorID 获取指定headline及其所有子headline的ID列表
+func GetHeadIDByAncestorID(ancestorID string) []string {
+	var headIDs []string
+
+	// 先将自身ID添加到结果中
+	headIDs = append(headIDs, ancestorID)
+
+	// 查询headline所属的文件ID
+	headline := dal.Headline
+	heads, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(ancestorID)).Find()
+	if err != nil || len(heads) == 0 {
+		return headIDs
+	}
+
+	// 确保文件ID存在
+	if heads[0].FileID == nil {
+		return headIDs
+	}
+
+	// 从缓存管理器获取缓存
+	cache, err := GetCacheManager().GetCache(*heads[0].FileID)
+	if err != nil {
+		return headIDs
+	}
+
+	// 获取所有子headline的ID
+	childrenIDs := cache.getChildrenIDs(ancestorID)
+	headIDs = append(headIDs, childrenIDs...)
+
+	return headIDs
+}
+
+// GetHeadIDByAncestorIDs 获取多个headline及其所有子headline的ID列表
+func GetHeadIDByAncestorIDs(ancestorIDs []string) []string {
+	var headIDs []string
+
+	// 遍历所有ancestorID，获取各自的子headline ID
+	for _, ancestorID := range ancestorIDs {
+		headIDs = append(headIDs, GetHeadIDByAncestorID(ancestorID)...)
+	}
+
+	// 去重
+	uniqMap := make(map[string]bool)
+	var result []string
+
+	for _, id := range headIDs {
+		if !uniqMap[id] {
+			uniqMap[id] = true
+			result = append(result, id)
+		}
+	}
+
+	return result
+}

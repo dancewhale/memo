@@ -82,7 +82,7 @@ Otherwise returns value itself."
       (let ((inhibit-read-only t))
         (when-let ((buf (get-buffer memo-treemacs-buffer-name)))
 	  (with-current-buffer buf
-            (treemacs-update-async-node '("memo-treemacs-root" "VirtHeadTree") buf)
+            (treemacs-update-async-node '("memo-treemacs-review-mode-node" "VirtHeadTree") buf)
 	    (display-buffer-in-side-window buf memo-treemacs-virtual-head-position-params))))
     (error)))
 
@@ -115,21 +115,6 @@ Otherwise returns value itself."
 (define-minor-mode memo-treemacs-generic-mode "Treemacs generic mode."
   :keymap memo-treemacs-generic-map)
 
-(defun memo-treemacs--generic-icon (item expanded?)
-  "Get the symbol for the the kind."
-  (concat
-   (if (or (plist-get item :children)
-           (plist-get item :children-async))
-       (if expanded?  "▾ " "▸ ")
-     "  ")
-   (or (plist-get item :icon-literal)
-       (-if-let (icon (plist-get item :icon))
-           (treemacs-get-icon-value
-            icon
-            nil
-            memo-treemacs-theme)
-         "   "))))
-
 (defun memo-treemacs-perform-ret-action (&rest _)
   (interactive)
   (if-let (item (-> (treemacs-node-at-point)
@@ -137,9 +122,13 @@ Otherwise returns value itself."
       (memo-open-head-in-view-buffer item)
     (treemacs-pulse-on-failure "No Child head Found.")))
 
+;;;----------------------------------
+;;;  treemacs tree render for review
+;;;----------------------------------
+
 (treemacs-define-expandable-node-type memo-treemacs-virtual-node
-  :closed-icon "• "
-  :open-icon   "- "
+  :closed-icon treemacs-icon-tag-closed
+  :open-icon   treemacs-icon-tag-open
   :label
   (if (equal (memo-note-expandable item) 1)
       (propertize (memo-note-title item) 'face 'font-lock-string-face)
@@ -158,9 +147,10 @@ Otherwise returns value itself."
     `(:note ,item))
   :async? t)
 
-(treemacs-define-expandable-node-type memo-treemacs-generic-node
-  :closed-icon "--"
-  :open-icon   "--"
+
+(treemacs-define-expandable-node-type memo-treemacs-review-node
+  :closed-icon treemacs-icon-tag-closed
+  :open-icon   treemacs-icon-tag-open
   :label "--------------------------"
   :key item
   :children
@@ -172,16 +162,16 @@ Otherwise returns value itself."
   :async? t)
 
 
-(treemacs-define-variadic-entry-node-type memo-treemacs-root
-  :key  "memo-treemacs-root"
+(treemacs-define-variadic-entry-node-type memo-treemacs-review-mode-node
+  :key  "memo-treemacs-review-mode-node"
   :children '("VirtHeadTree")
-  :child-type 'memo-treemacs-generic-node)
+  :child-type 'memo-treemacs-review-node)
 
-(defun memo-treemacs-render (title expand-depth
-                                 &optional buffer-name right-click-actions _clear-cache?)
+(defun memo-treemacs-review-render (title expand-depth
+                                 &optional buffer-name right-click-actions)
   (let ((buffer (get-buffer-create (or buffer-name memo-treemacs-buffer-name))))
     (with-current-buffer buffer
-      (treemacs-initialize memo-treemacs-root
+      (treemacs-initialize memo-treemacs-review-mode-node
         :with-expand-depth (or expand-depth 0)
         :and-do (progn
                   (memo-treemacs--set-mode-line-format buffer title)
@@ -196,11 +186,77 @@ Otherwise returns value itself."
                   (memo-treemacs-generic-mode t)))
       (current-buffer))))
 
-(defun memo-treemacs-initialize ()
+;;;----------------------------------
+;;;  treemacs tree render for read
+;;;----------------------------------
+
+(treemacs-define-expandable-node-type memo-treemacs-virtual-node
+  :closed-icon treemacs-icon-tag-closed
+  :open-icon   treemacs-icon-tag-open
+  :label
+  (if (equal (memo-note-expandable item) 1)
+      (propertize (memo-note-title item) 'face 'font-lock-string-face)
+    (propertize (memo-note-title item) 'face 'font-lock-variable-name-face))
+  :key (memo-note-id item)
+  :ret-action #'memo-treemacs-perform-ret-action
+  :children
+  (when (equal (memo-note-expandable item) 1)
+    (let ((items (memo-api--get-virt-heads-by-parentid (memo-note-id item))))
+      (funcall callback items)))
+  :child-type
+  'memo-treemacs-virtual-node
+  :more-properties
+  (if (equal (memo-note-expandable item) 0)
+      `(:note ,item :leaf t :no-tab? t)
+    `(:note ,item))
+  :async? t)
+
+
+(treemacs-define-expandable-node-type memo-treemacs-read-node
+  :closed-icon treemacs-icon-tag-closed
+  :open-icon   treemacs-icon-tag-open
+  :label "The file wait reading."
+  :key item
+  :children
+  (when (equal item "ReadTree")
+    (let ((items  (list (memo-get-review-note))))
+      (funcall callback items)))
+  :child-type
+  'memo-treemacs-virtual-node
+  :async? t)
+
+
+(treemacs-define-variadic-entry-node-type memo-treemacs-read-mode-node
+  :key  "memo-treemacs-read-mode-node"
+  :children '("ReadTree")
+  :child-type 'memo-treemacs-read-node)
+
+(defun memo-treemacs-read-render (title expand-depth
+                                 &optional buffer-name right-click-actions)
+  (let ((buffer (get-buffer-create (or buffer-name memo-treemacs-buffer-name))))
+    (with-current-buffer buffer
+      (treemacs-initialize memo-treemacs-review-mode-node
+        :with-expand-depth (or expand-depth 0)
+        :and-do (progn
+                  (memo-treemacs--set-mode-line-format buffer title)
+                  (setq-local face-remapping-alist '((button . default)))
+                  (setq-local treemacs-default-visit-action 'treemacs-RET-action)
+                  (setq-local memo-treemacs--right-click-actions right-click-actions)
+                  (setq-local window-size-fixed nil)
+                  (setq-local treemacs--width-is-locked nil)
+                  (setq-local treemacs-space-between-root-nodes nil)
+                  (when treemacs-text-scale
+                    (text-scale-increase treemacs-text-scale))
+                  (memo-treemacs-generic-mode t)))
+      (current-buffer))))
+
+;;;----------------------------------
+
+(defun memo-treemacs-review-initialize ()
   "Display heads in treemacs."
   (interactive)
   (display-buffer-in-side-window
-   (memo-treemacs-render
+   (memo-treemacs-review-render
     "*MemoTree*" memo-treemacs-virtual-head-expand-depth)
    memo-treemacs-virtual-head-position-params))
 
@@ -209,20 +265,7 @@ Otherwise returns value itself."
 Update node in buffer if buffer exist."
   (let ((buffer (get-buffer memo-treemacs-buffer-name)))
     (if buffer (memo-treemacs-refresh)
-      (memo-treemacs-initialize))))
-
-;(treemacs-define-entry-node-type show-virtual-children-heads-entry
-;  :key 'show-virtual-children-heads-entry
-;  :label (propertize "Children Note" 'face 'font-lock-keyword-face)
-;  :open-icon (treemacs-get-icon-value 'list)
-;  :closed-icon (treemacs-get-icon-value 'list)
-;  :children (memo-api--get-virt-heads-by-parentid (memo-get-current-note-id))
-;  :more-properties nil
-;  :child-type 'show-virtual-children-heads)
-;
-;(treemacs-enable-top-level-extension
-; :extension 'show-virtual-children-heads-entry
-; :position 'top)
+      (memo-treemacs-review-initialize))))
 
 
 (provide 'memo-treemacs)

@@ -90,11 +90,11 @@
 ;
 (let* ((buf (get-buffer memo-treemacs-buffer-name)))
   (with-current-buffer buf
-    (treemacs-update-async-node '("memo-treemacs-root" "VirtHeadTree") buf)))
+    (treemacs-update-async-node '("memo-treemacs-review-mode-node" "VirtHeadTree") buf)))
 
 (let* ((buf (get-buffer-create memo-treemacs-buffer-name)))
   (with-current-buffer buf
-    (treemacs-update-async-node '("memo-treemacs-root" "CurrentReviewNote")  buf)))
+    (treemacs-update-async-node '("memo-treemacs-review-mode-node" "CurrentReviewNote")  buf)))
 
 (let* ((buf  (treemacs-get-local-buffer)))
   (with-current-buffer buf

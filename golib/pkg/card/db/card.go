@@ -194,7 +194,7 @@ func (c *CardDB) parentFilter(op string, parentID []string) *CardDB {
 }
 
 func (c *CardDB) ancestorFilter(op string, ancestorID []string) *CardDB {
-	idList := getHeadIDByAncestorIDs(ancestorID)
+	idList := GetHeadIDByAncestorIDs(ancestorID)
 	if op == "-" {
 		c.headDO = c.headDO.Where(dal.Headline.ID.NotIn(idList...))
 	} else {

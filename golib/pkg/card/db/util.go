@@ -1,40 +1,10 @@
 package db
 
 import (
-	"context"
-	"memo/pkg/storage"
-	"memo/pkg/storage/dal"
 	"strconv"
 
 	"github.com/samber/lo"
 )
-
-func getHeadIDByAncestorID(ancestorID string) []string {
-	var headIDs []string
-
-	h := dal.Headline
-	heads, _ := h.WithContext(context.Background()).Where(h.ParentID.Eq(ancestorID)).Find()
-	if len(heads) != 0 {
-		headIDs = lo.Map(heads, func(head *storage.Headline, index int) string {
-			return head.ID
-		})
-		for _, head := range heads {
-			headIDs = append(headIDs, getHeadIDByAncestorID(head.ID)...)
-		}
-	}
-
-	return headIDs
-}
-
-func getHeadIDByAncestorIDs(ancestorID []string) []string {
-	var headIDs []string
-	for _, ancID := range ancestorID {
-		headIDs = append(headIDs, getHeadIDByAncestorID(ancID)...)
-	}
-	// distinct headIDs
-	headIDs = lo.Uniq(headIDs)
-	return headIDs
-}
 
 func ParseIntForList(values []string) []int64 {
 	return lo.Map(values, func(value string, index int) int64 {
