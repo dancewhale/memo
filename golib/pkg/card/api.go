@@ -34,15 +34,19 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 }
 
 func (api *CardApi) GetFileHasNewCard() util.Result {
-	cDB, err := query.NewCardDB()
+	cardDB, err := query.NewCardDB()
 	if err != nil {
 		return util.Result{Data: false, Err: err}
 	}
-	files, err := cDB.GetFileHasNewCard()
+	fileids, err := cardDB.GetFileHasNewCard()
 	if err != nil {
 		return util.Result{Data: false, Err: err}
 	}
-	return util.Result{Data: files, Err: nil}
+	fileInfos, err := db.GetCacheManager().GetFilesFromCache(fileids)
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	return util.Result{Data: fileInfos, Err: nil}
 }
 
 // function to export to emacs rpc.

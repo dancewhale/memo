@@ -277,10 +277,9 @@ func (c *CardDB) count() (int64, error) {
 }
 
 // Use in other module to get card list
-func (c *CardDB) GetFileHasNewCard() ([]*storage.File, error) {
+func (c *CardDB) GetFileHasNewCard() ([]string, error) {
 	head := dal.Headline
 	fsrs := dal.FsrsInfo
-	file := dal.File
 
 	heads, err := head.WithContext(context.Background()).
 		Join(fsrs, head.ID.EqCol(fsrs.HeadlineID)).
@@ -293,10 +292,5 @@ func (c *CardDB) GetFileHasNewCard() ([]*storage.File, error) {
 		return *item.FileID
 	})
 
-	files, err := file.WithContext(context.Background()).
-		Where(file.ID.In(fileIDList...)).Find()
-	if err != nil {
-		return nil, logger.Errorf("Get file has new card error: %v", err)
-	}
-	return files, nil
+	return fileIDList, nil
 }
