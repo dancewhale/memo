@@ -4,7 +4,6 @@ import (
 	"context"
 	"memo/pkg/logger"
 	"memo/pkg/storage/dal"
-	"memo/pkg/util"
 	"sync"
 	"time"
 )
@@ -42,6 +41,7 @@ type HeadlineWithFsrs struct {
 // HeadlineCache 用于缓存文件中所有headline的树形结构和统计信息
 type HeadlineCache struct {
 	FileID      string                    // 文件ID
+	FilePath    string                    // 文件路径
 	RootHeads   []*HeadlineStats          // 根headline的统计信息
 	HeadMap     map[string]*HeadlineStats // 所有headline的映射，用于快速查找
 	Hash        string
@@ -72,15 +72,27 @@ func GetCacheManager() *HeadlineCacheManager {
 
 // NewHeadlineCache 创建一个新的headline缓存
 func NewHeadlineCache(fileID string) (*HeadlineCache, error) {
-
+	file := dal.File
+	// 查询文件信息
+	files, err := file.WithContext(context.Background()).Where(file.ID.Eq(fileID)).Find()
+	if err != nil || len(files) == 0 {
+		return nil, logger.Errorf("Find file %s failed: %v", fileID, err)
+	}
+	// 确保文件ID存在
+	if len(files) == 0 {
+		return nil, logger.Errorf("File %s not found", fileID)
+	}
+	// 创建新的headline缓存
 	cache := &HeadlineCache{
 		FileID:    fileID,
+		FilePath:  files[0].FilePath,
+		Hash:      files[0].Hash,
 		RootHeads: make([]*HeadlineStats, 0),
 		HeadMap:   make(map[string]*HeadlineStats),
 	}
 
 	// 构建缓存树
-	err := cache.buildCache()
+	err = cache.buildCache()
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +103,7 @@ func NewHeadlineCache(fileID string) (*HeadlineCache, error) {
 // buildCache 构建headline缓存树并计算统计信息
 func (c *HeadlineCache) buildCache() error {
 	// 获取当前日期的结束时间，用于判断卡片是否过期
-	_, dayEnd := util.GetDayTime(0)
+	_, dayEnd := GetDayTime(0)
 
 	// 一次性查询所有headline和fsrsInfo信息
 	fsrs := dal.FsrsInfo

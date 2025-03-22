@@ -1,7 +1,7 @@
 package card
 
 import (
-	cardDB "memo/pkg/card/db"
+	cardDB "memo/pkg/db/query"
 	"memo/pkg/storage"
 )
 

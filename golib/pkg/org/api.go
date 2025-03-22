@@ -2,12 +2,12 @@ package org
 
 import (
 	"errors"
+	"memo/pkg/db"
 	"strings"
 	"sync"
 
 	"memo/pkg/card"
 	"memo/pkg/logger"
-	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/util"

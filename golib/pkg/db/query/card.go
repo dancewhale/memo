@@ -1,15 +1,14 @@
-package db
+package query
 
 import (
 	"context"
-	"memo/pkg/logger"
-	"memo/pkg/storage"
-	"memo/pkg/storage/dal"
-	"memo/pkg/util"
-
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"memo/pkg/db"
+	"memo/pkg/logger"
+	"memo/pkg/storage"
+	"memo/pkg/storage/dal"
 )
 
 func NewCardDB() (*CardDB, error) {
@@ -48,7 +47,7 @@ func (c *CardDB) joinFsrs() *CardDB {
 func (c *CardDB) dueBeforeDayFilter(op string, n int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
-	dayStart, _ := util.GetDayTime(n)
+	dayStart, _ := db.GetDayTime(n)
 	if op == "-" {
 		c.headDO = c.headDO.Where(fsrs.Due.Gte(dayStart))
 	} else {
@@ -63,7 +62,7 @@ func (c *CardDB) dueAtDaysFilter(op string, n []int64) *CardDB {
 
 	var headIDs []string
 	for _, n := range n {
-		dayStart, dayEnd := util.GetDayTime(n)
+		dayStart, dayEnd := db.GetDayTime(n)
 		f, err := fsrs.WithContext(context.Background()).Where(fsrs.Due.Gte(dayStart)).
 			Where(fsrs.Due.Lte(dayEnd)).Find()
 
@@ -86,7 +85,7 @@ func (c *CardDB) dueAtDaysFilter(op string, n []int64) *CardDB {
 func (c *CardDB) dueAfterDayFilter(op string, n int64) *CardDB {
 	fsrs := dal.FsrsInfo
 
-	_, dayEnd := util.GetDayTime(n)
+	_, dayEnd := db.GetDayTime(n)
 	if op == "-" {
 		c.headDO = c.headDO.Where(fsrs.Due.Lte(dayEnd))
 	} else {
@@ -102,7 +101,7 @@ func (c *CardDB) limitFilter(limit int) *CardDB {
 
 func (c *CardDB) stateFilter(op string, states []string) *CardDB {
 	fsrs := dal.FsrsInfo
-	stateList := ParseStateList(states)
+	stateList := db.ParseStateList(states)
 	if op == "-" {
 		c.headDO = c.headDO.Where(fsrs.State.NotIn(stateList...))
 	} else {
@@ -194,7 +193,7 @@ func (c *CardDB) parentFilter(op string, parentID []string) *CardDB {
 }
 
 func (c *CardDB) ancestorFilter(op string, ancestorID []string) *CardDB {
-	idList := GetHeadIDByAncestorIDs(ancestorID)
+	idList := db.GetHeadIDByAncestorIDs(ancestorID)
 	if op == "-" {
 		c.headDO = c.headDO.Where(dal.Headline.ID.NotIn(idList...))
 	} else {

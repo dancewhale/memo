@@ -6,7 +6,6 @@ import (
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
-	"memo/pkg/util"
 )
 
 func NewFsrsDB() (*FsrsDB, error) {
@@ -78,7 +77,7 @@ func (f *FsrsDB) removeFsrs(orgid string) error {
 func (f *FsrsDB) IfCardIsDue(orgid string) (bool, error) {
 	fsrs := dal.FsrsInfo
 
-	_, todayEnd := util.GetDayTime(0)
+	_, todayEnd := GetDayTime(0)
 
 	heads, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(orgid)).
 		Where(fsrs.Due.Lte(todayEnd)).Find()

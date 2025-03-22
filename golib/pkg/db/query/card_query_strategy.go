@@ -1,4 +1,4 @@
-package db
+package query
 
 import (
 	"memo/pkg/storage"
@@ -279,6 +279,18 @@ func (b *QueryBuilder) ExecuteFirst() (*storage.Headline, error) {
 	}
 
 	return cards[0], nil
+}
+
+// ExecuteScan 执行查询并返回结果
+func (b *QueryBuilder) ExecuteScan(result interface{}) error {
+	// 应用所有策略
+	db := b.cardDB
+	for _, strategy := range b.strategies {
+		db = strategy.Apply(db)
+	}
+
+	// 执行查询
+	return db.Scan(result)
 }
 
 // ExecuteCount 执行查询并返回结果数量

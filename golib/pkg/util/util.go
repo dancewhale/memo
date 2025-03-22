@@ -2,11 +2,9 @@ package util
 
 import (
 	"fmt"
-	"github.com/maniartech/gotime"
-	"memo/pkg/org/db"
+	"memo/pkg/db"
 	"memo/pkg/storage"
 	"net"
-	"time"
 )
 
 type Result struct {
@@ -83,13 +81,4 @@ func GetHeadStructs(headline []*storage.Headline, db *db.OrgHeadlineDB) []Headli
 		heads = append(heads, GetHeadStruct(head, db))
 	}
 	return heads
-}
-
-// get the start/end time after n day
-func GetDayTime(n int64) (dayStart, dayEnd time.Time) {
-	china, _ := time.LoadLocation("Asia/Shanghai")
-	dueDay := time.Now().In(china).AddDate(0, 0, int(n))
-	dayStart = gotime.SoD(dueDay)
-	dayEnd = gotime.EoD(dueDay)
-	return dayStart, dayEnd
 }

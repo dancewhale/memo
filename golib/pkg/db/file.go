@@ -58,6 +58,7 @@ func (f *OrgFileDB) UpdateFileHash(fileid, hash string) error {
 	if err != nil {
 		return logger.Errorf("Update file hash error: %v", err)
 	}
+
 	return nil
 }
 
@@ -96,6 +97,10 @@ func FileDBUpdate(fd *storage.File, force bool) error {
 
 		if err != nil {
 			return logger.Errorf("Check file record in db error: %v", err)
+		}
+		// 使相关缓存失效
+		if cacheManager := GetCacheManager(); cacheManager != nil {
+			cacheManager.InvalidateCache(fd.ID)
 		}
 	}
 	return nil

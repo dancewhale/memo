@@ -2,7 +2,7 @@ package card
 
 import (
 	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
-	cardDB "memo/pkg/card/db"
+	cardDB "memo/pkg/db"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"sync"

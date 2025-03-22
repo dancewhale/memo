@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"memo/pkg/db"
 	"memo/pkg/storage"
 	"os"
 	"path/filepath"
 
 	"memo/pkg/logger"
-	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 
 	"github.com/emirpasic/gods/lists/arraylist"

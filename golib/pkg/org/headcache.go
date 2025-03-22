@@ -3,8 +3,8 @@ package org
 import (
 	"errors"
 	"fmt"
+	db2 "memo/pkg/db"
 	"memo/pkg/logger"
-	"memo/pkg/org/db"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 
@@ -14,11 +14,11 @@ import (
 // 用于加载从硬盘文件读取的 headline 数据，用于和数据库 headline 数据进行比较。
 func NewHeadlineCache(headlines []storage.Headline, fileID, filePath, hash string) (*HeadlineCacheMap, error) {
 	var err error
-	fileDB, err := db.NewOrgFileDB()
+	fileDB, err := db2.NewOrgFileDB()
 	if err != nil {
 		return nil, err
 	}
-	headDB, err := db.NewOrgHeadlineDB()
+	headDB, err := db2.NewOrgHeadlineDB()
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +46,8 @@ type HeadlineCacheMap struct {
 	HeadlinesFileCache *linkedhashmap.Map
 	HeadlinesDBCache   *linkedhashmap.Map
 	DuplicateID        []string
-	FileDB             *db.OrgFileDB
-	HeadlineDB         *db.OrgHeadlineDB
+	FileDB             *db2.OrgFileDB
+	HeadlineDB         *db2.OrgHeadlineDB
 }
 
 // Scan for head without id or with duplicate id and prepare cache for compare.

@@ -2,9 +2,9 @@ package card
 
 import (
 	"errors"
-	cardDB "memo/pkg/card/db"
+	"memo/pkg/db"
+	"memo/pkg/db/query"
 	"memo/pkg/logger"
-	headDB "memo/pkg/org/db"
 	"memo/pkg/storage"
 	"memo/pkg/util"
 
@@ -34,7 +34,7 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 }
 
 func (api *CardApi) GetFileHasNewCard() util.Result {
-	cDB, err := cardDB.NewCardDB()
+	cDB, err := query.NewCardDB()
 	if err != nil {
 		return util.Result{Data: false, Err: err}
 	}
@@ -52,18 +52,18 @@ func (api *CardApi) GetNextReviewNote() util.Result {
 		return util.Result{Data: nil, Err: errors.New("There is no card need review")}
 	}
 
-	hDB, _ := headDB.NewOrgHeadlineDB()
+	hDB, _ := db.NewOrgHeadlineDB()
 	note := util.GetHeadStruct(head, hDB)
 
 	return util.Result{Data: note, Err: nil}
 }
 
 func (api *CardApi) FindNoteList(q []string) util.Result {
-	hDB, err := headDB.NewOrgHeadlineDB()
+	hDB, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return util.Result{Data: nil, Err: err}
 	}
-	query, err := cardDB.BuildQueryFromSyntax(q)
+	query, err := query.BuildQueryFromSyntax(q)
 	if err != nil {
 		return util.Result{Data: nil, Err: err}
 	}
@@ -79,11 +79,11 @@ func (api *CardApi) FindNoteList(q []string) util.Result {
 }
 
 func (api *CardApi) FindNoteFirst(q []string) util.Result {
-	hDB, err := headDB.NewOrgHeadlineDB()
+	hDB, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return util.Result{Data: nil, Err: err}
 	}
-	query, err := cardDB.BuildQueryFromSyntax(q)
+	query, err := query.BuildQueryFromSyntax(q)
 	if err != nil {
 		return util.Result{Data: nil, Err: err}
 	}

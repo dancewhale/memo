@@ -1,7 +1,8 @@
-package db
+package query
 
 import (
 	"fmt"
+	"memo/pkg/db"
 	"strconv"
 	"strings"
 )
@@ -243,15 +244,15 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 				queryBuilder = queryBuilder.WithStateFilter(unit.Operater, unit.Values)
 
 			case DueAtFilter:
-				dayOffset := ParseIntForList(unit.Values)
+				dayOffset := db.ParseIntForList(unit.Values)
 				queryBuilder = queryBuilder.WithDueTime(dayOffset, "at")
 
 			case DueBeforeFilter:
-				dayOffset := ParseIntForList(unit.Values)
+				dayOffset := db.ParseIntForList(unit.Values)
 				queryBuilder = queryBuilder.WithDueTime(dayOffset, "before")
 
 			case DueAfterFilter:
-				dayOffset := ParseIntForList(unit.Values)
+				dayOffset := db.ParseIntForList(unit.Values)
 				queryBuilder = queryBuilder.WithDueTime(dayOffset, "after")
 
 			case TagFilter:
