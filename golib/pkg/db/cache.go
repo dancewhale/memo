@@ -10,13 +10,8 @@ import (
 
 // HeadlineStats 存储headline及其子headline的统计信息
 type HeadlineStats struct {
-	HeadlineID     string           // headline的ID
-	Info           HeadlineWithFsrs // headline和fsrs的详细信息
-	TotalCards     int              // 总卡片数量
-	ExpiredCards   int              // 过期卡片数量
-	WaitingCards   int              // 等待学习的卡片数量
-	ReviewingCards int              // 等待复习的卡片数量
-	Children       []*HeadlineStats // 子headline的统计信息
+	Info     HeadlineWithFsrs // headline和fsrs的详细信息
+	Children []*HeadlineStats // 子headline的统计信息
 }
 
 // HeadlineWithFsrs 包含headline和fsrsInfo信息的结构体
@@ -36,7 +31,13 @@ type HeadlineWithFsrs struct {
 	Reps          uint64    `json:"Reps"`
 	Lapses        uint64    `json:"Lapses"`
 	State         uint64    `json:"State"`
+	NeedReview    bool      `json:"NeedReview"`
 	LastReview    time.Time `json:"LastReview"`
+
+	TotalCards     int // 总卡片数量
+	ExpiredCards   int // 超期未复习的卡片数量
+	WaitingCards   int // 新创建等待第一次阅读的卡片数量
+	ReviewingCards int // 今天等待复习的卡片数量
 }
 
 type FileInfo struct {
@@ -44,9 +45,9 @@ type FileInfo struct {
 	FilePath       string // 文件路径
 	Hash           string
 	TotalCards     int // 总卡片数量
-	ExpiredCards   int // 过期卡片数量
-	WaitingCards   int // 等待学习的卡片数量
-	ReviewingCards int // 等待复习的卡片数量
+	ExpiredCards   int // 超期未复习的卡片数量
+	WaitingCards   int // 新创建等待第一次阅读的卡片数量
+	ReviewingCards int // 今天等待复习的卡片数量
 }
 
 // FileHeadlineCache 用于缓存文件中所有headline的树形结构和统计信息
@@ -110,7 +111,7 @@ func NewFileHeadlineCache(fileID string) (*FileHeadlineCache, error) {
 // buildCache 构建headline缓存树并计算统计信息
 func (c *FileHeadlineCache) buildCache() error {
 	// 获取当前日期的结束时间，用于判断卡片是否过期
-	_, dayEnd := GetDayTime(0)
+	dayStart, dayEnd := GetDayTime(0)
 
 	// 一次性查询所有headline和fsrsInfo信息
 	fsrs := dal.FsrsInfo
@@ -136,17 +137,14 @@ func (c *FileHeadlineCache) buildCache() error {
 
 	// 第一遍遍历，构建ID到headline的映射
 	for _, result := range results {
-		headlineID := result.ID
-
 		// 存储headline信息
-		if _, exists := headlineMap[headlineID]; !exists {
-			headlineMap[headlineID] = result
+		if _, exists := headlineMap[result.ID]; !exists {
+			headlineMap[result.ID] = result
 
 			// 初始化每个headline的统计信息
-			c.HeadMap[headlineID] = &HeadlineStats{
-				HeadlineID: headlineID,
-				Info:       result,
-				Children:   make([]*HeadlineStats, 0),
+			c.HeadMap[result.ID] = &HeadlineStats{
+				Info:     result,
+				Children: make([]*HeadlineStats, 0),
 			}
 
 			// 记录父子关系
@@ -155,31 +153,37 @@ func (c *FileHeadlineCache) buildCache() error {
 				if _, ok := parentChildrenMap[parentID]; !ok {
 					parentChildrenMap[parentID] = make([]string, 0)
 				}
-				parentChildrenMap[parentID] = append(parentChildrenMap[parentID], headlineID)
+				parentChildrenMap[parentID] = append(parentChildrenMap[parentID], result.ID)
 			} else {
 				// 根headline
-				c.RootHeads = append(c.RootHeads, c.HeadMap[headlineID])
+				c.RootHeads = append(c.RootHeads, c.HeadMap[result.ID])
 			}
 		}
 
 		// 处理fsrsInfo信息，计算统计数据
-		if stats, ok := c.HeadMap[headlineID]; ok {
+		if stats, ok := c.HeadMap[result.ID]; ok {
 			// 总卡片数量+1
-			stats.TotalCards++
+			stats.Info.TotalCards++
 
 			// 根据State判断卡片类型
 			if result.State == 0 {
 				// 等待学习的卡片
-				stats.WaitingCards++
+				stats.Info.WaitingCards++
+				stats.Info.NeedReview = false
 			} else {
-				// 判断是否是等待复习的卡片
-				if result.Due.Before(dayEnd) {
-					stats.ReviewingCards++
+				// 判断是否是今天等待复习的卡片
+				if result.Due.Before(dayEnd) && result.Due.After(dayStart) {
+					stats.Info.ReviewingCards++
+					stats.Info.NeedReview = true
 				}
 
 				// 判断是否是过期卡片
-				if result.Due.Before(time.Now()) {
-					stats.ExpiredCards++
+				if result.Due.Before(dayStart) {
+					stats.Info.ExpiredCards++
+					stats.Info.NeedReview = true
+				}
+				if result.Due.After(dayEnd) {
+					stats.Info.NeedReview = false
 				}
 			}
 		}
@@ -211,10 +215,10 @@ func (c *FileHeadlineCache) aggregateStats(stats *HeadlineStats) {
 		c.aggregateStats(child)
 
 		// 将子headline的统计信息累加到父headline
-		stats.TotalCards += child.TotalCards
-		stats.ExpiredCards += child.ExpiredCards
-		stats.WaitingCards += child.WaitingCards
-		stats.ReviewingCards += child.ReviewingCards
+		stats.Info.TotalCards += child.Info.TotalCards
+		stats.Info.ExpiredCards += child.Info.ExpiredCards
+		stats.Info.WaitingCards += child.Info.WaitingCards
+		stats.Info.ReviewingCards += child.Info.ReviewingCards
 	}
 }
 
@@ -226,10 +230,10 @@ func (c *FileHeadlineCache) getHeadlineStats(headlineID string) *HeadlineStats {
 // GetFileStats 获取整个文件的统计信息
 func (c *FileHeadlineCache) getFileStats() (totalCards, expiredCards, waitingCards, reviewingCards int) {
 	for _, rootHead := range c.RootHeads {
-		totalCards += rootHead.TotalCards
-		expiredCards += rootHead.ExpiredCards
-		waitingCards += rootHead.WaitingCards
-		reviewingCards += rootHead.ReviewingCards
+		totalCards += rootHead.Info.TotalCards
+		expiredCards += rootHead.Info.ExpiredCards
+		waitingCards += rootHead.Info.WaitingCards
+		reviewingCards += rootHead.Info.ReviewingCards
 	}
 	return
 }
@@ -246,16 +250,7 @@ func (m *FileHeadlineCacheManager) GetFileFromCache(fileID string) (*FileHeadlin
 		return cache, nil
 	}
 
-	// 缓存不存在或已过期，创建新缓存
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	// 双重检查，避免在获取锁的过程中其他协程已经创建了缓存
-	cache, exists = m.caches[fileID]
-	if exists && time.Since(cache.LastUpdated) < m.maxAge {
-		return cache, nil
-	}
-
+	// 在获取写锁之前先创建新缓存，避免在持有锁的过程中进行耗时的数据库操作
 	// 创建新缓存
 	newCache, err := NewFileHeadlineCache(fileID)
 	if err != nil {
@@ -264,6 +259,16 @@ func (m *FileHeadlineCacheManager) GetFileFromCache(fileID string) (*FileHeadlin
 
 	// 设置最后更新时间
 	newCache.LastUpdated = time.Now()
+
+	// 双重检查，避免在获取锁的过程中其他协程已经创建了缓存
+	cache, exists = m.caches[fileID]
+	if exists && time.Since(cache.LastUpdated) < m.maxAge {
+		return cache, nil
+	}
+
+	// 缓存不存在或已过期，获取写锁更新缓存
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	// 更新缓存
 	m.caches[fileID] = newCache
@@ -359,11 +364,26 @@ func (c *FileHeadlineCache) getChildrenIDs(headlineID string) []string {
 
 	// 递归获取所有子headline的ID
 	for _, child := range stats.Children {
-		childrenIDs = append(childrenIDs, child.HeadlineID)
-		childrenIDs = append(childrenIDs, c.getChildrenIDs(child.HeadlineID)...)
+		childrenIDs = append(childrenIDs, child.Info.ID)
+		childrenIDs = append(childrenIDs, c.getChildrenIDs(child.Info.ID)...)
 	}
 
 	return childrenIDs
+}
+
+// getChildren 获取指定headline的子headlineWithFsrs
+func (c *FileHeadlineCache) getChildren(headlineID string) []*HeadlineWithFsrs {
+	var children []*HeadlineWithFsrs
+	// 获取当前headline的统计信息
+	stats := c.getHeadlineStats(headlineID)
+	if stats == nil {
+		return children
+	}
+	// 递归获取所有子headline的Fsrs
+	for _, child := range stats.Children {
+		children = append(children, &child.Info)
+	}
+	return children
 }
 
 // GetHeadIDByAncestorID 获取指定headline及其所有子headline的ID列表
@@ -419,4 +439,30 @@ func GetHeadIDByAncestorIDs(ancestorIDs []string) []string {
 	}
 
 	return result
+}
+
+func GetChildrenByFileID(fileID string) ([]*HeadlineWithFsrs, error) {
+	// 从缓存管理器获取缓存
+	cache, err := GetCacheManager().GetFileFromCache(fileID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取所有子headline的ID
+	var children []*HeadlineWithFsrs
+	for _, rootHead := range cache.RootHeads {
+		children = append(children, &rootHead.Info)
+	}
+	return children, nil
+}
+
+func GetChildrenByHeadlineID(headlineID, fileid string) ([]*HeadlineWithFsrs, error) {
+	// 从缓存管理器获取缓存
+	cache, err := GetCacheManager().GetFileFromCache(fileid)
+	if err != nil {
+		return nil, err
+	}
+	// 获取所有子headline的ID
+	children := cache.getChildren(headlineID)
+	return children, nil
 }

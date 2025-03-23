@@ -30,6 +30,8 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("FindNoteFirst", api.FindNoteFirst, "string", "Find note with query"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteList", api.FindNoteList, "string", "Find notes with query"))
 	service.RegisterMethod(epc.MakeMethod("GetFileHasNewCard", api.GetFileHasNewCard, "string", "Get file has new card"))
+	service.RegisterMethod(epc.MakeMethod("GetFileChildrenCard", api.GetFileChildrenCard, "string", "Get file children card"))
+	service.RegisterMethod(epc.MakeMethod("GetHeadChildrenCard", api.GetHeadChildrenCard, "string", "Get head children card"))
 	return service
 }
 
@@ -47,6 +49,22 @@ func (api *CardApi) GetFileHasNewCard() util.Result {
 		return util.Result{Data: false, Err: err}
 	}
 	return util.Result{Data: fileInfos, Err: nil}
+}
+
+func (api *CardApi) GetFileChildrenCard(fileid string) util.Result {
+	children, err := db.GetChildrenByFileID(fileid)
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	return util.Result{Data: children, Err: nil}
+}
+
+func (api *CardApi) GetHeadChildrenCard(headid, fileid string) util.Result {
+	children, err := db.GetChildrenByHeadlineID(headid, fileid)
+	if err != nil {
+		return util.Result{Data: false, Err: err}
+	}
+	return util.Result{Data: children, Err: nil}
 }
 
 // function to export to emacs rpc.
