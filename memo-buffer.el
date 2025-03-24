@@ -29,6 +29,9 @@
 (defconst memo--view-buffer-name "*memo-view*"
   "The memo buffer for view child virtual head.")
 
+(defconst memo--read-buffer-name "*memo-read*"
+  "The memo buffer for read resource.")
+
 (defvar-local memo--buffer-local-note nil
   "The memo note object store in current buffer.")
 
@@ -61,7 +64,7 @@
 (defun memo-review-note()
   "Get next review note in review buffer."
   (interactive)
-  (memo--get-review-note-object)
+  (memo-api--get-review-note-object)
   (if (not (memo-note-id memo--review-note))
       (user-error "Review memo-note object is nil"))
   (let* ((buf (get-buffer-create memo--review-buffer-name))
@@ -142,7 +145,7 @@
     (with-current-buffer buf
       memo--buffer-local-note)))
 
-(defun memo-open-head-in-view-buffer(head)
+(defun memo-open-head-in-view-buffer (head)
   "Open HEAD in view buffer."
   (if (not (memo-note-id head))
       (user-error "Memo-note object is nil"))
@@ -150,14 +153,18 @@
     (pop-to-buffer buf)
     (with-current-buffer buf
       (erase-buffer)
-      (insert (memo-note-content head))
+      (insert (memo-api--get-content-byid (memo-note-id head)))
       (set-buffer-modified-p nil)
       (org-mode)
       (setq memo--buffer-local-note head)
       (setq write-contents-functions '(memo-update-current-note-content)))))
 
-
-
+(defun memo-open-file-from-treemacs (file)
+  "Open FILE in view buffer and jump to TITLE."
+  (if (not (memo-file-filepath file))
+      (user-error "Memo-file object is nil"))
+  (let ((filepath (memo-file-filepath file)))
+    (find-file filepath)))
 
 ;; jump to org and enable editor.
 (defun memo-goto-org ()

@@ -240,6 +240,40 @@ func (c *FileHeadlineCache) aggregateStats(stats *HeadlineStats) {
 	}
 }
 
+// getChildrenIDs 递归获取指定headline的所有子headline ID
+func (c *FileHeadlineCache) getChildrenIDs(headlineID string) []string {
+	var childrenIDs []string
+
+	// 获取当前headline的统计信息
+	stats := c.getHeadlineStats(headlineID)
+	if stats == nil {
+		return childrenIDs
+	}
+
+	// 递归获取所有子headline的ID
+	for _, child := range stats.Children {
+		childrenIDs = append(childrenIDs, child.Info.ID)
+		childrenIDs = append(childrenIDs, c.getChildrenIDs(child.Info.ID)...)
+	}
+
+	return childrenIDs
+}
+
+// getChildren 获取指定headline的子headlineWithFsrs
+func (c *FileHeadlineCache) getChildren(headlineID string) []*HeadlineWithFsrs {
+	var children []*HeadlineWithFsrs
+	// 获取当前headline的统计信息
+	stats := c.getHeadlineStats(headlineID)
+	if stats == nil {
+		return children
+	}
+	// 递归获取所有子headline的Fsrs
+	for _, child := range stats.Children {
+		children = append(children, &child.Info)
+	}
+	return children
+}
+
 // GetHeadlineStats 获取指定headline的统计信息
 func (c *FileHeadlineCache) getHeadlineStats(headlineID string) *HeadlineStats {
 	return c.HeadMap[headlineID]
@@ -369,40 +403,6 @@ func GetFileStats(fileID string) (totalCards, expiredCards, waitingCards, review
 	}
 
 	return cache.Info.TotalCards, cache.Info.ExpiredCards, cache.Info.WaitingCards, cache.Info.ReviewingCards, nil
-}
-
-// getChildrenIDs 递归获取指定headline的所有子headline ID
-func (c *FileHeadlineCache) getChildrenIDs(headlineID string) []string {
-	var childrenIDs []string
-
-	// 获取当前headline的统计信息
-	stats := c.getHeadlineStats(headlineID)
-	if stats == nil {
-		return childrenIDs
-	}
-
-	// 递归获取所有子headline的ID
-	for _, child := range stats.Children {
-		childrenIDs = append(childrenIDs, child.Info.ID)
-		childrenIDs = append(childrenIDs, c.getChildrenIDs(child.Info.ID)...)
-	}
-
-	return childrenIDs
-}
-
-// getChildren 获取指定headline的子headlineWithFsrs
-func (c *FileHeadlineCache) getChildren(headlineID string) []*HeadlineWithFsrs {
-	var children []*HeadlineWithFsrs
-	// 获取当前headline的统计信息
-	stats := c.getHeadlineStats(headlineID)
-	if stats == nil {
-		return children
-	}
-	// 递归获取所有子headline的Fsrs
-	for _, child := range stats.Children {
-		children = append(children, &child.Info)
-	}
-	return children
 }
 
 // GetHeadIDByAncestorID 获取指定headline及其所有子headline的ID列表

@@ -19,6 +19,7 @@
 
 (require 'treemacs)
 (require 'treemacs-treelib)
+(require 'f)
 
 (defvar-local memo-treemacs--right-click-actions nil)
 (defvar-local memo-treemacs-generic-filter nil)
@@ -189,26 +190,67 @@ Otherwise returns value itself."
 ;;;----------------------------------
 ;;;  treemacs tree render for read
 ;;;----------------------------------
+(defun memo-treemacs-card-perform-ret-action (&rest _)
+  (interactive)
+  (if-let (item (-> (treemacs-node-at-point)
+                      (button-get :item)))
+      (memo-open-head-in-view-buffer item)
+    (treemacs-pulse-on-failure "No Child head Found.")))
 
-(treemacs-define-expandable-node-type memo-treemacs-virtual-node
+(treemacs-define-expandable-node-type memo-treemacs-read-head-node
+  :closed-icon
+  (if (= (memo-note-totalcards item) 1)
+      treemacs-icon-tag-leaf  treemacs-icon-tag-closed)
+  :open-icon   treemacs-icon-tag-open
+  :label
+  (cond
+    ((= (memo-note-state item) 0)
+     (propertize (f-base (memo-note-title item)) 'face 'font-lock-string-face))
+    ((memo-note-NeedReview)
+     (propertize (f-base (memo-note-title item)) 'face 'red))
+    ((not (memo-note-NeedReview))
+     (propertize (f-base (memo-note-title item)) 'face 'shadow)))
+  :key (memo-note-id item)
+  :ret-action #'memo-treemacs-card-perform-ret-action
+  :children
+  (when (> (memo-note-totalcards item) 1)
+    (let ((items (memo-api--get-head-children-heads (memo-note-id item)
+						    (memo-note-fileid item) memo-note-normal-type)))
+      (funcall callback items)))
+  :child-type
+  'memo-treemacs-read-head-node
+  :more-properties
+  (if (= (memo-note-totalcards item) 1)
+      `(:note ,item :leaf t :no-tab? t)
+    `(:note ,item))
+  :async? t)
+
+(defun memo-treemacs-file-perform-ret-action (&rest _)
+  (interactive)
+  (if-let (item (-> (treemacs-node-at-point)
+                      (button-get :item)))
+      (memo-open-file-from-treemacs item)
+    (treemacs-pulse-on-failure "No file Found.")))
+
+(treemacs-define-expandable-node-type memo-treemacs-read-file-node
   :closed-icon treemacs-icon-tag-closed
   :open-icon   treemacs-icon-tag-open
   :label
-  (if (equal (memo-note-expandable item) 1)
-      (propertize (memo-note-title item) 'face 'font-lock-string-face)
-    (propertize (memo-note-title item) 'face 'font-lock-variable-name-face))
-  :key (memo-note-id item)
-  :ret-action #'memo-treemacs-perform-ret-action
+  (if (> (memo-file-waitingcards item) 0)
+      (propertize (f-base  (memo-file-filepath item)) 'face 'font-lock-string-face)
+      (propertize (f-base  (memo-file-filepath item)) 'face 'font-lock-variable-name-face))
+  :key (memo-file-fileid item)
+  :ret-action #'memo-treemacs-file-perform-ret-action
   :children
-  (when (equal (memo-note-expandable item) 1)
-    (let ((items (memo-api--get-virt-heads-by-parentid (memo-note-id item))))
+  (when (> (memo-file-totalcards item) 0)
+    (let ((items (memo-api--get-file-children-heads (memo-file-fileid item))))
       (funcall callback items)))
   :child-type
-  'memo-treemacs-virtual-node
+  'memo-treemacs-read-head-node
   :more-properties
-  (if (equal (memo-note-expandable item) 0)
-      `(:note ,item :leaf t :no-tab? t)
-    `(:note ,item))
+  (if (= (memo-file-totalcards item) 0)
+      `(:file ,item :leaf t :no-tab? t)
+    `(:file ,item))
   :async? t)
 
 
@@ -219,10 +261,10 @@ Otherwise returns value itself."
   :key item
   :children
   (when (equal item "ReadTree")
-    (let ((items  (list (memo-get-review-note))))
+    (let ((items  (memo-api--get-read-files)))
       (funcall callback items)))
   :child-type
-  'memo-treemacs-virtual-node
+  'memo-treemacs-read-file-node
   :async? t)
 
 
@@ -235,7 +277,7 @@ Otherwise returns value itself."
                                  &optional buffer-name right-click-actions)
   (let ((buffer (get-buffer-create (or buffer-name memo-treemacs-buffer-name))))
     (with-current-buffer buffer
-      (treemacs-initialize memo-treemacs-review-mode-node
+      (treemacs-initialize memo-treemacs-read-mode-node
         :with-expand-depth (or expand-depth 0)
         :and-do (progn
                   (memo-treemacs--set-mode-line-format buffer title)
@@ -253,11 +295,19 @@ Otherwise returns value itself."
 ;;;----------------------------------
 
 (defun memo-treemacs-review-initialize ()
-  "Display heads in treemacs."
+  "Display heads in treemacs for review mode."
   (interactive)
   (display-buffer-in-side-window
    (memo-treemacs-review-render
     "*MemoTree*" memo-treemacs-virtual-head-expand-depth)
+   memo-treemacs-virtual-head-position-params))
+
+(defun memo-treemacs-read-initialize ()
+  "Display heads in treemacs for read mode."
+  (interactive)
+  (display-buffer-in-side-window
+   (memo-treemacs-read-render
+    "*MemoReadTree*" 1)
    memo-treemacs-virtual-head-position-params))
 
 (defun memo-treemacs-update ()

@@ -120,23 +120,7 @@
             (message "缓冲区 '%s' 的窗口中光标位置为：%d" buffer-name cursor-pos)
             cursor-pos)))))) ; 返回光标位置
 
-
-;(let* ((buf  (get-buffer-create memo-treemacs-buffer-name)))
-;  (with-current-buffer memo-treemacs-buffer-name
-;    (treemacs-update-async-node  "a97e5355-a74d-4b01-baa4-4b4c71cae63"  buf)))
-
-; update function
-;(closure (t)  (&optional btn item callback) 
-;   (ignore btn item callback) 
-;   (if (equal (progn (or (progn (and (memq (type-of item) cl-struct-memo-note-tags) t))
-;			 (signal 'wrong-type-argument (list 'memo-note item))) (aref item 16)) 1) 
-;       (progn (memo-api--get-virt-heads-by-parentid 
-;	       (progn (or (progn (and (memq (type-of item) cl-struct-memo-note-tags) t)) 
-;			  (signal 'wrong-type-argument (list 'memo-note item))) (aref item 1))))))
-;
-;;callback
-;(lambda (items)
-;    (treemacs--async-update-part-complete   path item-path items buffer))
+(memo-api--get-read-files)
 
 (require 'treemacs)
 (require 'treemacs-treelib)

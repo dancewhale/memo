@@ -28,6 +28,12 @@
   (cdr (assoc (read key) x)))
 
 ;;; Properties and Value setting.
+(defconst memo-note-normal-type  1
+  "Memo virt type.")
+
+(defconst memo-note-virt-type  2
+  "Memo virt type.")
+
 (defconst memo-prop-note-schedule  "MEMO_NOTE_SCHEDULE"
   "Property used to store the cards type;
 and used for backend to indentify memo head.")
@@ -66,52 +72,98 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 ;; get note for review.
 (cl-defstruct memo-note
   id weight source scheduletype type title hash
-  content parentid level  order status priority
-  fileid filepath expandable)
+  parentid fileid level order status priority
+  due state needreview lastreview totalcards
+  totalvirtcards expiredcards waitingcards reviewingcards)
 
 
 (defvar memo--review-note nil
   "The memo-note object which store note info wait for review.")
 
 (defun memo-make-note-from-alist (x)
-  "Generate memo note object from return list."
-  (make-memo-note :id (memo-alist-get x "ID")
-		  :weight (memo-alist-get x "Weight")
-		  :source (memo-alist-get x "Source")
-		  :scheduletype (memo-alist-get x "ScheduleType")
-		  :type (memo-alist-get x "Type")
-		  :title (memo-alist-get x "Title")
-		  :hash (memo-alist-get x "Hash")
-		  :content (memo-alist-get x "Content")
-		  :parentid (memo-alist-get x "ParentID")
-		  :level (memo-alist-get x "Level")
-		  :order (memo-alist-get x "Order")
-		  :status (memo-alist-get x "Status")
-		  :priority (memo-alist-get x "Priority")
-		  :fileid (memo-alist-get x "FileID")
-		  :filepath (memo-alist-get x "FilePath")
-		  :expandable (memo-alist-get x "Expandable")))
+  "Generate memo note object from alist X."
+  (if (memo-alist-get x "ID")
+      (make-memo-note :id (memo-alist-get x "ID")
+		      :weight (memo-alist-get x "Weight")
+		      :source (memo-alist-get x "Source")
+		      :scheduletype (memo-alist-get x "ScheduleType")
+		      :type (memo-alist-get x "Type")
+		      :title (memo-alist-get x "Title")
+		      :hash (memo-alist-get x "Hash")
+		      :parentid (memo-alist-get x "ParentID")
+		      :fileid (memo-alist-get x "FileID")
+		      :level (memo-alist-get x "Level")
+		      :order (memo-alist-get x "Order")
+		      :status (memo-alist-get x "Status")
+		      :priority (memo-alist-get x "Priority")
+		      :due  (memo-alist-get x "Due")
+		      :state (memo-alist-get x "State")
+		      :needreview (memo-alist-get x "NeedReview")
+		      :lastreview (memo-alist-get x "LastReview")
+		      :totalcards (memo-alist-get x "TotalCards")
+		      :totalvirtcards (memo-alist-get x "TotalVirtCards")
+		      :expiredcards (memo-alist-get x "ExpiredCards")
+		      :waitingcards (memo-alist-get x "WaitingCards")
+		      :reviewingcards (memo-alist-get x "ReviewingCards"))))
 
-(defun memo--get-review-note-object ()
+(defun memo-make-note-from-return (y)
+  "Try to parser note object from return value Y."
+  (if (memo-alist-get y "ID")
+      (memo-make-note-from-alist y)
+    (if (memo-alist-get (car y) "ID")
+        (-map #'memo-make-note-from-alist y)
+      nil)))
+
+(cl-defstruct memo-file
+  fileid filepath hash totalcards totalvirtcards
+  expiredcards waitingcards reviewingcards)
+
+(defun memo-make-file-from-alist (x)
+  "Generate memo file object from alist X."
+  (if (memo-alist-get x "FilePath")
+      (make-memo-file :fileid (memo-alist-get x "FileID")
+		      :filepath (memo-alist-get x "FilePath")
+		      :hash (memo-alist-get x "Hash")
+		      :totalcards (memo-alist-get x "TotalCards")
+		      :totalvirtcards (memo-alist-get x "TotalVirtCards")
+		      :expiredcards (memo-alist-get x "ExpiredCards")
+		      :waitingcards (memo-alist-get x "WaitingCards")
+		      :reviewingcards (memo-alist-get x "ReviewingCards"))))
+
+(defun memo-make-file-from-return (y)
+  "Try to parser file object from return value Y."
+  (if (memo-alist-get y "FilePath")
+      (memo-make-file-from-alist y)
+    (if (memo-alist-get (car y) "FilePath")
+        (-map #'memo-make-file-from-alist y)
+      nil)))
+
+
+(defun memo-api--get-review-note-object ()
   "Return memo-note object which need review from server."
   (let ((result (memo-bridge-call-sync "GetNextReviewNote")))
     (memo--parse-result result))
   (setq memo--review-note (memo-make-note-from-alist memo-api-return-value)))
 
+(defun memo-api--get-content-byid (headid)
+  "Get the content of head by HEADID and FILEID."
+  (let ((result (memo-bridge-call-sync "GetHeadContentByID" headid)))
+    (memo--parse-result result)))
+
 (defun memo-api--update-content (id content)
-  "Update the content of head."
+  "Update the content of head by ID CONTENT."
   (let ((result (memo-bridge-call-sync "UpdateOrgHeadContent" id content)))
     (memo--parse-result result)
     t))
 
 (defun memo-api--review-note (id rate)
-  "Review current review-note with rate."
+  "Review current review-note with ID RATE."
   (let ((result (memo-bridge-call-sync "ReviewNote" id rate)))
     (memo--parse-result result)
     t))
 
 (defun memo-api--update-property (id key value)
-  "Update the content of head."
+  "Update the content of head by ID KEY VALUE."
   (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" id key value)))
     (memo--parse-result result))
   (message "Content Update finish."))
@@ -122,10 +174,25 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
     (memo--parse-result result)
     t))
 
-(defun memo-api--get-virt-heads-by-parentid (parentid)
-  "Get virt heads by PARENTID."
-  (let ((result (memo-bridge-call-sync "GetVirtualHeadByParentID" parentid)))
-    (-map #'memo-make-note-from-alist (memo--parse-result result))))
+(defun memo-api--get-virt-heads-by-parentid (parentID fileID)
+  "Get virt heads by PARENTID and FILEID."
+  (let ((result (memo-bridge-call-sync "GetVirtualHeadByParentID" parentID fileID memo-note-virt-type)))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-read-files ()
+  "Get file that need to read and not finish read yet."
+  (let ((result (memo-bridge-call-sync "GetFileHasNewCard")))
+    (memo-make-file-from-return (memo--parse-result result))))
+
+(defun memo-api--get-file-children-heads (fileID)
+  "Get first heads of file by FILEID."
+  (let ((result (memo-bridge-call-sync "GetFileChildrenCard" fileID)))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-head-children-heads (headID fileID type)
+  "Get first child heads under head by HEADID FILEID TYPE."
+  (let ((result (memo-bridge-call-sync "GetHeadChildrenCard" headID fileID type)))
+    (memo-make-note-from-return (memo--parse-result result))))
 
 ;; sync org file under dir.
 (defun memo-sync-db ()

@@ -31,6 +31,7 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("GetFileHasNewCard", api.GetFileHasNewCard, "string", "Get file has new card"))
 	service.RegisterMethod(epc.MakeMethod("GetFileChildrenCard", api.GetFileChildrenCard, "string", "Get file children card"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadChildrenCard", api.GetHeadChildrenCard, "string", "Get head children card"))
+	service.RegisterMethod(epc.MakeMethod("GetHeadContentByID", api.GetHeadContentByID, "string", "Get headline by id"))
 	return service
 }
 
@@ -50,20 +51,32 @@ func (api *CardApi) GetFileHasNewCard() db.Result {
 	return db.Result{Data: fileInfos, Err: nil}
 }
 
-func (api *CardApi) GetFileChildrenCard(fileid string) db.Result {
-	children, err := db.GetChildrenByFileID(fileid)
+func (api *CardApi) GetHeadContentByID(headid string) db.Result {
+	headDB, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}
-	return db.Result{Data: children, Err: nil}
+	head, err := headDB.GetHeadlineByID(headid)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	return db.Result{Data: head.Content, Err: nil}
+}
+
+func (api *CardApi) GetFileChildrenCard(fileid string) db.Result {
+	childrens, err := db.GetChildrenByFileID(fileid)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	return db.Result{Data: childrens, Err: nil}
 }
 
 func (api *CardApi) GetHeadChildrenCard(headid, fileid string, notetype int) db.Result {
-	children, err := db.GetChildrenByHeadlineID(headid, fileid, notetype)
+	childrens, err := db.GetChildrenByHeadlineID(headid, fileid, notetype)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}
-	return db.Result{Data: children, Err: nil}
+	return db.Result{Data: childrens, Err: nil}
 }
 
 func (api *CardApi) FindNoteList(q []string) db.Result {
