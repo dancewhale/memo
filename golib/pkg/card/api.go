@@ -6,9 +6,9 @@ import (
 	"memo/pkg/db/query"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
-	"memo/pkg/util"
 
 	epc "github.com/kiwanami/go-elrpc"
+
 	//	"github.com/spewerspew/spew"
 	"gorm.io/gorm"
 )
@@ -25,7 +25,6 @@ type CardApi struct {
 }
 
 func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
-	service.RegisterMethod(epc.MakeMethod("GetNextReviewNote", api.GetNextReviewNote, "string", "Get next review note"))
 	service.RegisterMethod(epc.MakeMethod("ReviewNote", api.ReviewNote, "string", "Review note"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteFirst", api.FindNoteFirst, "string", "Find note with query"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteList", api.FindNoteList, "string", "Find notes with query"))
@@ -35,101 +34,82 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	return service
 }
 
-func (api *CardApi) GetFileHasNewCard() util.Result {
+func (api *CardApi) GetFileHasNewCard() db.Result {
 	cardDB, err := query.NewCardDB()
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	fileids, err := cardDB.GetFileHasNewCard()
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	fileInfos, err := db.GetCacheManager().GetFilesFromCache(fileids)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
-	return util.Result{Data: fileInfos, Err: nil}
+	return db.Result{Data: fileInfos, Err: nil}
 }
 
-func (api *CardApi) GetFileChildrenCard(fileid string) util.Result {
+func (api *CardApi) GetFileChildrenCard(fileid string) db.Result {
 	children, err := db.GetChildrenByFileID(fileid)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
-	return util.Result{Data: children, Err: nil}
+	return db.Result{Data: children, Err: nil}
 }
 
-func (api *CardApi) GetHeadChildrenCard(headid, fileid string) util.Result {
-	children, err := db.GetChildrenByHeadlineID(headid, fileid)
+func (api *CardApi) GetHeadChildrenCard(headid, fileid string, notetype int) db.Result {
+	children, err := db.GetChildrenByHeadlineID(headid, fileid, notetype)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
-	return util.Result{Data: children, Err: nil}
+	return db.Result{Data: children, Err: nil}
 }
 
-// function to export to emacs rpc.
-func (api *CardApi) GetNextReviewNote() util.Result {
-	head := GetReviewCardByWeightDueTime()
-	if head == nil {
-		return util.Result{Data: nil, Err: errors.New("There is no card need review")}
+func (api *CardApi) FindNoteList(q []string) db.Result {
+	var notes []db.HeadlineWithFsrs
+
+	bq, err := query.BuildQueryFromSyntax(q)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
 	}
-
-	hDB, _ := db.NewOrgHeadlineDB()
-	note := util.GetHeadStruct(head, hDB)
-
-	return util.Result{Data: note, Err: nil}
+	err = bq.ExecuteScan(notes)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	if len(notes) == 0 {
+		return db.Result{Data: nil, Err: nil}
+	}
+	return db.Result{Data: notes, Err: nil}
 }
 
-func (api *CardApi) FindNoteList(q []string) util.Result {
-	hDB, err := db.NewOrgHeadlineDB()
+func (api *CardApi) FindNoteFirst(q []string) db.Result {
+	var notes []db.HeadlineWithFsrs
+
+	bq, err := query.BuildQueryFromSyntax(q)
 	if err != nil {
-		return util.Result{Data: nil, Err: err}
+		return db.Result{Data: nil, Err: err}
 	}
-	query, err := query.BuildQueryFromSyntax(q)
+	err = bq.ExecuteScan(notes)
 	if err != nil {
-		return util.Result{Data: nil, Err: err}
+		return db.Result{Data: nil, Err: err}
 	}
-	heads, err := query.ExecuteList()
-	if err != nil {
-		return util.Result{Data: nil, Err: err}
+	if len(notes) == 0 {
+		return db.Result{Data: nil, Err: nil}
 	}
-	if len(heads) == 0 {
-		return util.Result{Data: nil, Err: nil}
-	}
-	notes := util.GetHeadStructs(heads, hDB)
-	return util.Result{Data: notes, Err: nil}
+	return db.Result{Data: notes[0], Err: nil}
 }
 
-func (api *CardApi) FindNoteFirst(q []string) util.Result {
-	hDB, err := db.NewOrgHeadlineDB()
-	if err != nil {
-		return util.Result{Data: nil, Err: err}
-	}
-	query, err := query.BuildQueryFromSyntax(q)
-	if err != nil {
-		return util.Result{Data: nil, Err: err}
-	}
-	head, err := query.ExecuteFirst()
-	if err != nil {
-		return util.Result{Data: nil, Err: err}
-	}
-	if head == nil {
-		return util.Result{Data: nil, Err: nil}
-	}
-	note := util.GetHeadStruct(head, hDB)
-	return util.Result{Data: note, Err: nil}
-}
-
-func (api *CardApi) ReviewNote(orgID string, rating string) util.Result {
+func (api *CardApi) ReviewNote(orgID string, rating string) db.Result {
 	if orgID == "" {
-		return util.Result{Data: nil, Err: errors.New("orgID is empty When review note")}
+		return db.Result{Data: nil, Err: errors.New("orgID is empty When review note")}
 	}
 	fsrsRate := storage.StringToRate(rating)
 	err := ReviewCard(orgID, fsrsRate)
 	logger.Debugf("Review note success, orgID: %s, rating: %s", orgID, rating)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	} else {
-		return util.Result{Data: true, Err: nil}
+		return db.Result{Data: true, Err: nil}
 	}
 }

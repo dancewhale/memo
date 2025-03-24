@@ -12,7 +12,6 @@ import (
 	"memo/pkg/org"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
-	"memo/pkg/util"
 	"os"
 
 	"github.com/kiwanami/go-elrpc"
@@ -93,7 +92,7 @@ func appstart(ctx context.Context, cmd *cli.Command) error {
 
 	// construct epc server
 	if con.GoPort == 0 {
-		con.GoPort, err = util.QueryFreePort()
+		con.GoPort, err = db2.QueryFreePort()
 	}
 
 	if err != nil {

@@ -6,15 +6,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/karrick/godirwalk"
+	epc "github.com/kiwanami/go-elrpc"
+	"gorm.io/gorm"
 	"memo/pkg/card"
 	"memo/pkg/logger"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
-	"memo/pkg/util"
-
-	"github.com/karrick/godirwalk"
-	epc "github.com/kiwanami/go-elrpc"
-	"gorm.io/gorm"
 )
 
 var muteFile = sync.Mutex{}
@@ -36,8 +34,6 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
 	service.RegisterMethod(epc.MakeMethod("CreateVirtualHead", o.CreateVirtHead, "string", "Create virtual head."))
-	service.RegisterMethod(epc.MakeMethod("GetVirtualHeadByParentID", o.GetVirtHeadByParentID, "string", "Get VirtHead By parentID."))
-	service.RegisterMethod(epc.MakeMethod("Test", o.Test, "string", "test"))
 	return service
 }
 
@@ -45,7 +41,7 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 // Then get nodes and fileId, first try to get from kv cache, second to parse file.
 // force is not 0 mean alway update file even hash is same.
 // batchMode is 1 mean not scan head for fsrs init after upload.
-func (o *OrgApi) UploadFile(filePath string, fo int, batchMode int) util.Result {
+func (o *OrgApi) UploadFile(filePath string, fo int, batchMode int) db.Result {
 	var force bool
 	if fo == 0 {
 		force = false
@@ -55,20 +51,20 @@ func (o *OrgApi) UploadFile(filePath string, fo int, batchMode int) util.Result 
 
 	f, err := NewFileFromPath(filePath)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	} else if f == nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	err = f.LoadFromFile(force)
 	if err != nil && !errors.Is(err, parser.MissFileID) {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	} else if err != nil && errors.Is(err, parser.MissFileID) {
 		logger.Warnf("Miss file id in file %s.", filePath)
-		return util.Result{Data: false, Err: nil}
+		return db.Result{Data: false, Err: nil}
 	}
 	err = f.SaveDB(force)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 
 	if batchMode == 0 {
@@ -76,17 +72,13 @@ func (o *OrgApi) UploadFile(filePath string, fo int, batchMode int) util.Result 
 	}
 
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	} else {
-		return util.Result{Data: true, Err: nil}
+		return db.Result{Data: true, Err: nil}
 	}
 }
 
-func (o *OrgApi) Test(test string) error {
-	return errors.New("test")
-}
-
-func (o *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) util.Result {
+func (o *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) db.Result {
 	err := godirwalk.Walk(dirPath, &godirwalk.Options{
 		Callback: func(osPathname string, de *godirwalk.Dirent) error {
 			// Following string operation is not most performant way
@@ -108,10 +100,10 @@ func (o *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) util.Result 
 		Unsorted: true,
 	})
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	card.ScanInitFsrs()
-	return util.Result{Data: true, Err: nil}
+	return db.Result{Data: true, Err: nil}
 }
 
 func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
@@ -141,16 +133,16 @@ func (o *OrgApi) exportOrgFileToDiskByOrgID(orgid string, filePath string) error
 	return nil
 }
 
-func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
+func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	bodyContent = strings.ReplaceAll(bodyContent, "\\\\", "\\")
 	bodyContent = strings.ReplaceAll(bodyContent, "\\\"", "\"")
 	err = headdb.UpdateHeadlineContent(orgid, bodyContent)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	go func() {
 		muteFile.Lock()
@@ -161,17 +153,17 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) util.Result {
 	go func() {
 		headdb.UpdateHeadlineHash(orgid)
 	}()
-	return util.Result{Data: true, Err: nil}
+	return db.Result{Data: true, Err: nil}
 }
 
-func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
+func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	err = headdb.UpdateProperty(orgid, key, value)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	go func() {
 		muteFile.Lock()
@@ -182,31 +174,18 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) util.Result {
 	go func() {
 		headdb.UpdateHeadlineHash(orgid)
 	}()
-	return util.Result{Data: true, Err: nil}
+	return db.Result{Data: true, Err: nil}
 }
 
-func (o *OrgApi) CreateVirtHead(parentid, title, content string) util.Result {
+func (o *OrgApi) CreateVirtHead(parentid, title, content string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	err = headdb.CreateVirtualHead(parentid, title, content)
 	if err != nil {
-		return util.Result{Data: false, Err: err}
+		return db.Result{Data: false, Err: err}
 	}
 	card.ScanInitFsrs()
-	return util.Result{Data: true, Err: nil}
-}
-
-func (o *OrgApi) GetVirtHeadByParentID(parentid string) util.Result {
-	headdb, err := db.NewOrgHeadlineDB()
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	heads, err := headdb.GetVirtualHeadByParentID(parentid)
-	if err != nil {
-		return util.Result{Data: false, Err: err}
-	}
-	Heads := util.GetHeadStructs(heads, headdb)
-	return util.Result{Data: Heads, Err: nil}
+	return db.Result{Data: true, Err: nil}
 }

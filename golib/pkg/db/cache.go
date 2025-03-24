@@ -3,9 +3,12 @@ package db
 import (
 	"context"
 	"memo/pkg/logger"
+	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"sync"
 	"time"
+
+	"github.com/samber/lo"
 )
 
 // HeadlineStats 存储headline及其子headline的统计信息
@@ -16,13 +19,21 @@ type HeadlineStats struct {
 
 // HeadlineWithFsrs 包含headline和fsrsInfo信息的结构体
 type HeadlineWithFsrs struct {
-	ID            string    `gorm:"primarykey;not null"`
-	ScheduledType string    `json:"scheduled_type"`
+	ID            string `gorm:"primarykey;not null"`
+	Weight        int64  `json:"weight"`
+	Source        string `json:"source"`
+	ScheduledType string `json:"scheduled_type"`
+	// Type: 1 mean normal headline from file in disk.
+	// 2 mean virtual headline only exist in database by use create.
 	Type          int       `json:"type"`
 	Title         string    `json:"title"`
 	Hash          string    `json:"hash" hash:"ignore"`
 	ParentID      *string   `json:"parent_id"`
 	FileID        *string   `gorm:"primaryKey"`
+	Level         int       `json:"level"`
+	Order         int       `json:"order"`
+	Status        string    `json:"status"`
+	Priority      string    `json:"priority"`
 	Due           time.Time `json:"Due"`
 	Stability     float64   `json:"Stability"`
 	Difficulty    float64   `json:"Difficulty"`
@@ -35,6 +46,7 @@ type HeadlineWithFsrs struct {
 	LastReview    time.Time `json:"LastReview"`
 
 	TotalCards     int // 总卡片数量
+	TotalVirtCards int // 总虚拟卡片数量
 	ExpiredCards   int // 超期未复习的卡片数量
 	WaitingCards   int // 新创建等待第一次阅读的卡片数量
 	ReviewingCards int // 今天等待复习的卡片数量
@@ -45,6 +57,7 @@ type FileInfo struct {
 	FilePath       string // 文件路径
 	Hash           string
 	TotalCards     int // 总卡片数量
+	TotalVirtCards int // 总虚拟卡片数量
 	ExpiredCards   int // 超期未复习的卡片数量
 	WaitingCards   int // 新创建等待第一次阅读的卡片数量
 	ReviewingCards int // 今天等待复习的卡片数量
@@ -164,6 +177,10 @@ func (c *FileHeadlineCache) buildCache() error {
 		if stats, ok := c.HeadMap[result.ID]; ok {
 			// 总卡片数量+1
 			stats.Info.TotalCards++
+			if result.Type == 2 {
+				// 虚拟卡片数量+1
+				stats.Info.TotalVirtCards++
+			}
 
 			// 根据State判断卡片类型
 			if result.State == 0 {
@@ -205,7 +222,7 @@ func (c *FileHeadlineCache) buildCache() error {
 		c.aggregateStats(rootHead)
 	}
 
-	c.Info.TotalCards, c.Info.ExpiredCards, c.Info.WaitingCards, c.Info.ReviewingCards = c.getFileStats()
+	c.Info.TotalCards, c.Info.TotalVirtCards, c.Info.ExpiredCards, c.Info.WaitingCards, c.Info.ReviewingCards = c.getFileStats()
 	return nil
 }
 
@@ -216,6 +233,7 @@ func (c *FileHeadlineCache) aggregateStats(stats *HeadlineStats) {
 
 		// 将子headline的统计信息累加到父headline
 		stats.Info.TotalCards += child.Info.TotalCards
+		stats.Info.TotalVirtCards += child.Info.TotalVirtCards
 		stats.Info.ExpiredCards += child.Info.ExpiredCards
 		stats.Info.WaitingCards += child.Info.WaitingCards
 		stats.Info.ReviewingCards += child.Info.ReviewingCards
@@ -228,9 +246,10 @@ func (c *FileHeadlineCache) getHeadlineStats(headlineID string) *HeadlineStats {
 }
 
 // GetFileStats 获取整个文件的统计信息
-func (c *FileHeadlineCache) getFileStats() (totalCards, expiredCards, waitingCards, reviewingCards int) {
+func (c *FileHeadlineCache) getFileStats() (totalCards, totalVirtCards, expiredCards, waitingCards, reviewingCards int) {
 	for _, rootHead := range c.RootHeads {
 		totalCards += rootHead.Info.TotalCards
+		totalVirtCards += rootHead.Info.TotalVirtCards
 		expiredCards += rootHead.Info.ExpiredCards
 		waitingCards += rootHead.Info.WaitingCards
 		reviewingCards += rootHead.Info.ReviewingCards
@@ -456,7 +475,7 @@ func GetChildrenByFileID(fileID string) ([]*HeadlineWithFsrs, error) {
 	return children, nil
 }
 
-func GetChildrenByHeadlineID(headlineID, fileid string) ([]*HeadlineWithFsrs, error) {
+func GetChildrenByHeadlineID(headlineID, fileid string, notetype int) ([]*HeadlineWithFsrs, error) {
 	// 从缓存管理器获取缓存
 	cache, err := GetCacheManager().GetFileFromCache(fileid)
 	if err != nil {
@@ -464,5 +483,12 @@ func GetChildrenByHeadlineID(headlineID, fileid string) ([]*HeadlineWithFsrs, er
 	}
 	// 获取所有子headline的ID
 	children := cache.getChildren(headlineID)
+	if notetype != storage.NormalHead && notetype != storage.VirtualHead {
+		notetype = storage.NormalHead
+	}
+
+	children = lo.Filter(children, func(item *HeadlineWithFsrs, index int) bool {
+		return item.Type == notetype
+	})
 	return children, nil
 }
