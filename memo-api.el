@@ -71,10 +71,11 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 
 ;; get note for review.
 (cl-defstruct memo-note
-  id weight source scheduletype type title hash
+  id weight source scheduledtype type title hash
   parentid fileid level order status priority
-  due state needreview lastreview totalcards
-  totalvirtcards expiredcards waitingcards reviewingcards)
+  stability difficulty elapseddays scheduleddays
+  reps lapses  state needreview totalcards totalvirtcards
+  expiredcards waitingcards reviewingcards)
 
 
 (defvar memo--review-note nil
@@ -86,7 +87,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
       (make-memo-note :id (memo-alist-get x "ID")
 		      :weight (memo-alist-get x "Weight")
 		      :source (memo-alist-get x "Source")
-		      :scheduletype (memo-alist-get x "ScheduleType")
+		      :scheduledtype (memo-alist-get x "ScheduledType")
 		      :type (memo-alist-get x "Type")
 		      :title (memo-alist-get x "Title")
 		      :hash (memo-alist-get x "Hash")
@@ -96,10 +97,14 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 		      :order (memo-alist-get x "Order")
 		      :status (memo-alist-get x "Status")
 		      :priority (memo-alist-get x "Priority")
-		      :due  (memo-alist-get x "Due")
+		      :stability (memo-alist-get x "Stability")
+		      :difficulty (memo-alist-get x "Difficulty")
+		      :elapseddays (memo-alist-get x "ElapsedDays")
+		      :scheduleddays (memo-alist-get x "ScheduledDays")
+		      :reps (memo-alist-get x "Reps")
+		      :lapses (memo-alist-get x "Lapses")
 		      :state (memo-alist-get x "State")
 		      :needreview (memo-alist-get x "NeedReview")
-		      :lastreview (memo-alist-get x "LastReview")
 		      :totalcards (memo-alist-get x "TotalCards")
 		      :totalvirtcards (memo-alist-get x "TotalVirtCards")
 		      :expiredcards (memo-alist-get x "ExpiredCards")

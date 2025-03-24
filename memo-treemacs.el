@@ -204,12 +204,14 @@ Otherwise returns value itself."
   :open-icon   treemacs-icon-tag-open
   :label
   (cond
-    ((= (memo-note-state item) 0)
-     (propertize (f-base (memo-note-title item)) 'face 'font-lock-string-face))
-    ((memo-note-NeedReview)
-     (propertize (f-base (memo-note-title item)) 'face 'red))
-    ((not (memo-note-NeedReview))
-     (propertize (f-base (memo-note-title item)) 'face 'shadow)))
+   ((equal (memo-note-scheduledtype item) "suspend")
+    (propertize (f-base (memo-note-title item)) 'face 'yellow))
+   ((= (memo-note-state item) 0)
+    (propertize (f-base (memo-note-title item)) 'face 'font-lock-string-face))
+   ((memo-note-needreview item)
+    (propertize (f-base (memo-note-title item)) 'face 'red))
+   ((not (memo-note-needreview item))
+    (propertize (f-base (memo-note-title item)) 'face 'shadow)))
   :key (memo-note-id item)
   :ret-action #'memo-treemacs-card-perform-ret-action
   :children

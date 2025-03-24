@@ -39,29 +39,27 @@
 (defconst memo--source-buffer-name "*memo-source*"
   "The memo buffer for review note show and flip.")
 
-(defun memo-skip-current-review-note ()
+(defun memo-skip-current-note ()
   "Skip current review note and review next note."
   (interactive)
-  (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
-    (progn (memo-api--update-property (memo-note-id memo--review-note) "MEMO_NOTE_SCHEDULE" "postpone")
-	   (memo-review-note))))
+  (if memo--buffer-local-note
+    (progn (memo-api--update-property (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "postpone"))))
 
-(defun memo-suspend-current-review-note ()
+(defun memo-suspend-current-note ()
   "Skip current review note and review next note."
   (interactive)
-  (when (and memo--review-note (equal (buffer-name (current-buffer)) memo--review-buffer-name))
-    (progn (memo-api--update-property (memo-note-id memo--review-note) "MEMO_NOTE_SCHEDULE" "suspend")
-	   (memo-review-note))))
+  (if memo--buffer-local-note
+    (progn (memo-api--update-property (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend"))))
 
 (defun memo-update-current-note-content ()
   "Skip current review note and review next note."
   (interactive)
-  (when memo--buffer-local-note
+  (if memo--buffer-local-note
     (progn (memo-api--update-content (memo-note-id memo--buffer-local-note)
 				     (buffer-substring-no-properties (point-min) (point-max)))
            (set-buffer-modified-p nil) t)))
 
-(defun memo-review-note()
+(defun memo-show-review-note()
   "Get next review note in review buffer."
   (interactive)
   (memo-api--get-review-note-object)
@@ -83,32 +81,33 @@
     (save-excursion  (memo-treemacs-update))))
 
 
+(defun memo-review-note (rate)
+  "Review note with score: RATE."
+  (if memo--buffer-local-note
+      (memo-api--review-note (memo-note-id memo--buffer-local-note) rate ))
+  (if (equal (buffer-name (current-buffer)) memo--review-buffer-name)
+      (memo-review-note)))
+
 (defun memo-review-easy()
   "Review note with score: Easy."
   (interactive)
-  (memo-api--review-note (memo-note-id memo--review-note) "Easy")
-  (memo-review-note)
-  )
+  (memo-review-note "Easy"))
 
 (defun memo-review-good()
   "Review note with score: Good."
   (interactive)
-  (memo-api--review-note (memo-note-id memo--review-note) "Good")
-  (memo-review-note)
-  )
+  (memo-review-note "Good"))
 
 (defun memo-review-hard()
   "Review note with score: Hard."
   (interactive)
-  (memo-api--review-note (memo-note-id memo--review-note) "Hard")
-  (memo-review-note)
+  (memo-review-note "Hard")
   )
 
 (defun memo-review-again()
   "Review note with score: Again."
   (interactive)
-  (memo-api--review-note (memo-note-id memo--review-note) "Again")
-  (memo-review-note)
+  (memo-review-note "Again")
   )
 
 (defun memo-flip-note()
