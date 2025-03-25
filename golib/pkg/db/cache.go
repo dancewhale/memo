@@ -5,6 +5,7 @@ import (
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+	"sort"
 	"sync"
 	"time"
 
@@ -19,10 +20,11 @@ type HeadlineStats struct {
 
 // HeadlineWithFsrs 包含headline和fsrsInfo信息的结构体
 type HeadlineWithFsrs struct {
-	ID            string `gorm:"primarykey;not null"`
-	Weight        int64  `json:"weight"`
-	Source        string `json:"source"`
-	ScheduledType string `json:"scheduled_type"`
+	ID            string   `gorm:"primarykey;not null"`
+	Path          []string `json:"path"`
+	Weight        int64    `json:"weight"`
+	Source        string   `json:"source"`
+	ScheduledType string   `json:"scheduled_type"`
 	// Type: 1 mean normal headline from file in disk.
 	// 2 mean virtual headline only exist in database by use create.
 	Type          int       `json:"type"`
@@ -206,6 +208,54 @@ func (c *FileHeadlineCache) buildCache() error {
 		}
 	}
 
+	// 按层级构建所有headline的Path
+	// 从上层headline到下层headline，确保父headline的Path已经构建完成
+	// 创建一个按level分组的map
+	levelMap := make(map[int][]string)
+	maxLevel := 1
+
+	// 按level对headline进行分组
+	for headID, stats := range c.HeadMap {
+		level := stats.Info.Level
+		if level > maxLevel {
+			maxLevel = level
+		}
+		if _, ok := levelMap[level]; !ok {
+			levelMap[level] = make([]string, 0)
+		}
+		levelMap[level] = append(levelMap[level], headID)
+	}
+
+	// 从level 1开始，逐层构建Path
+	for level := 1; level <= maxLevel; level++ {
+		headIDs, ok := levelMap[level]
+		if !ok {
+			continue
+		}
+
+		for _, headID := range headIDs {
+			// 获取当前headline的信息
+			stats, ok := c.HeadMap[headID]
+			if !ok {
+				continue
+			}
+
+			// 对于level 1的headline，Path已经在前面设置过了
+			if level == 1 {
+				stats.Info.Path = []string{c.Info.FileID}
+			}
+
+			// 获取父headline的信息
+			if stats.Info.ParentID != nil && *stats.Info.ParentID != "" {
+				parentID := *stats.Info.ParentID
+				if parentStats, ok := c.HeadMap[parentID]; ok && len(parentStats.Info.Path) > 0 {
+					// 子headline的Path是父headline的Path加上父headline的ID
+					stats.Info.Path = append(append([]string{}, parentStats.Info.Path...), parentID)
+				}
+			}
+		}
+	}
+
 	// 第二遍遍历，构建树结构
 	for parentID, childrenIDs := range parentChildrenMap {
 		if parentStats, ok := c.HeadMap[parentID]; ok {
@@ -214,6 +264,10 @@ func (c *FileHeadlineCache) buildCache() error {
 					parentStats.Children = append(parentStats.Children, childStats)
 				}
 			}
+			// 按Order值从小到大排序Children数组
+			sort.Slice(parentStats.Children, func(i, j int) bool {
+				return parentStats.Children[i].Info.Order < parentStats.Children[j].Info.Order
+			})
 		}
 	}
 

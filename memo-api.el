@@ -71,7 +71,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 
 ;; get note for review.
 (cl-defstruct memo-note
-  id weight source scheduledtype type title hash
+  id path weight source scheduledtype type title hash
   parentid fileid level order status priority
   stability difficulty elapseddays scheduleddays
   reps lapses  state needreview totalcards totalvirtcards
@@ -85,6 +85,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   "Generate memo note object from alist X."
   (if (memo-alist-get x "ID")
       (make-memo-note :id (memo-alist-get x "ID")
+		      :path (memo-alist-get x "Path")
 		      :weight (memo-alist-get x "Weight")
 		      :source (memo-alist-get x "Source")
 		      :scheduledtype (memo-alist-get x "ScheduledType")
