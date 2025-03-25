@@ -205,7 +205,7 @@ Otherwise returns value itself."
   :label
   (cond
    ((equal (memo-note-scheduledtype item) "suspend")
-    (propertize (f-base (memo-note-title item)) 'face 'yellow))
+    (propertize (f-base (memo-note-title item)) 'face 'font-lock-warning-face))
    ((= (memo-note-state item) 0)
     (propertize (f-base (memo-note-title item)) 'face 'font-lock-string-face))
    ((memo-note-needreview item)

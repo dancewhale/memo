@@ -29,6 +29,10 @@ func (f *FsrsDB) CreateFsrs(fsrsInfo *storage.FsrsInfo) error {
 	if err != nil {
 		return logger.Errorf("Create fsrs info for headline %s failed: %v", fsrsInfo.HeadlineID, err)
 	}
+
+	if cacheManager := GetCacheManager(); cacheManager != nil {
+		cacheManager.InvalidateCache(fsrsInfo.HeadlineID)
+	}
 	return nil
 }
 
@@ -42,6 +46,10 @@ func (f *FsrsDB) UpdateFsrs(Fsrs *storage.FsrsInfo) error {
 	if err != nil {
 		logger.Errorf("Update %s Headline FsrsInfo in database failed: %v", Fsrs.HeadlineID, err)
 		return err
+	}
+
+	if cacheManager := GetCacheManager(); cacheManager != nil {
+		cacheManager.InvalidateCache(Fsrs.HeadlineID)
 	}
 	return nil
 }

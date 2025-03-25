@@ -167,11 +167,11 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
     (memo--parse-result result)
     t))
 
-(defun memo-api--update-property (id key value)
-  "Update the content of head by ID KEY VALUE."
-  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" id key value)))
+(defun memo-api--update-property (fileid headid key value)
+  "Update the content of head by FILEID HEADID KEY VALUE."
+  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" fileid headid key value)))
     (memo--parse-result result))
-  (message "Content Update finish."))
+  (message "Update finish."))
 
 (defun memo-api--create-virt-head (id title content)
   "Create virt head with TITLE and CONTENT under head with ID."

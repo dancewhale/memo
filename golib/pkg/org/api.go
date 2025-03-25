@@ -156,12 +156,12 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) db.Result {
 	return db.Result{Data: true, Err: nil}
 }
 
-func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) db.Result {
+func (o *OrgApi) UpdateOrgHeadProperty(fileid, orgid, key, value string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}
-	err = headdb.UpdateProperty(orgid, key, value)
+	err = headdb.UpdateProperty(fileid, orgid, key, value)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}

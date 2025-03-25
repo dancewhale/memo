@@ -222,16 +222,22 @@ func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
 	return nil
 }
 
-func (h *OrgHeadlineDB) UpdateProperty(id, key, value string) error {
+func (h *OrgHeadlineDB) UpdateProperty(fileID, headID, key, value string) error {
 	headline := dal.Headline
+	if key == options.EmacsPropertyWeight || key == options.EmacsPropertySchedule || key == options.EmacsPropertySource {
+		if cacheManager := GetCacheManager(); cacheManager != nil {
+			cacheManager.InvalidateCache(fileID)
+		}
+	}
+
 	if key == options.EmacsPropertyID {
 		return logger.Errorf("ID is not allowed to update.")
 	} else if key == options.EmacsPropertySource {
-		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
+		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headID)).
 			UpdateSimple(headline.Source.Value(value))
 		return err
 	} else if key == options.EmacsPropertySchedule {
-		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
+		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headID)).
 			UpdateSimple(headline.ScheduledType.Value(value))
 		return err
 	} else if key == options.EmacsPropertyWeight {
@@ -239,11 +245,11 @@ func (h *OrgHeadlineDB) UpdateProperty(id, key, value string) error {
 		if err != nil {
 			return logger.Errorf("convert weight to int error: %v", err)
 		}
-		_, err = headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
+		_, err = headline.WithContext(context.Background()).Where(headline.ID.Eq(headID)).
 			UpdateSimple(headline.Weight.Value(int64(w)))
 		return err
 	} else {
-		property := storage.Property{HeadlineID: id, Key: key, Value: value}
+		property := storage.Property{HeadlineID: headID, Key: key, Value: value}
 		err := h.db.Save(&property).Error
 		return err
 	}

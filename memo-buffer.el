@@ -43,13 +43,25 @@
   "Skip current review note and review next note."
   (interactive)
   (if memo--buffer-local-note
-    (progn (memo-api--update-property (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "postpone"))))
+    (progn (memo-api--update-property
+	    (memo-note-fileid memo--buffer-local-note)
+	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "postpone"))))
 
 (defun memo-suspend-current-note ()
-  "Skip current review note and review next note."
+  "Suspend current note."
   (interactive)
   (if memo--buffer-local-note
-    (progn (memo-api--update-property (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend"))))
+    (progn (memo-api--update-property
+	    (memo-note-fileid memo--buffer-local-note)
+	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend"))))
+
+(defun memo-resume-current-note ()
+  "Resume current note from suspend."
+  (interactive)
+  (if memo--buffer-local-note
+    (progn (memo-api--update-property
+	    (memo-note-fileid memo--buffer-local-note)
+	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal"))))
 
 (defun memo-update-current-note-content ()
   "Skip current review note and review next note."
