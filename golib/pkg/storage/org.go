@@ -41,27 +41,27 @@ type Headline struct {
 	// Suspend: hang up card, not review until set to normal.
 	// Normal: normal schedule.
 	// Postphone: move card to the end of the queue in today and reset to 0 after review.
-	ScheduledType string `json:"scheduled_type"`
-	// Type: 1 mean normal headline from file in disk.
-	// 2 mean virtual headline only exist in database by use create.
-	Type       int        `json:"type"`
-	Title      string     `json:"title"`
-	Hash       string     `json:"hash" hash:"ignore"`
-	Content    string     `json:"content"`
-	ParentID   *string    `json:"parent_id"`
-	Level      int        `json:"level"`
-	Order      int        `json:"order"`
-	Status     string     `json:"status"`
-	Scheduled  *time.Time `json:"scheduled"`
-	Deadline   *time.Time `json:"deadline"`
-	Closed     *time.Time `json:"closed"`
-	Priority   string     `json:"priority"`
-	Properties []Property `gorm:"foreignKey:HeadlineID;references:ID" json:"properties"`
-	Children   []Headline `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
-	FileID     *string    `gorm:"primaryKey"`
-	File       File       `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
-	LogBook    []*Clock   `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
-	Tags       []Tag      `gorm:"foreignKey:HeadlineID;references:ID" json:"tags"`
+	ScheduledType string     `json:"scheduled_type"`
+	Title         string     `json:"title"`
+	Hash          string     `json:"hash" hash:"ignore"`
+	Content       string     `json:"content"`
+	ParentID      *string    `json:"parent_id"`
+	Level         int        `json:"level"`
+	Order         int        `json:"order"`
+	Status        string     `json:"status"`
+	Scheduled     *time.Time `json:"scheduled"`
+	Deadline      *time.Time `json:"deadline"`
+	Closed        *time.Time `json:"closed"`
+	Priority      string     `json:"priority"`
+	Properties    []Property `gorm:"foreignKey:HeadlineID;references:ID" json:"properties"`
+	Children      []Headline `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
+	FileID        *string    `gorm:"primaryKey"`
+	HeadlineID    *string    `json:"headline_id"`
+	VirtChildren  []Headline `gorm:"foreignKey:HeadlineID" json:"virt_children" hash:"ignore"`
+	VirtFileHash  *string    `json:"virt_file_hash" hash:"ignore"`
+	File          File       `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`
+	LogBook       []*Clock   `gorm:"foreignKey:HeadlineID;references:ID" json:"logbook"`
+	Tags          []Tag      `gorm:"foreignKey:HeadlineID;references:ID" json:"tags"`
 }
 
 type Property struct {

@@ -293,16 +293,17 @@ func (h *OrgHeadlineDB) CreateVirtualHead(parentID, title, content string) error
 	head := dal.Headline
 	source := "[[id:" + parentID + "]]"
 
-	count, err := head.WithContext(context.Background()).Where(head.ID.Eq(parentID)).
-		Where(head.Type.Eq(storage.VirtualHead)).Count()
+	count, err := head.WithContext(context.Background()).
+		Where(head.HeadlineID.Eq(parentID)).Where(head.Level.Eq(1)).Count()
 	if err != nil {
 		return logger.Errorf("Count virtual headline by parent id %s error: %v", parentID, err)
 	}
 
 	headline := storage.Headline{ID: parser.GenerateID(),
-		ParentID: &parentID, Title: title, Content: content,
-		Weight: storage.DefaultWeight, Type: storage.VirtualHead,
+		Title: title, Content: content,
+		Weight: storage.DefaultWeight, HeadlineID: &parentID,
 		Source: source, ScheduledType: storage.NORMAL,
+		Level: 1,
 		Order: int(count + 1),
 	}
 

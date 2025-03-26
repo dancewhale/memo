@@ -34,7 +34,6 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.Weight = field.NewInt64(tableName, "weight")
 	_headline.Source = field.NewString(tableName, "source")
 	_headline.ScheduledType = field.NewString(tableName, "scheduled_type")
-	_headline.Type = field.NewInt(tableName, "type")
 	_headline.Title = field.NewString(tableName, "title")
 	_headline.Hash = field.NewString(tableName, "hash")
 	_headline.Content = field.NewString(tableName, "content")
@@ -47,6 +46,8 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.Closed = field.NewTime(tableName, "closed")
 	_headline.Priority = field.NewString(tableName, "priority")
 	_headline.FileID = field.NewString(tableName, "file_id")
+	_headline.HeadlineID = field.NewString(tableName, "headline_id")
+	_headline.VirtFileHash = field.NewString(tableName, "virt_file_hash")
 	_headline.Properties = headlineHasManyProperties{
 		db: db.Session(&gorm.Session{}),
 
@@ -63,6 +64,9 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 				field.RelationField
 			}
 			Children struct {
+				field.RelationField
+			}
+			VirtChildren struct {
 				field.RelationField
 			}
 			LogBook struct {
@@ -102,6 +106,11 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 			}{
 				RelationField: field.NewRelation("Properties.Headline.Children", "storage.Headline"),
 			},
+			VirtChildren: struct {
+				field.RelationField
+			}{
+				RelationField: field.NewRelation("Properties.Headline.VirtChildren", "storage.Headline"),
+			},
 			LogBook: struct {
 				field.RelationField
 				Headline struct {
@@ -135,6 +144,12 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("Children", "storage.Headline"),
+	}
+
+	_headline.VirtChildren = headlineHasManyVirtChildren{
+		db: db.Session(&gorm.Session{}),
+
+		RelationField: field.NewRelation("VirtChildren", "storage.Headline"),
 	}
 
 	_headline.LogBook = headlineHasManyLogBook{
@@ -171,7 +186,6 @@ type headline struct {
 	Weight        field.Int64
 	Source        field.String
 	ScheduledType field.String
-	Type          field.Int
 	Title         field.String
 	Hash          field.String
 	Content       field.String
@@ -184,9 +198,13 @@ type headline struct {
 	Closed        field.Time
 	Priority      field.String
 	FileID        field.String
+	HeadlineID    field.String
+	VirtFileHash  field.String
 	Properties    headlineHasManyProperties
 
 	Children headlineHasManyChildren
+
+	VirtChildren headlineHasManyVirtChildren
 
 	LogBook headlineHasManyLogBook
 
@@ -216,7 +234,6 @@ func (h *headline) updateTableName(table string) *headline {
 	h.Weight = field.NewInt64(table, "weight")
 	h.Source = field.NewString(table, "source")
 	h.ScheduledType = field.NewString(table, "scheduled_type")
-	h.Type = field.NewInt(table, "type")
 	h.Title = field.NewString(table, "title")
 	h.Hash = field.NewString(table, "hash")
 	h.Content = field.NewString(table, "content")
@@ -229,6 +246,8 @@ func (h *headline) updateTableName(table string) *headline {
 	h.Closed = field.NewTime(table, "closed")
 	h.Priority = field.NewString(table, "priority")
 	h.FileID = field.NewString(table, "file_id")
+	h.HeadlineID = field.NewString(table, "headline_id")
+	h.VirtFileHash = field.NewString(table, "virt_file_hash")
 
 	h.fillFieldMap()
 
@@ -245,7 +264,7 @@ func (h *headline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (h *headline) fillFieldMap() {
-	h.fieldMap = make(map[string]field.Expr, 25)
+	h.fieldMap = make(map[string]field.Expr, 27)
 	h.fieldMap["id"] = h.ID
 	h.fieldMap["created_at"] = h.CreatedAt
 	h.fieldMap["updated_at"] = h.UpdatedAt
@@ -253,7 +272,6 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["weight"] = h.Weight
 	h.fieldMap["source"] = h.Source
 	h.fieldMap["scheduled_type"] = h.ScheduledType
-	h.fieldMap["type"] = h.Type
 	h.fieldMap["title"] = h.Title
 	h.fieldMap["hash"] = h.Hash
 	h.fieldMap["content"] = h.Content
@@ -266,6 +284,8 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["closed"] = h.Closed
 	h.fieldMap["priority"] = h.Priority
 	h.fieldMap["file_id"] = h.FileID
+	h.fieldMap["headline_id"] = h.HeadlineID
+	h.fieldMap["virt_file_hash"] = h.VirtFileHash
 
 }
 
@@ -296,6 +316,9 @@ type headlineHasManyProperties struct {
 			field.RelationField
 		}
 		Children struct {
+			field.RelationField
+		}
+		VirtChildren struct {
 			field.RelationField
 		}
 		LogBook struct {
@@ -446,6 +469,77 @@ func (a headlineHasManyChildrenTx) Clear() error {
 }
 
 func (a headlineHasManyChildrenTx) Count() int64 {
+	return a.tx.Count()
+}
+
+type headlineHasManyVirtChildren struct {
+	db *gorm.DB
+
+	field.RelationField
+}
+
+func (a headlineHasManyVirtChildren) Where(conds ...field.Expr) *headlineHasManyVirtChildren {
+	if len(conds) == 0 {
+		return &a
+	}
+
+	exprs := make([]clause.Expression, 0, len(conds))
+	for _, cond := range conds {
+		exprs = append(exprs, cond.BeCond().(clause.Expression))
+	}
+	a.db = a.db.Clauses(clause.Where{Exprs: exprs})
+	return &a
+}
+
+func (a headlineHasManyVirtChildren) WithContext(ctx context.Context) *headlineHasManyVirtChildren {
+	a.db = a.db.WithContext(ctx)
+	return &a
+}
+
+func (a headlineHasManyVirtChildren) Session(session *gorm.Session) *headlineHasManyVirtChildren {
+	a.db = a.db.Session(session)
+	return &a
+}
+
+func (a headlineHasManyVirtChildren) Model(m *storage.Headline) *headlineHasManyVirtChildrenTx {
+	return &headlineHasManyVirtChildrenTx{a.db.Model(m).Association(a.Name())}
+}
+
+type headlineHasManyVirtChildrenTx struct{ tx *gorm.Association }
+
+func (a headlineHasManyVirtChildrenTx) Find() (result []*storage.Headline, err error) {
+	return result, a.tx.Find(&result)
+}
+
+func (a headlineHasManyVirtChildrenTx) Append(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Append(targetValues...)
+}
+
+func (a headlineHasManyVirtChildrenTx) Replace(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Replace(targetValues...)
+}
+
+func (a headlineHasManyVirtChildrenTx) Delete(values ...*storage.Headline) (err error) {
+	targetValues := make([]interface{}, len(values))
+	for i, v := range values {
+		targetValues[i] = v
+	}
+	return a.tx.Delete(targetValues...)
+}
+
+func (a headlineHasManyVirtChildrenTx) Clear() error {
+	return a.tx.Clear()
+}
+
+func (a headlineHasManyVirtChildrenTx) Count() int64 {
 	return a.tx.Count()
 }
 

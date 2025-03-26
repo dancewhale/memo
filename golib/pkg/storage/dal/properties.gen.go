@@ -65,6 +65,11 @@ func newProperty(db *gorm.DB, opts ...gen.DOOption) property {
 		}{
 			RelationField: field.NewRelation("Headline.Children", "storage.Headline"),
 		},
+		VirtChildren: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headline.VirtChildren", "storage.Headline"),
+		},
 		LogBook: struct {
 			field.RelationField
 			Headline struct {
@@ -176,6 +181,9 @@ type propertyBelongsToHeadline struct {
 		}
 	}
 	Children struct {
+		field.RelationField
+	}
+	VirtChildren struct {
 		field.RelationField
 	}
 	LogBook struct {

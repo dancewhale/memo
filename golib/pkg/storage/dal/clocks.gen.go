@@ -31,7 +31,7 @@ func newClock(db *gorm.DB, opts ...gen.DOOption) clock {
 	_clock.HeadlineID = field.NewString(tableName, "headline_id")
 	_clock.Start = field.NewTime(tableName, "start")
 	_clock.End = field.NewTime(tableName, "end")
-	_clock.Headline = clockBelongsToHeadline{
+	_clock.Headline = clockHasOneHeadline{
 		db: db.Session(&gorm.Session{}),
 
 		RelationField: field.NewRelation("Headline", "storage.Headline"),
@@ -65,6 +65,11 @@ func newClock(db *gorm.DB, opts ...gen.DOOption) clock {
 			field.RelationField
 		}{
 			RelationField: field.NewRelation("Headline.Children", "storage.Headline"),
+		},
+		VirtChildren: struct {
+			field.RelationField
+		}{
+			RelationField: field.NewRelation("Headline.VirtChildren", "storage.Headline"),
 		},
 		LogBook: struct {
 			field.RelationField
@@ -107,7 +112,7 @@ type clock struct {
 	HeadlineID field.String
 	Start      field.Time
 	End        field.Time
-	Headline   clockBelongsToHeadline
+	Headline   clockHasOneHeadline
 
 	fieldMap map[string]field.Expr
 }
@@ -162,7 +167,7 @@ func (c clock) replaceDB(db *gorm.DB) clock {
 	return c
 }
 
-type clockBelongsToHeadline struct {
+type clockHasOneHeadline struct {
 	db *gorm.DB
 
 	field.RelationField
@@ -182,6 +187,9 @@ type clockBelongsToHeadline struct {
 	Children struct {
 		field.RelationField
 	}
+	VirtChildren struct {
+		field.RelationField
+	}
 	LogBook struct {
 		field.RelationField
 		Headline struct {
@@ -196,7 +204,7 @@ type clockBelongsToHeadline struct {
 	}
 }
 
-func (a clockBelongsToHeadline) Where(conds ...field.Expr) *clockBelongsToHeadline {
+func (a clockHasOneHeadline) Where(conds ...field.Expr) *clockHasOneHeadline {
 	if len(conds) == 0 {
 		return &a
 	}
@@ -209,27 +217,27 @@ func (a clockBelongsToHeadline) Where(conds ...field.Expr) *clockBelongsToHeadli
 	return &a
 }
 
-func (a clockBelongsToHeadline) WithContext(ctx context.Context) *clockBelongsToHeadline {
+func (a clockHasOneHeadline) WithContext(ctx context.Context) *clockHasOneHeadline {
 	a.db = a.db.WithContext(ctx)
 	return &a
 }
 
-func (a clockBelongsToHeadline) Session(session *gorm.Session) *clockBelongsToHeadline {
+func (a clockHasOneHeadline) Session(session *gorm.Session) *clockHasOneHeadline {
 	a.db = a.db.Session(session)
 	return &a
 }
 
-func (a clockBelongsToHeadline) Model(m *storage.Clock) *clockBelongsToHeadlineTx {
-	return &clockBelongsToHeadlineTx{a.db.Model(m).Association(a.Name())}
+func (a clockHasOneHeadline) Model(m *storage.Clock) *clockHasOneHeadlineTx {
+	return &clockHasOneHeadlineTx{a.db.Model(m).Association(a.Name())}
 }
 
-type clockBelongsToHeadlineTx struct{ tx *gorm.Association }
+type clockHasOneHeadlineTx struct{ tx *gorm.Association }
 
-func (a clockBelongsToHeadlineTx) Find() (result *storage.Headline, err error) {
+func (a clockHasOneHeadlineTx) Find() (result *storage.Headline, err error) {
 	return result, a.tx.Find(&result)
 }
 
-func (a clockBelongsToHeadlineTx) Append(values ...*storage.Headline) (err error) {
+func (a clockHasOneHeadlineTx) Append(values ...*storage.Headline) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -237,7 +245,7 @@ func (a clockBelongsToHeadlineTx) Append(values ...*storage.Headline) (err error
 	return a.tx.Append(targetValues...)
 }
 
-func (a clockBelongsToHeadlineTx) Replace(values ...*storage.Headline) (err error) {
+func (a clockHasOneHeadlineTx) Replace(values ...*storage.Headline) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -245,7 +253,7 @@ func (a clockBelongsToHeadlineTx) Replace(values ...*storage.Headline) (err erro
 	return a.tx.Replace(targetValues...)
 }
 
-func (a clockBelongsToHeadlineTx) Delete(values ...*storage.Headline) (err error) {
+func (a clockHasOneHeadlineTx) Delete(values ...*storage.Headline) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -253,11 +261,11 @@ func (a clockBelongsToHeadlineTx) Delete(values ...*storage.Headline) (err error
 	return a.tx.Delete(targetValues...)
 }
 
-func (a clockBelongsToHeadlineTx) Clear() error {
+func (a clockHasOneHeadlineTx) Clear() error {
 	return a.tx.Clear()
 }
 
-func (a clockBelongsToHeadlineTx) Count() int64 {
+func (a clockHasOneHeadlineTx) Count() int64 {
 	return a.tx.Count()
 }
 

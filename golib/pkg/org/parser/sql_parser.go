@@ -69,7 +69,6 @@ func (s *OrgParserSql) parseHeadline(h Headline) {
 		Level: h.Lvl, Title: h.Title, Status: h.Status,
 		Content: h.BodyContent, Priority: h.Priority,
 		FileID:    &s.file.ID,
-		Type:      storage.NormalHead,
 		Scheduled: h.TaskTime.GetScheduled(),
 		Deadline:  h.TaskTime.GetDeadline(),
 		Closed:    h.TaskTime.GetClosed(),

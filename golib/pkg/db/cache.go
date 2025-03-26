@@ -3,13 +3,10 @@ package db
 import (
 	"context"
 	"memo/pkg/logger"
-	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"sort"
 	"sync"
 	"time"
-
-	"github.com/samber/lo"
 )
 
 // HeadlineStats 存储headline及其子headline的统计信息
@@ -20,18 +17,17 @@ type HeadlineStats struct {
 
 // HeadlineWithFsrs 包含headline和fsrsInfo信息的结构体
 type HeadlineWithFsrs struct {
-	ID            string   `gorm:"primarykey;not null"`
-	Path          []string `json:"path"`
-	Weight        int64    `json:"weight"`
-	Source        string   `json:"source"`
-	ScheduledType string   `json:"scheduled_type"`
-	// Type: 1 mean normal headline from file in disk.
-	// 2 mean virtual headline only exist in database by use create.
-	Type          int       `json:"type"`
+	ID            string    `gorm:"primarykey;not null"`
+	Path          []string  `json:"path"`
+	Weight        int64     `json:"weight"`
+	Source        string    `json:"source"`
+	ScheduledType string    `json:"scheduled_type"`
 	Title         string    `json:"title"`
 	Hash          string    `json:"hash" hash:"ignore"`
 	ParentID      *string   `json:"parent_id"`
 	FileID        *string   `gorm:"primaryKey"`
+	HeadlineID    *string   `json:"headline_id"`
+	VirtFileHash  *string   `json:"virt_file_hash"`
 	Level         int       `json:"level"`
 	Order         int       `json:"order"`
 	Status        string    `json:"status"`
@@ -179,7 +175,7 @@ func (c *FileHeadlineCache) buildCache() error {
 		if stats, ok := c.HeadMap[result.ID]; ok {
 			// 总卡片数量+1
 			stats.Info.TotalCards++
-			if result.Type == 2 {
+			if result.HeadlineID != nil {
 				// 虚拟卡片数量+1
 				stats.Info.TotalVirtCards++
 			}
@@ -537,12 +533,5 @@ func GetChildrenByHeadlineID(headlineID, fileid string, notetype int) ([]*Headli
 	}
 	// 获取所有子headline的ID
 	children := cache.getChildren(headlineID)
-	if notetype != storage.NormalHead && notetype != storage.VirtualHead {
-		notetype = storage.NormalHead
-	}
-
-	children = lo.Filter(children, func(item *HeadlineWithFsrs, index int) bool {
-		return item.Type == notetype
-	})
 	return children, nil
 }
