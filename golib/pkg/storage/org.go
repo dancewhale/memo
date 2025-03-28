@@ -16,8 +16,8 @@ const SUSPEND string = "suspend"
 const NORMAL string = "normal"
 const DELTED string = "deleted"
 
-const NormalHead int = 1
-const VirtualHead int = 2
+const NormalFile int = 1
+const VirtualFile int = 2
 
 type File struct {
 	ID          string `gorm:"primaryKey;not null"`

@@ -15,6 +15,18 @@ import (
 	"github.com/emirpasic/gods/lists/arraylist"
 )
 
+func NewVirtFileFromHeadID(headID string) (*OrgFile, error) {
+	orgfiledb, err := db.NewOrgFileDB()
+	if err != nil {
+		return nil, logger.Errorf("Init orgfile db operator error: %v", err)
+	}
+	return &OrgFile{
+		db:       orgfiledb,
+		fileType: storage.VirtualFile,
+		headID:   headID,
+	}, nil
+}
+
 // NewFileFromPath creates a new OrgFile from a file path.
 // It checks if the file exists, if it is a regular file, and if it is a .org file.
 // If the file is a .org file, it reads the file content, calculates the hash.
@@ -33,18 +45,19 @@ func NewFileFromPath(filePath string) (*OrgFile, error) {
 		return nil, err
 	}
 	return &OrgFile{
-		db:   orgfiledb,
-		hash: hashSting,
-		path: filePath,
+		db:       orgfiledb,
+		hash:     hashSting,
+		path:     filePath,
+		fileType: storage.NormalFile,
 	}, nil
 }
 
-func GetFileFromID(id string) (*OrgFile, error) {
+func GetFileFromID(id string, filetype int) (*OrgFile, error) {
 	orgfiledb, err := db.NewOrgFileDB()
 	if err != nil {
 		return nil, logger.Errorf("Init orgfile db operator error: %v", err)
 	}
-	file, err := orgfiledb.GetFileByID(id)
+	file, err := orgfiledb.GetFileByID(id, filetype)
 	if err != nil {
 		return nil, err
 	}
@@ -63,18 +76,33 @@ func GetFileFromID(id string) (*OrgFile, error) {
 // 提供接口用来加载文件，然后存储到kv数据库中
 // 提供接口用于修改，然后存储到kv数据库中，同时写入文件
 type OrgFile struct {
-	db    *db.OrgFileDB
-	path  string
-	hash  string
-	file  *storage.File
-	Nodes *arraylist.List
+	db       *db.OrgFileDB
+	path     string
+	content  string
+	hash     string
+	fileType int
+	// 当file 为virt file，也就是head只存在于数据库，只和实体head关联。
+	headID string
+	file   *storage.File
+	Nodes  *arraylist.List
 }
 
 func (f *OrgFile) String() string {
 	return f.file.String()
 }
 
-func (f *OrgFile) parseDocument() error {
+func (f *OrgFile) parseString(content string) error {
+	reader := bytes.NewReader([]byte(content))
+	nodes := parser.New().Parse(reader, "")
+	f.Nodes = nodes
+
+	s := parser.NewSqlWriter(f.fileType)
+	f.file = s.ParseOrgFile(f.Nodes)
+
+	return nil
+}
+
+func (f *OrgFile) parseDocument(fileType int) error {
 	content, err := os.ReadFile(f.path)
 	reader := bytes.NewReader(content)
 
@@ -87,7 +115,7 @@ func (f *OrgFile) parseDocument() error {
 	nodes := parser.New().Parse(reader, f.path)
 	f.Nodes = nodes
 
-	s := parser.NewSqlWriter()
+	s := parser.NewSqlWriter(fileType)
 	f.file = s.ParseOrgFile(f.Nodes)
 	f.file.FilePath = f.path
 	f.file.Hash = f.hash
@@ -108,7 +136,7 @@ func (f *OrgFile) LoadFromFile(force bool) error {
 		return logger.Errorf("Load file By hash from database %s failed: %v", f.file.Hash, err)
 	}
 	if file == nil || force {
-		return f.parseDocument()
+		return f.parseDocument(storage.NormalFile)
 	} else {
 		f.file = file
 		f.path = file.FilePath
@@ -117,15 +145,25 @@ func (f *OrgFile) LoadFromFile(force bool) error {
 	}
 }
 
+func (f *OrgFile) LoadFromContent(content string) error {
+	f.hash = parser.HashContent(content)
+	f.file.Hash = f.hash
+	return f.parseString(content)
+}
+
+func (f *OrgFile) getHash() string {
+	f.content = f.String()
+	hash := md5.New()
+	hash.Write([]byte(f.content))
+	HashString := hex.EncodeToString(hash.Sum(nil))
+	return HashString
+}
+
 func (f *OrgFile) SaveToDiskFile(path string) error {
 	if path == "" {
 		path = f.file.FilePath
 	}
-
-	content := f.String()
-	hash := md5.New()
-	hash.Write([]byte(content))
-	HashString := hex.EncodeToString(hash.Sum(nil))
+	HashString := f.getHash()
 
 	// 只有当内容发生变化时才写入文件
 	if f.hash != HashString {
@@ -137,7 +175,7 @@ func (f *OrgFile) SaveToDiskFile(path string) error {
 		defer file.Close()
 
 		// Write the content to the file
-		_, err = file.WriteString(content)
+		_, err = file.WriteString(f.content)
 		if err != nil {
 			return logger.Errorf("failed to write to file: %w", err)
 		}
@@ -154,13 +192,13 @@ func (f *OrgFile) SaveToDiskFile(path string) error {
 }
 
 func (f *OrgFile) SaveDB(force bool) error {
-	needUpdate, err := db.IfFileDBNeedUpdate(f.file.ID, f.file.Hash)
+	needUpdate, err := db.IfFileDBNeedUpdate(f.file.ID, f.file.Hash, f.fileType)
 	if err != nil {
 		return err
 	}
 
 	if needUpdate || force {
-		HeadCache, err := NewHeadlineCache(f.file.Headlines, f.file.ID, f.file.FilePath, f.file.Hash)
+		HeadCache, err := NewHeadlineCache(f.file.Headlines, f.file.ID, f.file.FilePath, f.fileType)
 		if err != nil {
 			return err
 		}
@@ -171,7 +209,7 @@ func (f *OrgFile) SaveDB(force bool) error {
 		}
 	}
 
-	err = db.FileDBUpdate(f.file, force)
+	err = db.FileDBUpdate(f.file, force, f.fileType)
 	if err != nil {
 		return err
 	}

@@ -12,14 +12,15 @@ type OrgParserSql struct {
 	// 用于存储headline 结构体的堆栈
 	stack     *arraystack.Stack
 	Headlines []storage.Headline
-	file      *storage.File
-	fileId    string
+	File      *storage.File
+	fileType  int
 }
 
-func NewSqlWriter() *OrgParserSql {
+func NewSqlWriter(fileType int) *OrgParserSql {
 	return &OrgParserSql{
-		stack: arraystack.New(),
-		file:  &storage.File{},
+		stack:    arraystack.New(),
+		File:     &storage.File{},
+		fileType: fileType,
 	}
 }
 
@@ -34,8 +35,22 @@ func (s *OrgParserSql) ParseOrgFile(nodes *arraylist.List) *storage.File {
 			s.ParseFileMeta(n.(Node))
 		}
 	}
-	s.file.Headlines = s.Headlines
-	return s.file
+	s.File.Headlines = s.Headlines
+	return s.File
+}
+
+func (s *OrgParserSql) ParseOrgHead(nodes *arraylist.List) []storage.Headline {
+	it := nodes.Iterator()
+	for it.Next() {
+		n := it.Value()
+		switch n := n.(type) {
+		case Headline:
+			s.parseHeadline(n)
+		default:
+			continue
+		}
+	}
+	return s.Headlines
 }
 
 func (s *OrgParserSql) ParseFileMeta(node Node) {
@@ -46,9 +61,9 @@ func (s *OrgParserSql) ParseFileMeta(node Node) {
 		id, exist = n.Get("ID")
 	}
 	if exist {
-		s.file.ID = id
+		s.File.ID = id
 	}
-	s.file.MetaContent += node.String()
+	s.File.MetaContent += node.String()
 }
 
 // WriteHeadline 构建headline 结构体用于后续数据库存储。
@@ -65,14 +80,20 @@ func (s *OrgParserSql) parseHeadline(h Headline) {
 			}
 		}
 	}
+
 	head := storage.Headline{
 		Level: h.Lvl, Title: h.Title, Status: h.Status,
 		Content: h.BodyContent, Priority: h.Priority,
-		FileID:    &s.file.ID,
 		Scheduled: h.TaskTime.GetScheduled(),
 		Deadline:  h.TaskTime.GetDeadline(),
 		Closed:    h.TaskTime.GetClosed(),
 		Children:  []storage.Headline{},
+	}
+
+	if s.fileType == storage.VirtualFile {
+		head.FileID = &s.File.ID
+	} else if s.fileType == storage.NormalFile {
+		head.HeadlineID = &s.File.ID
 	}
 
 	parseHeadlineProperty(&head, h.Properties)

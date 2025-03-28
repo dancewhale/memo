@@ -33,8 +33,56 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadContent", o.UpdateOrgHeadContent, "string", "Update org head content"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
-	service.RegisterMethod(epc.MakeMethod("CreateVirtualHead", o.CreateVirtHead, "string", "Create virtual head."))
+	service.RegisterMethod(epc.MakeMethod("CreateVirtHead", o.CreateVirtHead, "string", "Create virtual head."))
+	service.RegisterMethod(epc.MakeMethod("GetVirtFile", o.GetVirtfileContent, "string", "Get virtual file content."))
+	service.RegisterMethod(epc.MakeMethod("UploadVirtFile", o.UploadVirtFile, "string", "Get virtual file content."))
 	return service
+}
+
+func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
+	headdb, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	err = headdb.CreateVirtualHead(headid, title, content)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	card.ScanInitFsrs()
+	return db.Result{Data: true, Err: nil}
+}
+
+func (o *OrgApi) GetVirtfileContent(headid string) db.Result {
+	file, err := GetFileFromID(headid, storage.VirtualFile)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	content := file.String()
+	return db.Result{Data: content, Err: nil}
+}
+
+func (o *OrgApi) UploadVirtFile(headid, content string, fo int) db.Result {
+	var force bool
+	if fo == 0 {
+		force = false
+	} else {
+		force = true
+	}
+	f, err := NewVirtFileFromHeadID(headid)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	} else if f == nil {
+		return db.Result{Data: false, Err: err}
+	}
+	err = f.LoadFromContent(content)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	err = f.SaveDB(force)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	return db.Result{Data: true, Err: nil}
 }
 
 // UploadFile first load hash and filePath from file in disk，
@@ -107,7 +155,7 @@ func (o *OrgApi) UploadFilesUnderDir(dirPath string, needForce int) db.Result {
 }
 
 func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
-	file, err := GetFileFromID(fileid)
+	file, err := GetFileFromID(fileid, storage.NormalFile)
 	if err != nil {
 		return err
 	}
@@ -174,18 +222,5 @@ func (o *OrgApi) UpdateOrgHeadProperty(fileid, orgid, key, value string) db.Resu
 	go func() {
 		headdb.UpdateHeadlineHash(orgid)
 	}()
-	return db.Result{Data: true, Err: nil}
-}
-
-func (o *OrgApi) CreateVirtHead(parentid, title, content string) db.Result {
-	headdb, err := db.NewOrgHeadlineDB()
-	if err != nil {
-		return db.Result{Data: false, Err: err}
-	}
-	err = headdb.CreateVirtualHead(parentid, title, content)
-	if err != nil {
-		return db.Result{Data: false, Err: err}
-	}
-	card.ScanInitFsrs()
 	return db.Result{Data: true, Err: nil}
 }

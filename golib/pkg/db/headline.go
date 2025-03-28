@@ -149,12 +149,21 @@ func (h *OrgHeadlineDB) Delete(Data storage.Headline) error {
 }
 
 // Load all headline attach to id from database.
-func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string) (*linkedhashmap.Map, error) {
+func (h *OrgHeadlineDB) LoadFileHeadFromDB(fileID string, filetype int) (*linkedhashmap.Map, error) {
+	var headlines []*storage.Headline
+	var err error
 	headlinesDBCache := linkedhashmap.New()
 	headline := dal.Headline
-	headlines, err := headline.WithContext(context.Background()).
-		Preload(headline.Properties).Preload(headline.LogBook).Preload(headline.Tags).
-		Where(headline.FileID.Eq(fileID)).Find()
+
+	if filetype == storage.NormalFile {
+		headlines, err = headline.WithContext(context.Background()).
+			Preload(headline.Properties).Preload(headline.LogBook).Preload(headline.Tags).
+			Where(headline.FileID.Eq(fileID)).Find()
+	} else if filetype == storage.VirtualFile {
+		headlines, err = headline.WithContext(context.Background()).
+			Preload(headline.Properties).Preload(headline.LogBook).Preload(headline.Tags).
+			Where(headline.HeadlineID.Eq(fileID)).Find()
+	}
 	if err != nil {
 		return nil, logger.Errorf("Headlines load for file %s error: %v", fileID, err)
 	}
@@ -289,23 +298,24 @@ func UpdateHeadScheduleTypeByID(headlineID, stype string) error {
 	}
 }
 
-func (h *OrgHeadlineDB) CreateVirtualHead(parentID, title, content string) error {
+func (h *OrgHeadlineDB) CreateVirtualHead(headID, title, content string) error {
 	head := dal.Headline
-	source := "[[id:" + parentID + "]]"
+	source := "[[id:" + headID + "]]"
 
 	count, err := head.WithContext(context.Background()).
-		Where(head.HeadlineID.Eq(parentID)).Where(head.Level.Eq(1)).Count()
+		Where(head.HeadlineID.Eq(headID)).Where(head.Level.Eq(1)).Count()
 	if err != nil {
-		return logger.Errorf("Count virtual headline by parent id %s error: %v", parentID, err)
+		return logger.Errorf("Count virtual headline by parent id %s error: %v", headID, err)
 	}
 
 	headline := storage.Headline{ID: parser.GenerateID(),
 		Title: title, Content: content,
-		Weight: storage.DefaultWeight, HeadlineID: &parentID,
+		Weight: storage.DefaultWeight, HeadlineID: &headID,
 		Source: source, ScheduledType: storage.NORMAL,
 		Level: 1,
 		Order: int(count + 1),
 	}
+	headline.Hash = parser.HashContent(headline.String())
 
 	err = head.WithContext(context.Background()).Create(&headline)
 	if err != nil {

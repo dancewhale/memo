@@ -12,7 +12,7 @@ import (
 )
 
 // 用于加载从硬盘文件读取的 headline 数据，用于和数据库 headline 数据进行比较。
-func NewHeadlineCache(headlines []storage.Headline, fileID, filePath, hash string) (*HeadlineCacheMap, error) {
+func NewHeadlineCache(headlines []storage.Headline, fileID, filePath string, filetype int) (*HeadlineCacheMap, error) {
 	var err error
 	fileDB, err := db2.NewOrgFileDB()
 	if err != nil {
@@ -24,13 +24,13 @@ func NewHeadlineCache(headlines []storage.Headline, fileID, filePath, hash strin
 	}
 	cache := HeadlineCacheMap{HeadlinesFileCache: linkedhashmap.New(), DuplicateID: []string{},
 		HeadlinesDBCache: linkedhashmap.New(), fileID: fileID, filePath: filePath,
-		FileDB: fileDB, HeadlineDB: headDB}
+		FileDB: fileDB, fileType: filetype, HeadlineDB: headDB}
 
 	err = cache.loadHead(headlines)
 	if err != nil {
 		return nil, err
 	}
-	cache.HeadlinesDBCache, err = headDB.LoadFileHeadFromDB(fileID)
+	cache.HeadlinesDBCache, err = headDB.LoadFileHeadFromDB(fileID, filetype)
 	if err != nil {
 		return nil, err
 	}
@@ -43,6 +43,7 @@ func NewHeadlineCache(headlines []storage.Headline, fileID, filePath, hash strin
 type HeadlineCacheMap struct {
 	fileID             string
 	filePath           string
+	fileType           int
 	HeadlinesFileCache *linkedhashmap.Map
 	HeadlinesDBCache   *linkedhashmap.Map
 	DuplicateID        []string
