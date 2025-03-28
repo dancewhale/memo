@@ -44,6 +44,9 @@ func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}
+	content = strings.ReplaceAll(content, "\\\\", "\\")
+	content = strings.ReplaceAll(content, "\\\"", "\"")
+	content += "\n"
 	err = headdb.CreateVirtualHead(headid, title, content)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
@@ -74,6 +77,9 @@ func (o *OrgApi) UploadVirtFile(headid, content string, fo int) db.Result {
 	} else if f == nil {
 		return db.Result{Data: false, Err: err}
 	}
+
+	content = strings.ReplaceAll(content, "\\\\", "\\")
+	content = strings.ReplaceAll(content, "\\\"", "\"")
 	err = f.LoadFromContent(content)
 	if err != nil {
 		return db.Result{Data: false, Err: err}

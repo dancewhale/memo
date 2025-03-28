@@ -24,6 +24,7 @@ func NewVirtFileFromHeadID(headID string) (*OrgFile, error) {
 		db:       orgfiledb,
 		fileType: storage.VirtualFile,
 		headID:   headID,
+		file:     &storage.File{ID: headID},
 	}, nil
 }
 
@@ -98,6 +99,8 @@ func (f *OrgFile) parseString(content string) error {
 
 	s := parser.NewSqlWriter(f.fileType)
 	f.file = s.ParseOrgFile(f.Nodes)
+	f.file.Hash = f.hash
+	f.file.ID = f.headID
 
 	return nil
 }
@@ -147,7 +150,6 @@ func (f *OrgFile) LoadFromFile(force bool) error {
 
 func (f *OrgFile) LoadFromContent(content string) error {
 	f.hash = parser.HashContent(content)
-	f.file.Hash = f.hash
 	return f.parseString(content)
 }
 

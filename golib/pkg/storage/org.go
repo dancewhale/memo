@@ -153,7 +153,9 @@ func (h *Headline) propertiesString() string {
 	var content string
 	content = ":PROPERTIES:\n"
 	content += fmt.Sprintf("%-10s %s", ":"+options.EmacsPropertyID+":", h.ID) + "\n"
-	content += fmt.Sprintf("%-10s %s", ":"+options.EmacsPropertySource+":", h.ID) + "\n"
+	if h.Source != "" {
+		content += fmt.Sprintf("%-10s %s", ":"+options.EmacsPropertySource+":", h.Source) + "\n"
+	}
 	content += fmt.Sprintf("%-10s %d", ":"+options.EmacsPropertyWeight+":", h.Weight) + "\n"
 	content += fmt.Sprintf("%-10s %s", ":"+options.EmacsPropertySchedule+":", h.ScheduledType) + "\n"
 	if h.Properties != nil {
@@ -170,7 +172,7 @@ func (h *Headline) propertiesString() string {
 
 func (h *Headline) logbookString() string {
 	var content string
-	if h.LogBook == nil {
+	if len(h.LogBook) == 0 {
 		return content
 	}
 	content = ":LOGBOOK:\n"

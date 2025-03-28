@@ -35,12 +35,12 @@ func (f *OrgFileDB) GetHeadTree(fileID string, filetype int) ([]storage.Headline
 		err = f.db.Model(&storage.Headline{}).Order("`order` ASC").
 			Where("file_id = ? AND level = ?", fileID, 1).
 			Preload("Properties").Preload("LogBook").Preload("Tags").
-			Preload("Children", "type = 1", preload).Find(&heads).Error
+			Preload("Children", preload).Find(&heads).Error
 	} else if filetype == storage.VirtualFile {
 		err = f.db.Model(&storage.Headline{}).Order("`order` ASC").
-			Where("head_id = ? AND level = ?", fileID, 1).
+			Where("headline_id = ? AND level = ?", fileID, 1).
 			Preload("Properties").Preload("LogBook").Preload("Tags").
-			Preload("Children", "type = 1", preload).Find(&heads).Error
+			Preload("Children", preload).Find(&heads).Error
 	}
 	if err != nil {
 		return nil, logger.Errorf("Get headline of file %s error: %v", fileID, err)

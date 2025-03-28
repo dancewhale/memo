@@ -176,14 +176,19 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 
 (defun memo-api--create-virt-head (id title content)
   "Create virt head with TITLE and CONTENT under head with ID."
-  (let ((result (memo-bridge-call-sync "CreateVirtualHead" id title content)))
+  (let ((result (memo-bridge-call-sync "CreateVirtHead" id title content)))
     (memo--parse-result result)
     t))
 
-(defun memo-api--get-virt-heads-by-parentid (parentID fileID)
-  "Get virt heads by PARENTID and FILEID."
-  (let ((result (memo-bridge-call-sync "GetVirtualHeadByParentID" parentID fileID memo-note-virt-type)))
-    (memo-make-note-from-return (memo--parse-result result))))
+(defun memo-api--update-virt-file (headid content)
+  "Get the content of file by HEADID."
+  (let ((result (memo-bridge-call-sync "UploadVirtFile" headid content 1)))
+    (memo--parse-result result)))
+
+(defun memo-api--get-virt-file-byid (headid)
+  "Get the content of file by HEADID."
+  (let ((result (memo-bridge-call-sync "GetVirtFile" headid)))
+    (memo--parse-result result)))
 
 (defun memo-api--get-read-files ()
   "Get file that need to read and not finish read yet."

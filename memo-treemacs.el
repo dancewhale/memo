@@ -120,7 +120,7 @@ Otherwise returns value itself."
   (interactive)
   (if-let (item (-> (treemacs-node-at-point)
                       (button-get :item)))
-      (memo-open-head-in-view-buffer item)
+      (memo-open-head-in-read-buffer item)
     (treemacs-pulse-on-failure "No Child head Found.")))
 
 ;;;----------------------------------
@@ -194,7 +194,7 @@ Otherwise returns value itself."
   (interactive)
   (if-let (item (-> (treemacs-node-at-point)
                       (button-get :item)))
-      (memo-open-head-in-view-buffer item)
+      (memo-open-head-in-read-buffer item)
     (treemacs-pulse-on-failure "No Child head Found.")))
 
 (treemacs-define-expandable-node-type memo-treemacs-read-head-node

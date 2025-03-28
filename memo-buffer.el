@@ -26,18 +26,17 @@
 (defconst memo--review-buffer-name "*memo-review*"
   "The memo buffer for review note show and flip.")
 
-(defconst memo--view-buffer-name "*memo-view*"
+(defconst memo--virt-buffer-name "*memo-virt*"
   "The memo buffer for view child virtual head.")
 
 (defconst memo--read-buffer-name "*memo-read*"
   "The memo buffer for read resource.")
 
-(defvar-local memo--buffer-local-note nil
-  "The memo note object store in current buffer.")
-
-
 (defconst memo--source-buffer-name "*memo-source*"
   "The memo buffer for review note show and flip.")
+
+(defvar-local memo--buffer-local-note nil
+  "The memo note object store in current buffer.")
 
 (defun memo-skip-current-note ()
   "Skip current review note and review next note."
@@ -62,6 +61,16 @@
     (progn (memo-api--update-property
 	    (memo-note-fileid memo--buffer-local-note)
 	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal"))))
+
+(defun memo-update-current-virt-note-content ()
+  "Skip current review note and review next note."
+  (interactive)
+  (if memo--buffer-local-note
+    (progn (memo-api--update-virt-file (memo-note-id memo--buffer-local-note)
+				     (buffer-substring-no-properties (point-min) (point-max)))
+           (set-buffer-modified-p nil) t)))
+
+
 
 (defun memo-update-current-note-content ()
   "Skip current review note and review next note."
@@ -131,20 +140,6 @@
 	  (memo-remove-all-overlays)
 	  ))))
 
-;; virtual head
-(defun memo-create-virt-head ()
-  "Create a virtual head with user input title and content under head with ID."
-  (interactive)
-  (let* ((title (read-string "Enter title: "))
-         (content (read-string "Enter content: "))
-         (id  (memo-note-id memo--review-note)))
-    (when (and title content)
-      (memo-api--create-virt-head id title content)
-      (message "Virtual head created successfully."))
-    (when (or (string-empty-p title) (string-empty-p content))
-      (user-error "Title and content cannot be empty"))))
-
-
 (defun memo-get-current-note-id ()
   "Get current note id."
   (memo-note-id memo--buffer-local-note)
@@ -156,11 +151,11 @@
     (with-current-buffer buf
       memo--buffer-local-note)))
 
-(defun memo-open-head-in-view-buffer (head)
+(defun memo-open-head-in-read-buffer (head)
   "Open HEAD in view buffer."
   (if (not (memo-note-id head))
       (user-error "Memo-note object is nil"))
-  (let* ((buf (get-buffer-create memo--view-buffer-name)))
+  (let* ((buf (get-buffer-create memo--read-buffer-name)))
     (pop-to-buffer buf)
     (with-current-buffer buf
       (erase-buffer)
@@ -219,6 +214,35 @@
       (org-link-open-from-string source)
       (org-mode)
       (goto-char (point-min)))))
+
+;; virtual head
+(defun memo-create-virt-head ()
+  "Create a virtual head with user input title and content under head with ID."
+  (interactive)
+  (let* ((title (read-string "Enter title: "))
+         (content (read-string "Enter content: "))
+         (id  (memo-note-id memo--buffer-local-note)))
+    (when (and title content)
+      (memo-api--create-virt-head id title content)
+      (message "Virtual head created successfully."))
+    (when (or (string-empty-p title) (string-empty-p content))
+      (user-error "Title and content cannot be empty"))))
+
+(defun memo-open-virthead-in-virt-buffer ()
+  "Open virt head under current HEAD in virt buffer."
+  (interactive)
+  (let* ((buf (get-buffer-create memo--virt-buffer-name))
+	 (head memo--buffer-local-note))
+    (if (not (memo-note-id head))
+      (user-error "Memo-note object is nil"))
+    (pop-to-buffer buf)
+    (with-current-buffer buf
+      (erase-buffer)
+      (insert (memo-api--get-virt-file-byid (memo-note-id head)))
+      (set-buffer-modified-p nil)
+      (org-mode)
+      (setq memo--buffer-local-note head)
+      (setq write-contents-functions '(memo-update-current-virt-note-content)))))
 
 
 (provide 'memo-buffer)

@@ -90,10 +90,12 @@ func (s *OrgParserSql) parseHeadline(h Headline) {
 		Children:  []storage.Headline{},
 	}
 
-	if s.fileType == storage.VirtualFile {
+	if s.fileType == storage.NormalFile {
 		head.FileID = &s.File.ID
-	} else if s.fileType == storage.NormalFile {
+	} else if s.fileType == storage.VirtualFile {
+		whitespace := ""
 		head.HeadlineID = &s.File.ID
+		head.FileID = &whitespace
 	}
 
 	parseHeadlineProperty(&head, h.Properties)
