@@ -284,7 +284,8 @@ func (c *CardDB) GetFileHasNewCard() ([]string, error) {
 	heads, err := head.WithContext(context.Background()).
 		Join(fsrs, head.ID.EqCol(fsrs.HeadlineID)).
 		Select(head.FileID).Distinct().
-		Where(fsrs.State.Eq(0)).Where(head.FileID.IsNotNull()).Find()
+		Where(fsrs.State.Eq(0)).Where(head.FileID.IsNotNull()).Where(head.FileID.Neq("")).
+		Find()
 	if err != nil {
 		return nil, logger.Errorf("Get file has new card error: %v", err)
 	}
