@@ -411,6 +411,13 @@ func (m *FileHeadlineCacheManager) InvalidateCache(fileID string) {
 	m.mutex.Unlock()
 }
 
+// InvalidateAllCaches 使所有缓存失效
+func (m *FileHeadlineCacheManager) InvalidateAllCache() {
+	m.mutex.Lock()
+	m.caches = make(map[string]*FileHeadlineCache)
+	m.mutex.Unlock()
+}
+
 // InvalidateCacheByHeadlineID 根据HeadlineID使相关缓存失效
 func (m *FileHeadlineCacheManager) InvalidateCacheByHeadlineID(headlineID string) error {
 	// 查询headline所属的文件ID
