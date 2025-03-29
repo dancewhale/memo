@@ -144,6 +144,10 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
         (-map #'memo-make-file-from-alist y)
       nil)))
 
+(defun memo-api--get-note-path (id)
+  "Get current note with ID."
+  (let ((result (memo-bridge-call-sync "GetHeadFilePath" id)))
+    (memo--parse-result result)))
 
 (defun memo-api--get-review-note-object ()
   "Return memo-note object which need review from server."
@@ -191,7 +195,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
     (memo--parse-result result)))
 
 (defun memo-api--get-read-files ()
-  "Get file that need to read and not finish read yet."
+  "Get files that need to read and not finish read yet."
   (let ((result (memo-bridge-call-sync "GetFileHasNewCard")))
     (memo-make-file-from-return (memo--parse-result result))))
 

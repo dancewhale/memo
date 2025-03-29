@@ -32,6 +32,7 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("GetFileChildrenCard", api.GetFileChildrenCard, "string", "Get file children card"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadChildrenCard", api.GetHeadChildrenCard, "string", "Get head children card"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadContentByID", api.GetHeadContentByID, "string", "Get headline by id"))
+	service.RegisterMethod(epc.MakeMethod("GetHeadFilePath", api.GetHeadFilePath, "string", "Get headline file path"))
 	return service
 }
 
@@ -125,4 +126,16 @@ func (api *CardApi) ReviewNote(orgID string, rating string) db.Result {
 	} else {
 		return db.Result{Data: true, Err: nil}
 	}
+}
+
+func (api *CardApi) GetHeadFilePath(headid string) db.Result {
+	headDB, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return db.Result{Data: "", Err: err}
+	}
+	filepath, err := headDB.GetHeadFilePath(headid)
+	if err != nil {
+		return db.Result{Data: "", Err: err}
+	}
+	return db.Result{Data: filepath, Err: nil}
 }

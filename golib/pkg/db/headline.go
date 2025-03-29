@@ -2,14 +2,15 @@ package db
 
 import (
 	"context"
-	"github.com/emirpasic/gods/maps/linkedhashmap"
-	"gorm.io/gorm"
 	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 	"strconv"
+
+	"github.com/emirpasic/gods/maps/linkedhashmap"
+	"gorm.io/gorm"
 )
 
 func NewOrgHeadlineDB() (*OrgHeadlineDB, error) {
@@ -55,8 +56,8 @@ func (h *OrgHeadlineDB) UpdatePropertyByID(id string, currentProperties []storag
 	}
 	it := dbHashMap.Iterator()
 	for it.Begin(); it.Next(); {
-		prop := it.Value().(*storage.Property)
-		_, err := p.WithContext(context.Background()).Delete(prop)
+		prop := it.Value().(storage.Property)
+		_, err := p.WithContext(context.Background()).Delete(&prop)
 		if err != nil {
 			return logger.Errorf("Delete headline %s property %s error: %v", id, prop.Key, err)
 		}
@@ -188,6 +189,22 @@ func (h *OrgHeadlineDB) GetHeadlineByID(id string) (*storage.Headline, error) {
 		return nil, nil
 	} else {
 		return nil, logger.Errorf("Get headline by id %s error: more than one headline found.", id)
+	}
+}
+
+func (h *OrgHeadlineDB) GetHeadFilePath(id string) (string, error) {
+	headline := dal.Headline
+	heads, err := headline.WithContext(context.Background()).Preload(headline.File).
+		Where(headline.ID.Eq(id)).Find()
+	if err != nil {
+		return "", logger.Errorf("Get headline by id %s error: %v", id, err)
+	}
+	if len(heads) == 1 {
+		return heads[0].File.FilePath, nil
+	} else if len(heads) == 0 {
+		return "", nil
+	} else {
+		return "", logger.Errorf("Get headline by id %s error: more than one headline found.", id)
 	}
 }
 

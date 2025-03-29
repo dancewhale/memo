@@ -176,9 +176,9 @@
 (defun memo-goto-org ()
   "Jump to source point from review buffer."
   (interactive)
-  (let* ((file (memo-note-filepath memo--review-note))
-        (id  (memo-note-id memo--review-note))
-	(position (org-id-find-id-in-file id file 'markerp)))
+  (let* ((id  (memo-note-id memo--buffer-local-note))
+	 (file (memo-api--get-note-path id))
+	 (position (org-id-find-id-in-file id file 'markerp)))
       (pop-to-buffer-same-window (marker-buffer  position))
       (goto-char position)
       (move-marker position nil)
@@ -187,14 +187,13 @@
       (memo-narrow-to-org-subtree-content)
       (org-tidy-mode 1)))
 
-
 ;; jump to the source of node.
 (defun memo-goto-source-direct ()
   "Jump to source of node."
   (interactive)
-  (if (not (memo-note-id memo--review-note))
+  (if (not (memo-note-p memo--buffer-local-note))
       (user-error "Review memo-note object is nil"))
-  (let* ((source (memo-note-source memo--review-note))
+  (let* ((source (memo-note-source memo--buffer-local-note))
 	 (buf (get-buffer-create memo--source-buffer-name)))
     (save-excursion
       (with-current-buffer buf
@@ -204,12 +203,12 @@
 (defun memo-goto-source ()
 "Open an org-mode LINK in a new buffer on the right side."
   (interactive)
-  (if (not (memo-note-id memo--review-note))
-      (user-error "Review memo-note object is nil"))
-  (let ((source (memo-note-source memo--review-note))
+  (if (not (memo-note-p memo--buffer-local-note))
+      (user-error "Local buffer memo-note object is nil"))
+  (let ((source (memo-note-source memo--buffer-local-note))
 	(buffer (get-buffer-create memo--source-buffer-name)))
     (display-buffer-in-side-window buffer '((side . right) (window-width . 0.5)))
-    (set-window-dedicated-p (get-buffer-window buffer) t)  
+    (set-window-dedicated-p (get-buffer-window buffer) t)
     (with-current-buffer buffer
       (org-link-open-from-string source)
       (org-mode)
