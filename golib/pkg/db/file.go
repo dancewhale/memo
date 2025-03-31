@@ -25,7 +25,7 @@ type OrgFileDB struct {
 }
 
 func preload(d *gorm.DB) *gorm.DB {
-	return d.Order("`order` ASC").Preload("Children", "type = 1", preload).
+	return d.Order("`order` ASC").Preload("Children", preload).
 		Preload("Properties").Preload("Tags").Preload("LogBook")
 }
 func (f *OrgFileDB) GetHeadTree(fileID string, filetype int) ([]storage.Headline, error) {
