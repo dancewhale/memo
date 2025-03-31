@@ -38,13 +38,17 @@
 (defvar-local memo--buffer-local-note nil
   "The memo note object store in current buffer.")
 
+(defvar-local memo--buffer-local-note-path nil
+  "The memo note path store in current buffer, use to locate node in treemacs.")
+
 (defun memo-skip-current-note ()
   "Skip current review note and review next note."
   (interactive)
   (if memo--buffer-local-note
     (progn (memo-api--update-property
 	    (memo-note-fileid memo--buffer-local-note)
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "postpone"))))
+	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "postpone")
+	   (memo-treemacs-refresh))))
 
 (defun memo-suspend-current-note ()
   "Suspend current note."
@@ -52,7 +56,8 @@
   (if memo--buffer-local-note
     (progn (memo-api--update-property
 	    (memo-note-fileid memo--buffer-local-note)
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend"))))
+	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend")
+	   (memo-treemacs-refresh))))
 
 (defun memo-resume-current-note ()
   "Resume current note from suspend."
@@ -60,7 +65,8 @@
   (if memo--buffer-local-note
     (progn (memo-api--update-property
 	    (memo-note-fileid memo--buffer-local-note)
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal"))))
+	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal")
+	   (memo-treemacs-refresh))))
 
 (defun memo-update-current-virt-note-content ()
   "Skip current review note and review next note."
@@ -151,8 +157,8 @@
     (with-current-buffer buf
       memo--buffer-local-note)))
 
-(defun memo-open-head-in-read-buffer (head)
-  "Open HEAD in view buffer."
+(defun memo-open-head-in-read-buffer (head path buffer)
+  "Open HEAD in view buffer, PATH is local var for update node in BUFFER."
   (if (not (memo-note-id head))
       (user-error "Memo-note object is nil"))
   (let* ((buf (get-buffer-create memo--read-buffer-name)))
@@ -162,7 +168,10 @@
       (insert (memo-api--get-content-byid (memo-note-id head)))
       (set-buffer-modified-p nil)
       (org-mode)
+      (goto-char (point-min))
       (setq memo--buffer-local-note head)
+      (setq memo--buffer-local-note-path path)
+      (setq memo--buffer-local-note-buffer buffer)
       (setq write-contents-functions '(memo-update-current-note-content)))))
 
 (defun memo-open-file-from-treemacs (file)

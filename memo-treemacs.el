@@ -77,14 +77,15 @@ Otherwise returns value itself."
      (with-current-buffer ,buffer
        ,@body)))
 
-(defun memo-treemacs-refresh (&optional _cache)
-  "Update note under Treemacs."
+(defun memo-treemacs-refresh ()
+  "Update note node under Treemacs."
   (condition-case _err
-      (let ((inhibit-read-only t))
-        (when-let ((buf (get-buffer memo-treemacs-buffer-name)))
-	  (with-current-buffer buf
-            (treemacs-update-async-node '("memo-treemacs-review-mode-node" "VirtHeadTree") buf)
-	    (display-buffer-in-side-window buf memo-treemacs-virtual-head-position-params))))
+      (-if-let* ((inhibit-read-only t)
+	    (path   memo--buffer-local-note-path)
+	    (buffer memo--buffer-local-note-buffer))
+	(with-current-buffer buffer
+	  (treemacs-update-async-node path buffer)
+	  (display-buffer-in-side-window buf memo-treemacs-virtual-head-position-params)))
     (error)))
 
 (defun memo-treemacs-generic-right-click (event)
@@ -192,9 +193,12 @@ Otherwise returns value itself."
 ;;;----------------------------------
 (defun memo-treemacs-card-perform-ret-action (&rest _)
   (interactive)
-  (if-let (item (-> (treemacs-node-at-point)
-                      (button-get :item)))
-      (memo-open-head-in-read-buffer item)
+  (-if-let* ((button-node (treemacs-node-at-point))
+	     (item (button-get button-node :item))
+	     (parent-node (button-get button-node :parent))
+	     (path (button-get parent-node :path))
+	     (buffer (current-buffer)))
+      (memo-open-head-in-read-buffer item path buffer)
     (treemacs-pulse-on-failure "No Child head Found.")))
 
 (treemacs-define-expandable-node-type memo-treemacs-read-head-node
@@ -311,14 +315,6 @@ Otherwise returns value itself."
    (memo-treemacs-read-render
     "*MemoReadTree*" 1)
    memo-treemacs-virtual-head-position-params))
-
-(defun memo-treemacs-update ()
-  "Update treemacs buffer, create buffer and init if buffer not exist.
-Update node in buffer if buffer exist."
-  (let ((buffer (get-buffer memo-treemacs-buffer-name)))
-    (if buffer (memo-treemacs-refresh)
-      (memo-treemacs-review-initialize))))
-
 
 (provide 'memo-treemacs)
 ;;; memo-treemacs.el ends here
