@@ -36,6 +36,12 @@ func newReviewLog(db *gorm.DB, opts ...gen.DOOption) reviewLog {
 	_reviewLog.ElapsedDays = field.NewUint64(tableName, "elapsed_days")
 	_reviewLog.Review = field.NewTime(tableName, "review")
 	_reviewLog.State = field.NewInt8(tableName, "state")
+	_reviewLog.Due = field.NewTime(tableName, "due")
+	_reviewLog.Stability = field.NewFloat64(tableName, "stability")
+	_reviewLog.Difficulty = field.NewFloat64(tableName, "difficulty")
+	_reviewLog.Reps = field.NewUint64(tableName, "reps")
+	_reviewLog.Lapses = field.NewUint64(tableName, "lapses")
+	_reviewLog.LastReview = field.NewTime(tableName, "last_review")
 	_reviewLog.HeadlineID = field.NewString(tableName, "headline_id")
 
 	_reviewLog.fillFieldMap()
@@ -56,6 +62,12 @@ type reviewLog struct {
 	ElapsedDays   field.Uint64
 	Review        field.Time
 	State         field.Int8
+	Due           field.Time
+	Stability     field.Float64
+	Difficulty    field.Float64
+	Reps          field.Uint64
+	Lapses        field.Uint64
+	LastReview    field.Time
 	HeadlineID    field.String
 
 	fieldMap map[string]field.Expr
@@ -82,6 +94,12 @@ func (r *reviewLog) updateTableName(table string) *reviewLog {
 	r.ElapsedDays = field.NewUint64(table, "elapsed_days")
 	r.Review = field.NewTime(table, "review")
 	r.State = field.NewInt8(table, "state")
+	r.Due = field.NewTime(table, "due")
+	r.Stability = field.NewFloat64(table, "stability")
+	r.Difficulty = field.NewFloat64(table, "difficulty")
+	r.Reps = field.NewUint64(table, "reps")
+	r.Lapses = field.NewUint64(table, "lapses")
+	r.LastReview = field.NewTime(table, "last_review")
 	r.HeadlineID = field.NewString(table, "headline_id")
 
 	r.fillFieldMap()
@@ -99,7 +117,7 @@ func (r *reviewLog) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (r *reviewLog) fillFieldMap() {
-	r.fieldMap = make(map[string]field.Expr, 10)
+	r.fieldMap = make(map[string]field.Expr, 16)
 	r.fieldMap["id"] = r.ID
 	r.fieldMap["created_at"] = r.CreatedAt
 	r.fieldMap["updated_at"] = r.UpdatedAt
@@ -109,6 +127,12 @@ func (r *reviewLog) fillFieldMap() {
 	r.fieldMap["elapsed_days"] = r.ElapsedDays
 	r.fieldMap["review"] = r.Review
 	r.fieldMap["state"] = r.State
+	r.fieldMap["due"] = r.Due
+	r.fieldMap["stability"] = r.Stability
+	r.fieldMap["difficulty"] = r.Difficulty
+	r.fieldMap["reps"] = r.Reps
+	r.fieldMap["lapses"] = r.Lapses
+	r.fieldMap["last_review"] = r.LastReview
 	r.fieldMap["headline_id"] = r.HeadlineID
 }
 

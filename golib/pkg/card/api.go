@@ -26,6 +26,7 @@ type CardApi struct {
 
 func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
 	service.RegisterMethod(epc.MakeMethod("ReviewNote", api.ReviewNote, "string", "Review note"))
+	service.RegisterMethod(epc.MakeMethod("UndoReviewNote", api.UndoReviewNote, "string", "Undo today latest review record by headID"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteFirst", api.FindNoteFirst, "string", "Find note with query"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteList", api.FindNoteList, "string", "Find notes with query"))
 	service.RegisterMethod(epc.MakeMethod("GetFileHasNewCard", api.GetFileHasNewCard, "string", "Get file has new card"))
@@ -125,6 +126,15 @@ func (api *CardApi) ReviewNote(orgID string, rating string) db.Result {
 		return db.Result{Data: false, Err: err}
 	} else {
 		return db.Result{Data: true, Err: nil}
+	}
+}
+
+func (api *CardApi) UndoReviewNote(headlineID string) db.Result {
+	success, err := UndoReviewCard(headlineID)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	} else {
+		return db.Result{Data: success, Err: nil}
 	}
 }
 

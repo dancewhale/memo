@@ -64,6 +64,7 @@ type FsrsInfo struct {
 
 type ReviewLog struct {
 	gorm.Model
-	gfsrs.ReviewLog `gorm:"embedded",json:"Flog"`
+	gfsrs.ReviewLog `gorm:"embedded" json:"ReviewLog"`
+	gfsrs.Card      `gorm:"embedded" json:"PreviseFsrs"`
 	HeadlineID      string
 }

@@ -113,6 +113,55 @@ func (f *FsrsDB) CreateReviewLog(rlog *storage.ReviewLog) error {
 	return err
 }
 
+func (f *FsrsDB) UndoReviewLog(rlog *storage.ReviewLog) error {
+	r := dal.Q
+	reviewLog := dal.ReviewLog
+	// 使用事务确保操作的原子性
+	db := r.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			db.Rollback()
+		}
+	}()
+
+	// 更新Fsrs记录
+	fsrs := dal.FsrsInfo
+	_, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(rlog.HeadlineID)).Updates(rlog.Card)
+	if err != nil {
+		db.Rollback()
+		return logger.Errorf("Update Fsrs info failed: %v", err)
+	}
+
+	// 删除ReviewLog记录
+	_, err = reviewLog.WithContext(context.Background()).Where(reviewLog.ID.Eq(rlog.ID)).Delete()
+	if err != nil {
+		db.Rollback()
+		return logger.Errorf("Delete review log failed: %v", err)
+	}
+
+	if err := db.Commit().Error; err != nil {
+		return logger.Errorf("Commit transaction failed: %v", err)
+	}
+	return nil
+}
+
+func (f *FsrsDB) GetTodayLatestReviewLog(headlineID string) (*storage.ReviewLog, error) {
+	// 获取当天的时间范围
+	dayStart, dayEnd := GetDayTime(0)
+
+	// 查询最新的ReviewLog记录
+	reviewLog := dal.ReviewLog
+	latestLog, err := reviewLog.WithContext(context.Background()).
+		Where(reviewLog.HeadlineID.Eq(headlineID)).
+		Where(reviewLog.Review.Between(dayStart, dayEnd)).
+		Order(reviewLog.Review.Desc()).
+		First()
+	if err != nil {
+		return nil, err
+	}
+	return latestLog, nil
+}
+
 // get heads that need init fsrs info.
 func (f *FsrsDB) GetFsrsEmptyHeadline() []*storage.Headline {
 	headline := dal.Headline
