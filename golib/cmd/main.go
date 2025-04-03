@@ -4,15 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+
 	"memo/cmd/options"
 	"memo/pkg/card"
-	db2 "memo/pkg/db"
+	"memo/pkg/client"
+	"memo/pkg/db"
 	"memo/pkg/db/query"
 	"memo/pkg/logger"
 	"memo/pkg/org"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
-	"os"
 
 	"github.com/kiwanami/go-elrpc"
 	"github.com/urfave/cli/v3"
@@ -84,15 +86,15 @@ func appstart(ctx context.Context, cmd *cli.Command) error {
 
 	var err error
 	con := options.ConfigInit()
-	db, err := storage.InitDBEngine()
+	DB, err := storage.InitDBEngine()
 	if err != nil {
 		logger.Errorf("Failed to init db engine: %v", err)
 	}
-	dal.SetDefault(db)
+	dal.SetDefault(DB)
 
 	// construct epc server
 	if con.GoPort == 0 {
-		con.GoPort, err = db2.QueryFreePort()
+		con.GoPort, err = db.QueryFreePort()
 	}
 
 	if err != nil {
@@ -122,18 +124,8 @@ func appstart(ctx context.Context, cmd *cli.Command) error {
 	}
 	cardApi.RegistryEpcMethod(s)
 
-	cs, err := elrpc.StartClient(int(con.EmacsPort), nil)
-	if err != nil {
-		return logger.Errorf("Failed to start epc client: %v", err)
-	}
-	startCommand := fmt.Sprintf("(memo-bridge--first-start %d)", con.GoPort)
-	r, err := cs.Call("eval-in-emacs", startCommand)
-	if r != nil || err != nil {
-		return logger.Errorf("Failed to create epc server for go in emacs: %v", err)
-	}
-	if cs.Stop() != nil {
-		return logger.Errorf("Failed to stop epc client: %v", err)
-	}
+	client.NewEmacsEpcClient(int(con.EmacsPort))
+	client.EClient.RefreshEmacsGoPort(int(con.GoPort))
 
 	s.Wait()
 	return nil
@@ -149,6 +141,13 @@ func test(ctx context.Context, cmd *cli.Command) error {
 	//err := api.UploadFile("/Users/whale/elisp-manual.org", true)
 	//err := api.UploadFile("/tmp/elisp-manual.org", true)
 	logger.Init()
+	con := options.ConfigInit()
+	client.NewEmacsEpcClient(int(con.EmacsPort))
+	vara, err := client.EClient.GetEmacsVars("pis")
+	if err != nil {
+		fmt.Printf(err.Error())
+		fmt.Println(vara)
+	}
 
 	cardDB, _ := query.NewCardDB()
 	//heads, err := cardDB.GetFileHasNewCard()
@@ -164,7 +163,7 @@ func test(ctx context.Context, cmd *cli.Command) error {
 	if len(cards) > 0 {
 		fmt.Println(cards[0])
 	}
-	total, expired, wait, review, err := db2.GetFileStats("1ad3025f-c304-4227-9765-ba88905380e2")
+	total, expired, wait, review, err := db.GetFileStats("1ad3025f-c304-4227-9765-ba88905380e2")
 	fmt.Println(total, expired, wait, review)
 
 	fmt.Println("jkljresult")

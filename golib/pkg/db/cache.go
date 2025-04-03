@@ -11,8 +11,8 @@ import (
 
 // HeadlineStats 存储headline及其子headline的统计信息
 type HeadlineStats struct {
-	Info     HeadlineWithFsrs // headline和fsrs的详细信息
-	Children []*HeadlineStats // 子headline的统计信息
+	Info     *HeadlineWithFsrs // headline和fsrs的详细信息
+	Children []*HeadlineStats  // 子headline的统计信息
 }
 
 // HeadlineWithFsrs 包含headline和fsrsInfo信息的结构体
@@ -105,9 +105,10 @@ func NewFileHeadlineCache(fileID string) (*FileHeadlineCache, error) {
 	}
 	// 创建新的headline缓存
 	cache := &FileHeadlineCache{
-		Info:      FileInfo{FileID: fileID, FilePath: files[0].FilePath, Hash: files[0].Hash},
-		RootHeads: make([]*HeadlineStats, 0),
-		HeadMap:   make(map[string]*HeadlineStats),
+		Info:        FileInfo{FileID: fileID, FilePath: files[0].FilePath, Hash: files[0].Hash},
+		RootHeads:   make([]*HeadlineStats, 0),
+		HeadMap:     make(map[string]*HeadlineStats),
+		LastUpdated: time.Time{},
 	}
 
 	// 构建缓存树
@@ -119,40 +120,35 @@ func NewFileHeadlineCache(fileID string) (*FileHeadlineCache, error) {
 	return cache, nil
 }
 
-// buildCache 构建headline缓存树并计算统计信息
-func (c *FileHeadlineCache) buildCache() error {
-	// 获取当前日期的结束时间，用于判断卡片是否过期
-	dayStart, dayEnd := GetDayTime(0)
-
-	// 一次性查询所有headline和fsrsInfo信息
+// fetchHeadlineAndFsrsData 从数据库获取指定文件的 headline 和 FSRS 信息
+func fetchHeadlineAndFsrsData(fileID string) ([]*HeadlineWithFsrs, error) {
 	fsrs := dal.FsrsInfo
 	headline := dal.Headline
 
-	// 创建一个临时结构体切片用于存储查询结果
-	var results []HeadlineWithFsrs
-
-	// 执行联合查询，获取所有headline和对应的fsrsInfo
+	var results []*HeadlineWithFsrs
 	err := headline.WithContext(context.Background()).
 		Select(headline.ALL, fsrs.ALL).
 		LeftJoin(fsrs, headline.ID.EqCol(fsrs.HeadlineID)).
-		Where(headline.FileID.Eq(c.Info.FileID)).
+		Where(headline.FileID.Eq(fileID)).
 		Scan(&results)
 
 	if err != nil {
-		return logger.Errorf("Query headline and fsrs info error: %v", err)
+		return nil, logger.Errorf("Query headline and fsrs info for file %s error: %v", fileID, err)
 	}
+	return results, nil
+}
 
-	// 创建headline树结构
-	headlineMap := make(map[string]HeadlineWithFsrs)
+// initializeCacheMaps 根据查询结果初始化缓存映射和计算初始统计信息
+func (c *FileHeadlineCache) initializeCacheMaps(results []*HeadlineWithFsrs, dayStart, dayEnd time.Time) (map[string][]string, error) {
+	headlineMap := make(map[string]*HeadlineWithFsrs)
 	parentChildrenMap := make(map[string][]string)
 
-	// 第一遍遍历，构建ID到headline的映射
 	for _, result := range results {
-		// 存储headline信息
+		// 存储 headline 信息
 		if _, exists := headlineMap[result.ID]; !exists {
 			headlineMap[result.ID] = result
 
-			// 初始化每个headline的统计信息
+			// 初始化每个 headline 的统计信息
 			c.HeadMap[result.ID] = &HeadlineStats{
 				Info:     result,
 				Children: make([]*HeadlineStats, 0),
@@ -166,12 +162,12 @@ func (c *FileHeadlineCache) buildCache() error {
 				}
 				parentChildrenMap[parentID] = append(parentChildrenMap[parentID], result.ID)
 			} else {
-				// 根headline
+				// 根 headline
 				c.RootHeads = append(c.RootHeads, c.HeadMap[result.ID])
 			}
 		}
 
-		// 处理fsrsInfo信息，计算统计数据
+		// 处理 fsrsInfo 信息，计算统计数据
 		if stats, ok := c.HeadMap[result.ID]; ok {
 			// 总卡片数量+1
 			stats.Info.TotalCards++
@@ -180,7 +176,7 @@ func (c *FileHeadlineCache) buildCache() error {
 				stats.Info.TotalVirtCards++
 			}
 
-			// 根据State判断卡片类型
+			// 根据 State 判断卡片类型
 			if result.State == 0 {
 				// 等待学习的卡片
 				stats.Info.WaitingCards++
@@ -203,14 +199,15 @@ func (c *FileHeadlineCache) buildCache() error {
 			}
 		}
 	}
+	return parentChildrenMap, nil
+}
 
-	// 按层级构建所有headline的Path
-	// 从上层headline到下层headline，确保父headline的Path已经构建完成
-	// 创建一个按level分组的map
+// buildHeadlinePaths 构建 headline 的路径信息
+func (c *FileHeadlineCache) buildHeadlinePaths() {
 	levelMap := make(map[int][]string)
 	maxLevel := 1
 
-	// 按level对headline进行分组
+	// 按 level 对 headline 进行分组
 	for headID, stats := range c.HeadMap {
 		level := stats.Info.Level
 		if level > maxLevel {
@@ -222,7 +219,7 @@ func (c *FileHeadlineCache) buildCache() error {
 		levelMap[level] = append(levelMap[level], headID)
 	}
 
-	// 从level 1开始，逐层构建Path
+	// 从 level 1 开始，逐层构建 Path
 	for level := 1; level <= maxLevel; level++ {
 		headIDs, ok := levelMap[level]
 		if !ok {
@@ -230,29 +227,27 @@ func (c *FileHeadlineCache) buildCache() error {
 		}
 
 		for _, headID := range headIDs {
-			// 获取当前headline的信息
 			stats, ok := c.HeadMap[headID]
 			if !ok {
 				continue
 			}
 
-			// 对于level 1的headline，Path已经在前面设置过了
 			if level == 1 {
 				stats.Info.Path = []string{c.Info.FileID}
 			}
 
-			// 获取父headline的信息
 			if stats.Info.ParentID != nil && *stats.Info.ParentID != "" {
 				parentID := *stats.Info.ParentID
 				if parentStats, ok := c.HeadMap[parentID]; ok && len(parentStats.Info.Path) > 0 {
-					// 子headline的Path是父headline的Path加上父headline的ID
 					stats.Info.Path = append(append([]string{}, parentStats.Info.Path...), parentID)
 				}
 			}
 		}
 	}
+}
 
-	// 第二遍遍历，构建树结构
+// buildHeadlineTree 构建 headline 的树形结构
+func (c *FileHeadlineCache) buildHeadlineTree(parentChildrenMap map[string][]string) {
 	for parentID, childrenIDs := range parentChildrenMap {
 		if parentStats, ok := c.HeadMap[parentID]; ok {
 			for _, childID := range childrenIDs {
@@ -260,19 +255,46 @@ func (c *FileHeadlineCache) buildCache() error {
 					parentStats.Children = append(parentStats.Children, childStats)
 				}
 			}
-			// 按Order值从小到大排序Children数组
+			// 按 Order 值从小到大排序 Children 数组
 			sort.Slice(parentStats.Children, func(i, j int) bool {
 				return parentStats.Children[i].Info.Order < parentStats.Children[j].Info.Order
 			})
 		}
 	}
+}
 
-	// 递归计算每个根headline的统计信息
+// buildCache 构建headline缓存树并计算统计信息
+func (c *FileHeadlineCache) buildCache() error {
+	// 获取当前日期的起止时间
+	dayStart, dayEnd := GetDayTime(0)
+
+	// 1. 获取数据
+	results, err := fetchHeadlineAndFsrsData(c.Info.FileID)
+	if err != nil {
+		return err
+	}
+
+	// 2. 初始化映射和计算初始统计
+	parentChildrenMap, err := c.initializeCacheMaps(results, dayStart, dayEnd)
+	if err != nil {
+		// 虽然当前 initializeCacheMaps 不会返回 error，但保留以防未来修改
+		return err
+	}
+
+	// 3. 构建路径
+	c.buildHeadlinePaths()
+
+	// 4. 构建树结构
+	c.buildHeadlineTree(parentChildrenMap)
+
+	// 5. 聚合统计信息
 	for _, rootHead := range c.RootHeads {
 		c.aggregateStats(rootHead)
 	}
 
+	// 6. 计算文件整体统计信息
 	c.Info.TotalCards, c.Info.TotalVirtCards, c.Info.ExpiredCards, c.Info.WaitingCards, c.Info.ReviewingCards = c.getFileStats()
+
 	return nil
 }
 
@@ -319,7 +341,7 @@ func (c *FileHeadlineCache) getChildren(headlineID string) []*HeadlineWithFsrs {
 	}
 	// 递归获取所有子headline的Fsrs
 	for _, child := range stats.Children {
-		children = append(children, &child.Info)
+		children = append(children, child.Info)
 	}
 	return children
 }
@@ -527,7 +549,7 @@ func GetChildrenByFileID(fileID string) ([]*HeadlineWithFsrs, error) {
 	// 获取所有子headline的ID
 	var children []*HeadlineWithFsrs
 	for _, rootHead := range cache.RootHeads {
-		children = append(children, &rootHead.Info)
+		children = append(children, rootHead.Info)
 	}
 	return children, nil
 }
