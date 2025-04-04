@@ -26,7 +26,7 @@ func ReviewCard(orgID string, rating gfsrs.Rating) error {
 		_ = logger.Errorf("not found card [orgid=%s] to review", orgID)
 		return nil
 	}
-	preFsrs := fsrsInfo.Card
+	preCard := fsrsInfo.Card
 
 	needReview, err := db.IfCardIsDue(orgID)
 
@@ -36,7 +36,8 @@ func ReviewCard(orgID string, rating gfsrs.Rating) error {
 
 		rLog := schedulingInfo[rating].ReviewLog
 
-		reviewlog := &storage.ReviewLog{HeadlineID: orgID, ReviewLog: rLog, Card: preFsrs}
+		reviewlog := &storage.ReviewLog{HeadlineID: orgID, ReviewLog: rLog}
+		reviewlog.SetPreCard(preCard)
 
 		fsrsInfo.Card = updatedCard
 		err = db.CreateReviewLog(reviewlog)

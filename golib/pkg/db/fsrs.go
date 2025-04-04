@@ -126,7 +126,7 @@ func (f *FsrsDB) UndoReviewLog(rlog *storage.ReviewLog) error {
 
 	// 更新Fsrs记录
 	fsrs := dal.FsrsInfo
-	_, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(rlog.HeadlineID)).Updates(rlog.Card)
+	_, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(rlog.HeadlineID)).Updates(rlog.GetPreCard())
 	if err != nil {
 		db.Rollback()
 		return logger.Errorf("Update Fsrs info failed: %v", err)

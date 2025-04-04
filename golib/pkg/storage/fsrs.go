@@ -1,9 +1,10 @@
 package storage
 
 import (
+	"time"
+
 	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 	"gorm.io/gorm"
-	"time"
 )
 
 // change string to fsrs.rate
@@ -64,7 +65,41 @@ type FsrsInfo struct {
 
 type ReviewLog struct {
 	gorm.Model
-	gfsrs.ReviewLog `gorm:"embedded" json:"ReviewLog"`
-	gfsrs.Card      `gorm:"embedded" json:"PreviseFsrs"`
-	HeadlineID      string
+	gfsrs.ReviewLog   `gorm:"embedded" json:"ReviewLog"`
+	CardDue           time.Time   `json:"Due"`
+	CardStability     float64     `json:"Stability"`
+	CardDifficulty    float64     `json:"Difficulty"`
+	CardElapsedDays   uint64      `json:"ElapsedDays"`
+	CardScheduledDays uint64      `json:"ScheduledDays"`
+	CardReps          uint64      `json:"Reps"`
+	CardLapses        uint64      `json:"Lapses"`
+	CardState         gfsrs.State `json:"State"`
+	CardLastReview    time.Time   `json:"LastReview"`
+	HeadlineID        string
+}
+
+func (log *ReviewLog) GetPreCard() gfsrs.Card {
+	return gfsrs.Card{
+		Due:           log.CardDue,
+		Stability:     log.CardStability,
+		Difficulty:    log.CardDifficulty,
+		ElapsedDays:   log.CardElapsedDays,
+		ScheduledDays: log.CardScheduledDays,
+		Reps:          log.CardReps,
+		Lapses:        log.CardLapses,
+		State:         log.CardState,
+		LastReview:    log.CardLastReview,
+	}
+}
+
+func (log *ReviewLog) SetPreCard(card gfsrs.Card) {
+	log.CardDue = card.Due
+	log.CardStability = card.Stability
+	log.CardDifficulty = card.Difficulty
+	log.CardElapsedDays = card.ElapsedDays
+	log.CardScheduledDays = card.ScheduledDays
+	log.CardReps = card.Reps
+	log.CardLapses = card.Lapses
+	log.CardState = card.State
+	log.CardLastReview = card.LastReview
 }
