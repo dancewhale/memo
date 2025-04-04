@@ -34,6 +34,8 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("GetHeadChildrenCard", api.GetHeadChildrenCard, "string", "Get head children card"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadContentByID", api.GetHeadContentByID, "string", "Get headline by id"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadFilePath", api.GetHeadFilePath, "string", "Get headline file path"))
+	service.RegisterMethod(epc.MakeMethod("GetNextReviewCard", api.GetNextReviewCard, "", "Get next reviewed card info"))             // Added
+	service.RegisterMethod(epc.MakeMethod("GetPreviousReviewCard", api.GetPreviousReviewCard, "", "Get previous reviewed card info")) // Added
 	return service
 }
 
@@ -148,4 +150,75 @@ func (api *CardApi) GetHeadFilePath(headid string) db.Result {
 		return db.Result{Data: "", Err: err}
 	}
 	return db.Result{Data: filepath, Err: nil}
+}
+
+// GetNextReviewCard gets the next reviewed card details
+func (api *CardApi) GetNextReviewCard() db.Result {
+	headID, err := GetNextReviewHeadID()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	if headID == "" {
+		return db.Result{Data: nil, Err: errors.New("no next review card found")}
+	}
+
+	headineWithFsrs, err := api.getHeadlineWithFsrsByID(headID)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+
+	return db.Result{Data: headineWithFsrs, Err: nil}
+}
+
+// GetPreviousReviewCard gets the previous reviewed card details
+func (api *CardApi) GetPreviousReviewCard() db.Result {
+	headID, err := GetPreviousReviewHeadID()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	if headID == "" {
+		return db.Result{Data: nil, Err: errors.New("no previous review card found")}
+	}
+
+	headineWithFsrs, err := api.getHeadlineWithFsrsByID(headID)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+
+	return db.Result{Data: headineWithFsrs, Err: nil}
+}
+
+// Helper function to get HeadlineWithFsrs by ID using the cache
+func (api *CardApi) getHeadlineWithFsrsByID(headID string) (*db.HeadlineWithFsrs, error) {
+	// 1. Get FileID from HeadID
+	headDB, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return nil, logger.Errorf("Failed to get OrgHeadlineDB: %v", err)
+	}
+	fileID, err := headDB.GetFileIDByOrgID(headID)
+	if err != nil {
+		return nil, logger.Errorf("Failed to get FileID for head %s: %v", headID, err)
+	}
+	if fileID == nil {
+		// It might be a virtual card, need to handle this case if necessary.
+		// For now, assume it must belong to a file.
+		return nil, logger.Errorf("FileID not found for head %s", headID)
+	}
+
+	// 2. Get File Cache
+	cacheManager := db.GetCacheManager()
+	fileCache, err := cacheManager.GetFileFromCache(*fileID)
+	if err != nil {
+		return nil, logger.Errorf("Failed to get file cache for file %s: %v", *fileID, err)
+	}
+
+	// 3. Get HeadlineStats from HeadMap
+	headStats, ok := fileCache.HeadMap[headID]
+	if !ok || headStats == nil {
+		// If not found in cache, maybe invalidate and retry?
+		// Or the cache structure/logic needs adjustment.
+		return nil, logger.Errorf("Headline %s not found in cache for file %s", headID, *fileID)
+	}
+
+	return headStats.Info, nil
 }

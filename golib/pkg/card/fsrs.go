@@ -1,20 +1,142 @@
 package card
 
 import (
-	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
-	cardDB "memo/pkg/db"
+	// Added for returning errors
+	"errors"
+	"memo/pkg/db" // Corrected import path assumed based on previous steps
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"sync"
 	"time"
+
+	gfsrs "github.com/open-spaced-repetition/go-fsrs/v3"
 )
 
 var muteDB = sync.Mutex{}
 
 var Scheduler = gfsrs.NewFSRS(gfsrs.DefaultParam())
 
+// State for navigating reviewed cards
+var (
+	todayReviewedHeadIDs []string
+	currentReviewIndex   int = -1 // -1 indicates not initialized or empty
+	reviewCacheMutex     sync.Mutex
+	cacheValid           bool = false // Flag to indicate if the cache is valid
+)
+
+// Function to fetch and cache today's reviewed head IDs
+func fetchAndCacheReviewedIDs() error {
+	reviewCacheMutex.Lock()
+	defer reviewCacheMutex.Unlock()
+
+	fsrsDB, err := db.NewFsrsDB()
+	if err != nil {
+		return logger.Errorf("Failed to get FsrsDB instance: %v", err)
+	}
+	ids, err := fsrsDB.GetTodayReviewedHeadIDs()
+	if err != nil {
+		currentReviewIndex = -1
+		todayReviewedHeadIDs = nil
+		cacheValid = false
+		return logger.Errorf("Failed to get today's reviewed head IDs: %v", err)
+	}
+	todayReviewedHeadIDs = ids
+	if len(todayReviewedHeadIDs) == 0 {
+		currentReviewIndex = -1
+	} else {
+		// Maintain current index if possible, otherwise reset
+		if currentReviewIndex >= len(todayReviewedHeadIDs) {
+			currentReviewIndex = len(todayReviewedHeadIDs) - 1
+		} else if currentReviewIndex < -1 { // Reset if index was somehow invalid (< -1)
+			currentReviewIndex = -1 // Let GetNext/Previous handle initial state
+		}
+		// If the index was -1, it remains -1, indicating start state for GetNext/Previous
+	}
+	cacheValid = true
+	logger.Infof("Fetched and cached %d reviewed head IDs for today.", len(todayReviewedHeadIDs))
+	return nil
+}
+
+// Function to invalidate the review cache
+func invalidateReviewCache() {
+	reviewCacheMutex.Lock()
+	defer reviewCacheMutex.Unlock()
+	cacheValid = false
+	logger.Info("Review navigation cache invalidated.")
+}
+
+// ensureCacheValid ensures the review cache is loaded and valid
+func ensureCacheValid() error {
+	reviewCacheMutex.Lock()
+	isValid := cacheValid
+	reviewCacheMutex.Unlock()
+
+	if !isValid {
+		return fetchAndCacheReviewedIDs()
+	}
+	return nil
+}
+
+// GetNextReviewHeadID gets the next head ID from today's reviewed list
+func GetNextReviewHeadID() (string, error) {
+	if err := ensureCacheValid(); err != nil {
+		return "", logger.Errorf("Failed to ensure review cache validity: %v", err)
+	}
+
+	reviewCacheMutex.Lock()
+	defer reviewCacheMutex.Unlock()
+
+	if len(todayReviewedHeadIDs) == 0 {
+		return "", errors.New("no cards reviewed today")
+	}
+
+	currentReviewIndex++
+	if currentReviewIndex >= len(todayReviewedHeadIDs) {
+		currentReviewIndex = len(todayReviewedHeadIDs) - 1 // Clamp at the end
+		logger.Debugf("Reached end of reviewed list, staying at index %d", currentReviewIndex)
+	} else if currentReviewIndex < 0 {
+		// This case might happen if the list became non-empty after being empty
+		currentReviewIndex = 0
+	}
+
+	headID := todayReviewedHeadIDs[currentReviewIndex]
+	logger.Debugf("GetNextReviewHeadID: index %d, ID %s", currentReviewIndex, headID)
+	return headID, nil
+}
+
+// GetPreviousReviewHeadID gets the previous head ID from today's reviewed list
+func GetPreviousReviewHeadID() (string, error) {
+	if err := ensureCacheValid(); err != nil {
+		return "", logger.Errorf("Failed to ensure review cache validity: %v", err)
+	}
+
+	reviewCacheMutex.Lock()
+	defer reviewCacheMutex.Unlock()
+
+	if len(todayReviewedHeadIDs) == 0 {
+		return "", errors.New("no cards reviewed today")
+	}
+
+	// If index is -1 (initial state or empty list previously), getting previous should point to the first item.
+	if currentReviewIndex == -1 {
+		currentReviewIndex = 0
+	} else {
+		currentReviewIndex--
+	}
+
+	if currentReviewIndex < 0 {
+		currentReviewIndex = 0 // Clamp at the beginning
+		logger.Debugf("Reached beginning of reviewed list, staying at index %d", currentReviewIndex)
+	}
+
+	headID := todayReviewedHeadIDs[currentReviewIndex]
+	logger.Debugf("GetPreviousReviewHeadID: index %d, ID %s", currentReviewIndex, headID)
+	return headID, nil
+}
+
 func ReviewCard(orgID string, rating gfsrs.Rating) error {
-	db, err := cardDB.NewFsrsDB()
+	invalidateReviewCache() // Invalidate cache on review
+	db, err := db.NewFsrsDB()
 	if err != nil {
 		return err
 	}
@@ -56,7 +178,7 @@ func ReviewCard(orgID string, rating gfsrs.Rating) error {
 // 如果最新记录的Review时间是当天，则将headlineID关联的Fsrs记录修改为ReviewLog中的Card数据并删除该记录
 // 成功返回true，否则返回false，同时处理并返回error
 func UndoReviewCard(headlineID string) (bool, error) {
-	fsrsDB, err := cardDB.NewFsrsDB()
+	fsrsDB, err := db.NewFsrsDB()
 	if err != nil {
 		return false, err
 	}
@@ -72,7 +194,7 @@ func UndoReviewCard(headlineID string) (bool, error) {
 	}
 
 	// 清除缓存
-	if cacheManager := cardDB.GetCacheManager(); cacheManager != nil {
+	if cacheManager := db.GetCacheManager(); cacheManager != nil {
 		err = cacheManager.InvalidateCacheByHeadlineID(headlineID)
 		if err != nil {
 			logger.Errorf("Invalidate Cache by headlineid %s failed: %v.", headlineID, err)
@@ -88,7 +210,7 @@ func ScanInitFsrs() {
 		muteDB.Lock()
 		defer muteDB.Unlock()
 		logger.Infof("Start to scan org for headline init.")
-		fsrsDB, err := cardDB.NewFsrsDB()
+		fsrsDB, err := db.NewFsrsDB()
 		if err != nil {
 			return
 		}

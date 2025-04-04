@@ -2,10 +2,11 @@ package db
 
 import (
 	"context"
-	"gorm.io/gorm"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+
+	"gorm.io/gorm"
 )
 
 func NewFsrsDB() (*FsrsDB, error) {
@@ -160,6 +161,24 @@ func (f *FsrsDB) GetTodayLatestReviewLog(headlineID string) (*storage.ReviewLog,
 		return nil, err
 	}
 	return latestLog, nil
+}
+
+// GetTodayReviewedHeadIDs 获取今天已复习的所有唯一 headlineID，按复习时间升序排列
+func (f *FsrsDB) GetTodayReviewedHeadIDs() ([]string, error) {
+	dayStart, dayEnd := GetDayTime(0)
+	reviewLog := dal.ReviewLog
+	var headIDs []string
+
+	err := reviewLog.WithContext(context.Background()).
+		Select(reviewLog.HeadlineID).Distinct(). // 选择唯一的 HeadlineID
+		Where(reviewLog.Review.Between(dayStart, dayEnd)).
+		Order(reviewLog.Review). // 按复习时间升序
+		Pluck(reviewLog.HeadlineID, &headIDs)
+
+	if err != nil {
+		return nil, logger.Errorf("Get today reviewed head IDs failed: %v", err)
+	}
+	return headIDs, nil
 }
 
 // get heads that need init fsrs info.
