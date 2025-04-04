@@ -363,6 +363,38 @@ func (c *FileHeadlineCache) getFileStats() (totalCards, totalVirtCards, expiredC
 	return
 }
 
+// FindNextNew performs a depth-first search to find the first HeadlineWithFsrs with State = 0.
+// It returns the found HeadlineWithFsrs or nil if none is found.
+func (c *FileHeadlineCache) FindNextNew() *HeadlineWithFsrs {
+	var result *HeadlineWithFsrs
+	for _, rootHead := range c.RootHeads {
+		result = c.findNextNewDFS(rootHead)
+		if result != nil {
+			return result
+		}
+	}
+	return nil
+}
+
+// findNextNewDFS is a helper function for depth-first search.
+func (c *FileHeadlineCache) findNextNewDFS(stats *HeadlineStats) *HeadlineWithFsrs {
+	// Check the current headline
+	if stats.Info != nil && stats.Info.State == 0 {
+		return stats.Info
+	}
+
+	// Recursively search children
+	for _, child := range stats.Children {
+		found := c.findNextNewDFS(child)
+		if found != nil {
+			return found
+		}
+	}
+
+	// Not found in this subtree
+	return nil
+}
+
 // GetFileFromCache 从缓存管理器获取指定文件的缓存，如果不存在或已过期则创建新缓存
 func (m *FileHeadlineCacheManager) GetFileFromCache(fileID string) (*FileHeadlineCache, error) {
 	// 先尝试读取缓存
