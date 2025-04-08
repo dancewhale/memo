@@ -114,6 +114,34 @@ func (f *FsrsDB) CreateReviewLog(rlog *storage.ReviewLog) error {
 	return err
 }
 
+func (f *FsrsDB) Review(rlog *storage.ReviewLog, fsrsinfo *storage.FsrsInfo) error {
+	fsrs := dal.FsrsInfo
+
+	if fsrsinfo == nil || rlog == nil {
+		return nil
+	}
+	r := dal.Q
+	db := r.Begin()
+
+	if rlog.HeadlineID == "" || fsrsinfo.HeadlineID == "" {
+		return logger.Errorf("Review card with headlineID is empty.")
+	}
+	_, err := db.FsrsInfo.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(fsrsinfo.HeadlineID)).Updates(fsrsinfo)
+	if err != nil {
+		logger.Errorf("Update %s Headline FsrsInfo in database failed: %v", fsrsinfo.HeadlineID, err)
+		_ = db.Rollback()
+		return err
+	}
+
+	err = db.ReviewLog.WithContext(context.Background()).Create(rlog)
+	if err != nil {
+		_ = db.Rollback()
+		return logger.Errorf("Add review log in db failed: %v", err)
+	}
+
+	return nil
+}
+
 func (f *FsrsDB) UndoReview(rlog *storage.ReviewLog) error {
 	r := dal.Q
 	reviewLog := dal.ReviewLog
@@ -121,7 +149,7 @@ func (f *FsrsDB) UndoReview(rlog *storage.ReviewLog) error {
 	db := r.Begin()
 	defer func() {
 		if r := recover(); r != nil {
-			db.Rollback()
+			_ = db.Rollback()
 		}
 	}()
 

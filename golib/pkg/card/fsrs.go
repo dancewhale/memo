@@ -162,7 +162,7 @@ func ReviewCard(headlineID string, rating gfsrs.Rating) error {
 		reviewlog.SetPreCard(fsrsInfo.Card)
 
 		fsrsInfo.Card = updatedCard
-		err = fsrsDB.CreateReviewLog(reviewlog)
+		err = fsrsDB.Review(reviewlog, fsrsInfo)
 		if err != nil {
 			return err
 		}
@@ -175,10 +175,9 @@ func ReviewCard(headlineID string, rating gfsrs.Rating) error {
 			}
 		}
 
-		return fsrsDB.UpdateFsrs(fsrsInfo)
+		return nil
 	}
-	logger.Infof("Card %s no need to review.", headlineID)
-	return err
+	return logger.Errorf("Card %s no need to review.", headlineID)
 }
 
 // UndoReviewCard 撤销最近一次复习操作
