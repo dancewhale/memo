@@ -75,8 +75,8 @@ func (api *CardApi) GetFileChildrenCard(fileid string) db.Result {
 	return db.Result{Data: childrens, Err: nil}
 }
 
-func (api *CardApi) GetHeadChildrenCard(headid, fileid string, notetype int) db.Result {
-	childrens, err := db.GetChildrenByHeadlineID(headid, fileid, notetype)
+func (api *CardApi) GetHeadChildrenCard(headid, fileid string) db.Result {
+	childrens, err := db.GetChildrenByHeadlineID(headid, fileid)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}

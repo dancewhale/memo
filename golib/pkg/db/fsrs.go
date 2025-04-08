@@ -114,7 +114,7 @@ func (f *FsrsDB) CreateReviewLog(rlog *storage.ReviewLog) error {
 	return err
 }
 
-func (f *FsrsDB) UndoReviewLog(rlog *storage.ReviewLog) error {
+func (f *FsrsDB) UndoReview(rlog *storage.ReviewLog) error {
 	r := dal.Q
 	reviewLog := dal.ReviewLog
 	// 使用事务确保操作的原子性

@@ -586,7 +586,7 @@ func GetChildrenByFileID(fileID string) ([]*HeadlineWithFsrs, error) {
 	return children, nil
 }
 
-func GetChildrenByHeadlineID(headlineID, fileid string, notetype int) ([]*HeadlineWithFsrs, error) {
+func GetChildrenByHeadlineID(headlineID, fileid string) ([]*HeadlineWithFsrs, error) {
 	// 从缓存管理器获取缓存
 	cache, err := GetCacheManager().GetFileFromCache(fileid)
 	if err != nil {

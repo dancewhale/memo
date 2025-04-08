@@ -134,42 +134,50 @@ func GetPreviousReviewHeadID() (string, error) {
 	return headID, nil
 }
 
-func ReviewCard(orgID string, rating gfsrs.Rating) error {
+func ReviewCard(headlineID string, rating gfsrs.Rating) error {
 	invalidateReviewCache() // Invalidate cache on review
-	db, err := db.NewFsrsDB()
+	fsrsDB, err := db.NewFsrsDB()
 	if err != nil {
 		return err
 	}
 
-	logger.Debugf("Start Review Headline with orgID: %s, rating: %d", orgID, rating)
-	now := time.Now()
-	fsrsInfo := db.GetFsrsInfoByOrgID(orgID)
-	if fsrsInfo == nil {
-		_ = logger.Errorf("not found card [orgid=%s] to review", orgID)
-		return nil
-	}
-	preCard := fsrsInfo.Card
+	logger.Debugf("Start Review Headline with headlineID: %s, rating: %d", headlineID, rating)
 
-	needReview, err := db.IfCardIsDue(orgID)
+	needReview, err := fsrsDB.IfCardIsDue(headlineID)
 
 	if needReview && err == nil {
+		fsrsInfo := fsrsDB.GetFsrsInfoByOrgID(headlineID)
+		if fsrsInfo == nil {
+			_ = logger.Errorf("not found card [orgid=%s] to review", headlineID)
+			return nil
+		}
+
+		now := time.Now()
 		schedulingInfo := Scheduler.Repeat(fsrsInfo.Card, now)
 		updatedCard := schedulingInfo[rating].Card
 
 		rLog := schedulingInfo[rating].ReviewLog
 
-		reviewlog := &storage.ReviewLog{HeadlineID: orgID, ReviewLog: rLog}
-		reviewlog.SetPreCard(preCard)
+		reviewlog := &storage.ReviewLog{HeadlineID: headlineID, ReviewLog: rLog}
+		reviewlog.SetPreCard(fsrsInfo.Card)
 
 		fsrsInfo.Card = updatedCard
-		err = db.CreateReviewLog(reviewlog)
+		err = fsrsDB.CreateReviewLog(reviewlog)
 		if err != nil {
 			return err
 		}
 
-		return db.UpdateFsrs(fsrsInfo)
+		// 清除缓存
+		if cacheManager := db.GetCacheManager(); cacheManager != nil {
+			err = cacheManager.InvalidateCacheByHeadlineID(headlineID)
+			if err != nil {
+				logger.Errorf("Invalidate Cache by headlineid %s failed: %v.", headlineID, err)
+			}
+		}
+
+		return fsrsDB.UpdateFsrs(fsrsInfo)
 	}
-	logger.Infof("Card %s no need to review.", orgID)
+	logger.Infof("Card %s no need to review.", headlineID)
 	return err
 }
 
@@ -188,7 +196,7 @@ func UndoReviewCard(headlineID string) (bool, error) {
 		return false, nil
 	}
 
-	err = fsrsDB.UndoReviewLog(latestLog)
+	err = fsrsDB.UndoReview(latestLog)
 	if err != nil {
 		return false, err
 	}
