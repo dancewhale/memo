@@ -88,6 +88,18 @@ Otherwise returns value itself."
 	  (display-buffer-in-side-window buf memo-treemacs-virtual-head-position-params)))
     (error)))
 
+(defun memo-treemacs-goto ()
+  "Goto note node under Treemacs."
+  (interactive)
+  (condition-case _err
+      (-if-let* ((inhibit-read-only t)
+	    (path   memo--buffer-local-note-path)
+	    (id  (memo-note-id memo--buffer-local-note))
+	    (buffer memo--buffer-local-note-buffer))
+	(with-current-buffer buffer
+	  (treemacs-goto-extension-node (append path `(,id)))))
+    (error)))
+
 (defun memo-treemacs-generic-right-click (event)
   (interactive "e")
   (let* ((ec (event-start event))
@@ -221,7 +233,7 @@ Otherwise returns value itself."
   :children
   (when (> (memo-note-totalcards item) 1)
     (let ((items (memo-api--get-head-children-heads (memo-note-id item)
-						    (memo-note-fileid item) memo-note-normal-type)))
+						    (memo-note-fileid item))))
       (funcall callback items)))
   :child-type
   'memo-treemacs-read-head-node

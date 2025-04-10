@@ -204,9 +204,9 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (let ((result (memo-bridge-call-sync "GetFileChildrenCard" fileID)))
     (memo-make-note-from-return (memo--parse-result result))))
 
-(defun memo-api--get-head-children-heads (headID fileID type)
-  "Get first child heads under head by HEADID FILEID TYPE."
-  (let ((result (memo-bridge-call-sync "GetHeadChildrenCard" headID fileID type)))
+(defun memo-api--get-head-children-heads (headID fileID)
+  "Get first child heads under head by HEADID FILEID."
+  (let ((result (memo-bridge-call-sync "GetHeadChildrenCard" headID fileID)))
     (memo-make-note-from-return (memo--parse-result result))))
 
 ;; sync org file under dir.

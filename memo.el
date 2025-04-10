@@ -18,7 +18,6 @@
 ;;
 ;;; Code:
 
-(require 'epc)
 (require 'cl-lib)
 (require 'org-element)
 

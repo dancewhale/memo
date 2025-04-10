@@ -113,7 +113,8 @@
   (if memo--buffer-local-note
       (memo-api--review-note (memo-note-id memo--buffer-local-note) rate ))
   (if (equal (buffer-name (current-buffer)) memo--review-buffer-name)
-      (memo-review-note)))
+      (progn  (memo-review-note)
+	      (memo-treemacs-refresh))))
 
 (defun memo-review-easy()
   "Review note with score: Easy."
@@ -279,6 +280,19 @@
       (org-mode)
       (setq memo--buffer-local-note head)
       (setq write-contents-functions '(memo-update-current-virt-note-content)))))
+
+
+;;;-------------------------------------------------
+;;  treemacs action
+;;;-------------------------------------------------
+(defun memo-treemacs-read-next-note ()
+  "Read Next node."
+  (interactive)
+  (unless (equal (buffer-name (current-buffer)) memo--read-buffer-name)
+    (user-error "You should execute this command in buffer *memo-read*")
+    (let* ((memo-treemacs-buffer (get-buffer memo-treemacs-buffer-name)))
+      ())))
+
 
 
 (provide 'memo-buffer)
