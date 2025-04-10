@@ -15,7 +15,7 @@ import (
 	"github.com/emirpasic/gods/lists/arraylist"
 )
 
-func NewVirtFileFromHeadID(headID string) (*OrgFile, error) {
+func NewAnnotationFileFromHeadID(headID string) (*OrgFile, error) {
 	orgfiledb, err := db.NewOrgFileDB()
 	if err != nil {
 		return nil, logger.Errorf("Init orgfile db operator error: %v", err)

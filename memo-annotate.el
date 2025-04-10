@@ -18,7 +18,7 @@
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;;
+;;  <memo-head-id:uuid>TEXT</memo-head-id> annotation.
 ;;; Code:
 
 

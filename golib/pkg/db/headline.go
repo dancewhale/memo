@@ -315,9 +315,14 @@ func UpdateHeadScheduleTypeByID(headlineID, stype string) error {
 	}
 }
 
-func (h *OrgHeadlineDB) CreateVirtualHead(headID, title, content string) error {
+func (h *OrgHeadlineDB) CreateAnnotationHead(headID, title, content string) error {
 	head := dal.Headline
-	source := "[[id:" + headID + "]]"
+	parentHead, err := head.WithContext(context.Background()).
+		Where(head.HeadlineID.Eq(headID)).
+		First()
+	if err != nil {
+		return logger.Errorf("CreateAnnotationHead: Find parentHead with id %s error: %v", headID, err)
+	}
 
 	count, err := head.WithContext(context.Background()).
 		Where(head.HeadlineID.Eq(headID)).Where(head.Level.Eq(1)).Count()
@@ -326,11 +331,13 @@ func (h *OrgHeadlineDB) CreateVirtualHead(headID, title, content string) error {
 	}
 
 	headline := storage.Headline{ID: parser.GenerateID(),
-		Title: title, Content: content,
-		Weight: storage.DefaultWeight, HeadlineID: &headID,
-		Source: source, ScheduledType: storage.NORMAL,
-		Level: 1,
-		Order: int(count + 1),
+		Title:         title,
+		Content:       content,
+		Weight:        storage.DefaultWeight,
+		HeadlineID:    &headID,
+		ScheduledType: storage.NORMAL,
+		Level:         parentHead.Level + 1,
+		Order:         int(count + 1),
 	}
 	headline.Hash = parser.HashContent(headline.String())
 

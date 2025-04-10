@@ -33,13 +33,13 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadContent", o.UpdateOrgHeadContent, "string", "Update org head content"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
-	service.RegisterMethod(epc.MakeMethod("CreateVirtHead", o.CreateVirtHead, "string", "Create virtual head."))
-	service.RegisterMethod(epc.MakeMethod("GetVirtFile", o.GetVirtfileContent, "string", "Get virtual file content."))
-	service.RegisterMethod(epc.MakeMethod("UploadVirtFile", o.UploadVirtFile, "string", "Get virtual file content."))
+	service.RegisterMethod(epc.MakeMethod("CreateAnnotationHead", o.CreateAnnotationHead, "string", "Create virtual head."))
+	service.RegisterMethod(epc.MakeMethod("GetAnnotationFile", o.GetAnnotationfileContent, "string", "Get virtual file content."))
+	service.RegisterMethod(epc.MakeMethod("UploadAnnotationFile", o.UploadAnnotationFile, "string", "Get virtual file content."))
 	return service
 }
 
-func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
+func (o *OrgApi) CreateAnnotationHead(headid, title, content string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return db.Result{Data: false, Err: err}
@@ -47,7 +47,7 @@ func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
 	content = strings.ReplaceAll(content, "\\\\", "\\")
 	content = strings.ReplaceAll(content, "\\\"", "\"")
 	content += "\n"
-	err = headdb.CreateVirtualHead(headid, title, content)
+	err = headdb.CreateAnnotationHead(headid, title, content)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}
@@ -55,7 +55,7 @@ func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
 	return db.Result{Data: true, Err: nil}
 }
 
-func (o *OrgApi) GetVirtfileContent(headid string) db.Result {
+func (o *OrgApi) GetAnnotationfileContent(headid string) db.Result {
 	file, err := GetFileFromID(headid, storage.VirtualFile)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
@@ -64,14 +64,14 @@ func (o *OrgApi) GetVirtfileContent(headid string) db.Result {
 	return db.Result{Data: content, Err: nil}
 }
 
-func (o *OrgApi) UploadVirtFile(headid, content string, fo int) db.Result {
+func (o *OrgApi) UploadAnnotationFile(headid, content string, fo int) db.Result {
 	var force bool
 	if fo == 0 {
 		force = false
 	} else {
 		force = true
 	}
-	f, err := NewVirtFileFromHeadID(headid)
+	f, err := NewAnnotationFileFromHeadID(headid)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	} else if f == nil {
