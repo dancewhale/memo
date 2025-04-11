@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"memo/cmd/options"
 	"memo/pkg/logger"
 	"memo/pkg/org/parser"
@@ -210,16 +211,54 @@ func (h *OrgHeadlineDB) GetHeadFilePath(id string) (string, error) {
 
 func (h *OrgHeadlineDB) GetFileIDByOrgID(orgid string) (*string, error) {
 	head := dal.Headline
-	headlines, err := head.WithContext(context.Background()).Where(head.ID.Eq(orgid)).Find()
-	if err != nil {
-		return nil, logger.Errorf("Get headline by orgid failed: %v", err)
-	} else if len(headlines) == 0 {
-		return nil, logger.Errorf("Head with orgid %s is not exist.", orgid)
-	} else if len(headlines) == 1 {
-		return headlines[0].FileID, nil
-	} else {
-		return nil, logger.Errorf("The orgid %s has more than one headline attach to it.", orgid)
+	currentID := orgid
+	// 添加迭代次数限制，防止无限循环（虽然理论上不应该发生）
+	maxIterations := 100
+
+	for i := 0; i < maxIterations; i++ {
+		var headlines []*storage.Headline
+		headlines, err := head.WithContext(context.Background()).
+			Where(head.ID.Eq(currentID)).
+			// 只需要查询 HeadlineID 和 FileID 字段
+			Select(head.ID, head.HeadlineID, head.FileID).
+			Find()
+
+		if err != nil {
+			return nil, logger.Errorf("Get headline by id %s failed ",
+				"during iteration: %v", currentID, err)
+		}
+
+		if len(headlines) == 0 {
+			return nil, logger.Errorf("Head with id %s not found during ",
+				"iteration (started with %s).", currentID, orgid)
+		}
+
+		if len(headlines) > 1 {
+			return nil, logger.Errorf("Multiple headlines found for id %s ",
+				"during iteration (started with %s).", currentID, orgid)
+		}
+
+		foundHeadline := headlines[0]
+
+		if foundHeadline.HeadlineID == nil || *foundHeadline.HeadlineID == "" {
+			// HeadlineID 为空，这是查找链的终点，检查 FileID
+			if foundHeadline.FileID == nil || *foundHeadline.FileID == "" {
+				// FileID 也为空，异常情况
+				return nil, logger.Errorf("Found terminal headline with id %s (started with %s), ",
+					"but its FileID is nil or empty.", foundHeadline.ID, orgid)
+			} else {
+				// FileID 有效，返回 FileID
+				return foundHeadline.FileID, nil
+			}
+		} else {
+			// HeadlineID 非空，继续向上查找
+			currentID = *foundHeadline.HeadlineID
+		}
 	}
+
+	// 如果循环次数过多，可能是数据结构有问题或陷入循环
+	return nil, logger.Errorf("Exceeded maximum iterations (%d) searching ",
+		"for FileID starting from orgid %s. Possible loop or deep nesting.", maxIterations, orgid)
 }
 
 func (h *OrgHeadlineDB) UpdateHeadlineHash(id string) error {
@@ -248,11 +287,19 @@ func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
 	return nil
 }
 
-func (h *OrgHeadlineDB) UpdateProperty(fileID, headID, key, value string) error {
+func (h *OrgHeadlineDB) UpdateProperty(headID, key, value string) error {
 	headline := dal.Headline
-	if key == options.EmacsPropertyWeight || key == options.EmacsPropertySchedule || key == options.EmacsPropertySource {
+	fileID, err := h.GetFileIDByOrgID(headID)
+	if err != nil {
+		return err
+	}
+	if key == options.EmacsPropertyID {
+		return errors.New("property ID can't update direct in UpdateProperty")
+	}
+
+	if key == options.EmacsPropertyWeight || key == options.EmacsPropertySchedule {
 		if cacheManager := GetCacheManager(); cacheManager != nil {
-			cacheManager.InvalidateCache(fileID)
+			cacheManager.InvalidateCache(*fileID)
 		}
 	}
 

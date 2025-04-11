@@ -46,7 +46,6 @@
   (interactive)
   (if memo--buffer-local-note
     (progn (memo-api--update-property
-	    (memo-note-fileid memo--buffer-local-note)
 	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "postpone")
 	   (memo-treemacs-refresh))))
 
@@ -55,7 +54,6 @@
   (interactive)
   (if memo--buffer-local-note
     (progn (memo-api--update-property
-	    (memo-note-fileid memo--buffer-local-note)
 	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend")
 	   (memo-treemacs-refresh))))
 
@@ -64,7 +62,6 @@
   (interactive)
   (if memo--buffer-local-note
     (progn (memo-api--update-property
-	    (memo-note-fileid memo--buffer-local-note)
 	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal")
 	   (memo-treemacs-refresh))))
 
