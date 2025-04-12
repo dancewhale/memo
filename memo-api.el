@@ -46,6 +46,10 @@ and used for backend to indentify memo head.")
   "Property used to store the cards type;
 and used for backend to indentify memo head.")
 
+(defconst memo-prop-annotation-color  "MEMO_NOTE_COLOR"
+  "Property used to store the color of annotation.")
+
+
 
 ;;; parse api call result; store value and throught err.
 (defvar  memo-api-return-err  nil
@@ -208,6 +212,21 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   "Get first child heads under head by HEADID FILEID."
   (let ((result (memo-bridge-call-sync "GetHeadChildrenCard" headID fileID)))
     (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-child-annotation-color-map (headid)
+  "Get the color property map of children annotation by HEADID."
+  (let ((result (memo-bridge-call-sync "GetChildAnnotationPropertyMap" headID memo-prop-annotation-color)))
+    (memo--parse-result result)))
+
+(defun memo-api--get-annotation-color (headid)
+  "Get the color property by HEADID."
+  (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headID memo-prop-annotation-color)))
+    (memo--parse-result result)))
+
+(defun memo-api--set-annotation-color (headid color)
+  "Set the COLOR(string) property of head with HEADID."
+  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" headID memo-prop-annotation-color color)))
+    (memo--parse-result result)))
 
 ;; sync org file under dir.
 (defun memo-sync-db ()

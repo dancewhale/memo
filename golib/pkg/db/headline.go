@@ -341,6 +341,7 @@ func (h *OrgHeadlineDB) GetPropertyValue(headID, key string) string {
 
 func (h *OrgHeadlineDB) UpdateProperty(headID, key, value string) error {
 	headline := dal.Headline
+	prop := dal.Property
 	fileID, err := h.GetFileIDByOrgID(headID)
 	if err != nil {
 		return err
@@ -375,8 +376,25 @@ func (h *OrgHeadlineDB) UpdateProperty(headID, key, value string) error {
 		return err
 	} else {
 		property := storage.Property{HeadlineID: headID, Key: key, Value: value}
-		err := h.db.Save(&property).Error
-		return err
+		properties, err := prop.WithContext(context.Background()).Where(prop.HeadlineID.Eq(headID)).
+			Where(prop.Key.Eq(key)).Find()
+		if len(properties) == 0 {
+			if value != "" {
+				return prop.WithContext(context.Background()).Create(&property)
+			} else {
+				return nil
+			}
+		} else {
+			if value == "" {
+				_, err = prop.WithContext(context.Background()).Where(prop.HeadlineID.Eq(headID)).
+					Where(prop.Key.Eq(key)).Delete()
+				return err
+			} else {
+				_, err = prop.WithContext(context.Background()).Where(prop.HeadlineID.Eq(headID)).
+					Where(prop.Key.Eq(key)).UpdateSimple(prop.Value.Value(value))
+				return err
+			}
+		}
 	}
 }
 

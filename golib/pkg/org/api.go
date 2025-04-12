@@ -6,13 +6,14 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/karrick/godirwalk"
-	epc "github.com/kiwanami/go-elrpc"
-	"gorm.io/gorm"
 	"memo/pkg/card"
 	"memo/pkg/logger"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
+
+	"github.com/karrick/godirwalk"
+	epc "github.com/kiwanami/go-elrpc"
+	"gorm.io/gorm"
 )
 
 var muteFile = sync.Mutex{}
@@ -32,11 +33,12 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("SyncOrgDir", o.UploadFilesUnderDir, "string", "Upload org files under dir to database"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadContent", o.UpdateOrgHeadContent, "string", "Update org head content"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
+	service.RegisterMethod(epc.MakeMethod("GetOrgHeadProperty", o.GetOrgHeadProperty, "string", "Get org head property by id."))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
 	service.RegisterMethod(epc.MakeMethod("CreateAnnotationHead", o.CreateAnnotationHead, "string", "Create annotation head."))
 	service.RegisterMethod(epc.MakeMethod("GetAnnotationFile", o.GetAnnotationfileContent, "string", "Get annotation file content."))
 	service.RegisterMethod(epc.MakeMethod("UploadAnnotationFile", o.UploadAnnotationFile, "string", "upload annotation file content."))
-	service.RegisterMethod(epc.MakeMethod("GetChildAnnotationProperty", o.GetChildrenAnnotationPropertyMap, "string", "Get child annotate head property."))
+	service.RegisterMethod(epc.MakeMethod("GetChildAnnotationPropertyMap", o.GetChildrenAnnotationPropertyMap, "string", "Get child annotate head property."))
 	return service
 }
 
