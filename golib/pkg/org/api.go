@@ -33,10 +33,20 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadContent", o.UpdateOrgHeadContent, "string", "Update org head content"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
-	service.RegisterMethod(epc.MakeMethod("CreateAnnotationHead", o.CreateAnnotationHead, "string", "Create virtual head."))
-	service.RegisterMethod(epc.MakeMethod("GetAnnotationFile", o.GetAnnotationfileContent, "string", "Get virtual file content."))
-	service.RegisterMethod(epc.MakeMethod("UploadAnnotationFile", o.UploadAnnotationFile, "string", "Get virtual file content."))
+	service.RegisterMethod(epc.MakeMethod("CreateAnnotationHead", o.CreateAnnotationHead, "string", "Create annotation head."))
+	service.RegisterMethod(epc.MakeMethod("GetAnnotationFile", o.GetAnnotationfileContent, "string", "Get annotation file content."))
+	service.RegisterMethod(epc.MakeMethod("UploadAnnotationFile", o.UploadAnnotationFile, "string", "upload annotation file content."))
+	service.RegisterMethod(epc.MakeMethod("GetChildAnnotationProperty", o.GetChildrenAnnotationPropertyMap, "string", "Get child annotate head property."))
 	return service
+}
+
+func (o *OrgApi) GetChildrenAnnotationPropertyMap(headid, key string) db.Result {
+	headdb, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	data := headdb.GetAnnotationPropertyMap(headid, key)
+	return db.Result{Data: data, Err: nil}
 }
 
 func (o *OrgApi) CreateAnnotationHead(headid, title, content string) db.Result {
@@ -210,12 +220,12 @@ func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) db.Result {
 	return db.Result{Data: true, Err: nil}
 }
 
-func (o *OrgApi) UpdateOrgHeadProperty(fileid, orgid, key, value string) db.Result {
+func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}
-	err = headdb.UpdateProperty(fileid, orgid, key, value)
+	err = headdb.UpdateProperty(orgid, key, value)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}
@@ -229,4 +239,13 @@ func (o *OrgApi) UpdateOrgHeadProperty(fileid, orgid, key, value string) db.Resu
 		headdb.UpdateHeadlineHash(orgid)
 	}()
 	return db.Result{Data: true, Err: nil}
+}
+
+func (o OrgApi) GetOrgHeadProperty(orgid, key string) db.Result {
+	headdb, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	value := headdb.GetPropertyValue(orgid, key)
+	return db.Result{Data: value, Err: nil}
 }

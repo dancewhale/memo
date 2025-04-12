@@ -11,6 +11,7 @@ var (
 	EmacsPropertySource   = "MEMO_NOTE_SOURCE"
 	EmacsPropertyWeight   = "MEMO_NOTE_WEIGHT"
 	EmacsPropertySchedule = "MEMO_NOTE_SCHEDULE"
+	EmacsPropertyColor    = "MEMO_NOTE_Color"
 )
 
 var Config *config

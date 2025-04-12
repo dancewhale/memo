@@ -287,6 +287,58 @@ func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
 	return nil
 }
 
+func (h *OrgHeadlineDB) GetAnnotationPropertyMap(headID, key string) map[string]string {
+	headline := dal.Headline
+	heads, err := headline.WithContext(context.Background()).Preload(headline.Properties).
+		Where(headline.HeadlineID.Eq(headID)).Find()
+	if err != nil {
+		logger.Errorf("Get headline by id %s error: %v", headID, err)
+		return nil
+	}
+	if len(heads) == 0 {
+		logger.Errorf("Get headline by id %s error: headline not found", headID)
+		return nil
+	}
+	var properties map[string]string
+	for _, head := range heads {
+		if head.Properties == nil {
+			logger.Infof("Get headline by id %s error: properties not found", headID)
+			continue
+		}
+		for _, property := range head.Properties {
+			if property.Key == key {
+				properties[head.ID] = property.Value
+			}
+		}
+	}
+	return properties
+}
+
+func (h *OrgHeadlineDB) GetPropertyValue(headID, key string) string {
+	headline := dal.Headline
+	head, err := headline.WithContext(context.Background()).Preload(headline.Properties).
+		Where(headline.ID.Eq(headID)).First()
+	if err != nil {
+		logger.Errorf("Get headline by id %s error: %v", headID, err)
+		return ""
+	}
+	if head == nil {
+		logger.Errorf("Get headline by id %s error: headline not found", headID)
+		return ""
+	}
+	if head.Properties == nil {
+		logger.Infof("Get headline by id %s error: properties not found", headID)
+		return ""
+	}
+	for _, property := range head.Properties {
+		if property.Key == key {
+			return property.Value
+		}
+	}
+	logger.Infof("Get headline by id %s error: property %s not found", headID, key)
+	return ""
+}
+
 func (h *OrgHeadlineDB) UpdateProperty(headID, key, value string) error {
 	headline := dal.Headline
 	fileID, err := h.GetFileIDByOrgID(headID)
@@ -343,22 +395,6 @@ func (h *OrgHeadlineDB) GetFileByHeadlineID(headlineID string) (*storage.File, e
 			return nil, logger.Errorf("Get file by id %s in db error: %v", *head.FileID, err)
 		}
 		return f, nil
-	}
-}
-
-func UpdateHeadScheduleTypeByID(headlineID, stype string) error {
-	headline := dal.Use(storage.Engine).Headline
-	if stype == storage.POSTPONE || stype == storage.NORMAL || stype == storage.SUSPEND {
-		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).
-			UpdateSimple(headline.ScheduledType.Value(stype))
-
-		if err != nil {
-			return logger.Errorf("Update headline %s body content error: %v", headlineID, err)
-		}
-		return nil
-	} else {
-		return logger.Errorf("Update headline %s type %s error: Only %s, %s, %s is allowed",
-			headlineID, stype, storage.NORMAL, storage.POSTPONE, storage.SUSPEND)
 	}
 }
 
