@@ -224,18 +224,15 @@ func (h *OrgHeadlineDB) GetFileIDByOrgID(orgid string) (*string, error) {
 			Find()
 
 		if err != nil {
-			return nil, logger.Errorf("Get headline by id %s failed ",
-				"during iteration: %v", currentID, err)
+			return nil, logger.Errorf("Get headline by id %s failed during iteration: %v", currentID, err)
 		}
 
 		if len(headlines) == 0 {
-			return nil, logger.Errorf("Head with id %s not found during ",
-				"iteration (started with %s).", currentID, orgid)
+			return nil, logger.Errorf("Head with id %s not found.", orgid)
 		}
 
 		if len(headlines) > 1 {
-			return nil, logger.Errorf("Multiple headlines found for id %s ",
-				"during iteration (started with %s).", currentID, orgid)
+			return nil, logger.Errorf("Multiple headlines found for id %s.", orgid)
 		}
 
 		foundHeadline := headlines[0]
@@ -244,8 +241,7 @@ func (h *OrgHeadlineDB) GetFileIDByOrgID(orgid string) (*string, error) {
 			// HeadlineID 为空，这是查找链的终点，检查 FileID
 			if foundHeadline.FileID == nil || *foundHeadline.FileID == "" {
 				// FileID 也为空，异常情况
-				return nil, logger.Errorf("Found terminal headline with id %s (started with %s), ",
-					"but its FileID is nil or empty.", foundHeadline.ID, orgid)
+				return nil, logger.Errorf("Found terminal headline with id %s (started with %s), but its FileID is nil or empty.", foundHeadline.ID, orgid)
 			} else {
 				// FileID 有效，返回 FileID
 				return foundHeadline.FileID, nil
@@ -257,8 +253,7 @@ func (h *OrgHeadlineDB) GetFileIDByOrgID(orgid string) (*string, error) {
 	}
 
 	// 如果循环次数过多，可能是数据结构有问题或陷入循环
-	return nil, logger.Errorf("Exceeded maximum iterations (%d) searching ",
-		"for FileID starting from orgid %s. Possible loop or deep nesting.", maxIterations, orgid)
+	return nil, logger.Errorf("Exceeded maximum iterations (%d) searching, for FileID starting from orgid %s. Possible loop or deep nesting.", maxIterations, orgid)
 }
 
 func (h *OrgHeadlineDB) UpdateHeadlineHash(id string) error {
@@ -299,7 +294,7 @@ func (h *OrgHeadlineDB) GetAnnotationPropertyMap(headID, key string) map[string]
 		logger.Errorf("Get headline by id %s error: headline not found", headID)
 		return nil
 	}
-	var properties map[string]string
+	properties := make(map[string]string)
 	for _, head := range heads {
 		if head.Properties == nil {
 			logger.Infof("Get headline by id %s error: properties not found", headID)

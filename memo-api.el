@@ -177,10 +177,15 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
     t))
 
 (defun memo-api--update-property (headid key value)
-  "Update the content of head by HEADID KEY VALUE."
+  "Update the property of head by HEADID KEY VALUE."
   (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" headid key value)))
     (memo--parse-result result))
   (message "Update finish."))
+
+(defun memo-api--get-property (headid key)
+  "Get the property of head by HEADID KEY VALUE."
+  (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headid key)))
+    (memo--parse-result result)))
 
 (defun memo-api--create-virt-head (id title content)
   "Create virt head with TITLE and CONTENT under head with ID."
@@ -203,29 +208,29 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (let ((result (memo-bridge-call-sync "GetFileHasNewCard")))
     (memo-make-file-from-return (memo--parse-result result))))
 
-(defun memo-api--get-file-children-heads (fileID)
+(defun memo-api--get-file-children-heads (fileid)
   "Get first heads of file by FILEID."
-  (let ((result (memo-bridge-call-sync "GetFileChildrenCard" fileID)))
+  (let ((result (memo-bridge-call-sync "GetFileChildrenCard" fileid)))
     (memo-make-note-from-return (memo--parse-result result))))
 
-(defun memo-api--get-head-children-heads (headID fileID)
+(defun memo-api--get-head-children-heads (headid fileid)
   "Get first child heads under head by HEADID FILEID."
-  (let ((result (memo-bridge-call-sync "GetHeadChildrenCard" headID fileID)))
+  (let ((result (memo-bridge-call-sync "GetHeadChildrenCard" headid fileid)))
     (memo-make-note-from-return (memo--parse-result result))))
 
 (defun memo-api--get-child-annotation-color-map (headid)
   "Get the color property map of children annotation by HEADID."
-  (let ((result (memo-bridge-call-sync "GetChildAnnotationPropertyMap" headID memo-prop-annotation-color)))
+  (let ((result (memo-bridge-call-sync "GetChildAnnotationPropertyMap" headid memo-prop-annotation-color)))
     (memo--parse-result result)))
 
 (defun memo-api--get-annotation-color (headid)
   "Get the color property by HEADID."
-  (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headID memo-prop-annotation-color)))
+  (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headid memo-prop-annotation-color)))
     (memo--parse-result result)))
 
 (defun memo-api--set-annotation-color (headid color)
   "Set the COLOR(string) property of head with HEADID."
-  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" headID memo-prop-annotation-color color)))
+  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" headid memo-prop-annotation-color color)))
     (memo--parse-result result)))
 
 ;; sync org file under dir.
