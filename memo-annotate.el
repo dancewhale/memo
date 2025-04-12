@@ -23,6 +23,7 @@
 
 (require 'font-lock)
 (require 'rx)
+(require 'memo-api) ; <-- Added require for memo-api
 
 ;(defface memo-annotate-default-face
 ;  '((t :background "LightGray")) ; Example: Light gray background for default
@@ -39,15 +40,21 @@
      :inherit highlight))
   "Face for the default highlighter pen.")
 
+;; 定义默认颜色字符串 (例如，使用 face 的背景色)
+;; 这里我们用 face symbol, 但也可以用具体颜色字符串 "#ecf7ed"
+;; 注意: 默认颜色主要在 memo-annotate-get-color 逻辑中使用
+(defvar memo-annotate-default-color "#ecf7ed"
+  "Default background color string to use when no specific color is set.")
+
 ;; 使用哈希表存储 ID (string) -> Color (string) 的映射
 (defvar memo-annotate-color-map (make-hash-table :test 'equal)
   "Hash table mapping memo head IDs (string) to background color strings.")
 
-;; 2. 辅助函数：根据 ID 获取颜色字符串
-(defun memo-annotate--get-color-for-id (id)
-  "Return the background color string associated with ID from `memo-annotate-color-map`.
-Returns nil if ID is not found."
-  (gethash id memo-annotate-color-map))
+;; 移除旧的内部获取函数
+;; (defun memo-annotate--get-color-for-id (id)
+;;   "Return the background color string associated with ID from `memo-annotate-color-map`.
+;; Returns nil if ID is not found."
+;;   (gethash id memo-annotate-color-map))
 
 (defconst memo-annotate-regex
   (rx "<memo-head-id:"
@@ -67,20 +74,18 @@ Returns nil if ID is not found."
 
      ;; Group 2 (Content): 应用动态颜色，并设置 text property.
      (2 (let* ((id (match-string-no-properties 1))
-               (color (memo-annotate--get-color-for-id id)))
-          ;; prog1 返回它的第一个参数（face spec 或 face symbol），
-          ;; 同时执行其他表达式（设置 text property）。
-          (prog1 (if color
-                     ;; 如果找到颜色，返回一个 face 属性列表
+               ;; 使用新的获取颜色函数
+               (color (memo-annotate-get-color id)))
+          (prog1 (if (and color (not (string-equal color ""))) ; 确保 color 有效
                      `(face (:background ,color))
-                   ;; 否则，返回默认的 face symbol
+                   ;; 使用默认 face
                    'memo-annotate-default-face)
-            ;; 无论是否找到颜色，都设置 memo-head-id 属性
+            ;; 设置 memo-head-id 属性
             (put-text-property (match-beginning 2) (match-end 2) 'memo-head-id id))))
 
      ;; Group 0 (整个匹配): 隐藏结束标签
      (0 (prog1 nil
-           (put-text-property (match-end 2) (match-end 0) 'invisible t)))))
+           (put-text-property (match-end 2) (match-end 0) 'invisible t))))) 
   "Font lock keywords for memo-annotate-mode.")
 
 ;;;###autoload
@@ -102,13 +107,48 @@ Returns nil if ID is not found."
     (font-lock-flush))) ; 刷新以移除高亮
 
 ;; 4. 提供用于更新映射并刷新高亮的函数
+
+(defun memo-annotate-update-color-map (parent-headid)
+  "Fetch child annotation colors for PARENT-HEADID from the backend
+and update the local `memo-annotate-color-map`.
+Refreshes font-lock highlighting."
+  (interactive "sParent Head ID: ")
+  (let ((color-alist (memo-api--get-child-annotation-color-map parent-headid)))
+    (when (listp color-alist)
+      (dolist (pair color-alist)
+        (when (consp pair)
+          (let ((id (car pair))
+                (color (cdr pair)))
+            (when (and (stringp id) (stringp color))
+              (puthash id color memo-annotate-color-map))))))
+    ;; 刷新高亮
+    (when (bound-and-true-p memo-annotate-mode)
+      (font-lock-flush))))
+
+(defun memo-annotate-get-color (id)
+  "Get the background color string for memo annotation with ID.
+Checks local map first, then queries backend via `memo-api--get-annotation-color`.
+Returns the specific color, or `memo-annotate-default-color` if none found.
+Updates local map if color is fetched from backend."
+  (or (gethash id memo-annotate-color-map)
+      (let ((api-color (memo-api--get-annotation-color id)))
+        (if (and api-color (not (string-equal api-color "")) (not (eq api-color 'null))) ; API 返回有效颜色
+            (progn
+              (puthash id api-color memo-annotate-color-map) ; 更新本地 map
+              api-color) ; 返回 API 颜色
+          ;; API 未返回有效颜色，返回默认颜色
+          memo-annotate-default-color))))
+
 (defun memo-annotate-set-color (id color)
   "Set the background COLOR (string) for memo annotation with ID (string).
-Refreshes font-lock highlighting in the current buffer."
-  (interactive "sMemo ID: \nsColor: ") ; 示例交互式输入
+Updates local map, calls backend API `memo-api--set-annotation-color`,
+and refreshes font-lock highlighting."
+  (interactive "sMemo ID: \nsColor: ")
   (puthash id color memo-annotate-color-map)
-  ;; 关键：修改映射后调用 font-lock-flush 使更改生效
-  (when (derived-mode-p 'memo-annotate-mode) ; 或检查 major-mode/buffer-local var
+  ;; 调用 API 更新后端
+  (memo-api--set-annotation-color id color)
+  ;; 刷新高亮
+  (when (bound-and-true-p memo-annotate-mode)
     (font-lock-flush)))
 
 (defun memo-annotate-remove-color (id)
