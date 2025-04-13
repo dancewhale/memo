@@ -50,12 +50,6 @@
 (defvar memo-annotate-color-map (make-hash-table :test 'equal)
   "Hash table mapping memo head IDs (string) to background color strings.")
 
-;; 移除旧的内部获取函数
-;; (defun memo-annotate--get-color-for-id (id)
-;;   "Return the background color string associated with ID from `memo-annotate-color-map`.
-;; Returns nil if ID is not found."
-;;   (gethash id memo-annotate-color-map))
-
 (defconst memo-annotate-regex
   (rx "<memo-head-id:"
       (group (one-or-more (in "0-9" "A-Z" "a-z" "-"))) ; Group 1: ID
@@ -107,7 +101,6 @@
     (font-lock-flush))) ; 刷新以移除高亮
 
 ;; 4. 提供用于更新映射并刷新高亮的函数
-
 (defun memo-annotate-update-color-map (parent-headid)
   "Fetch child annotation colors for PARENT-HEADID from the backend
 and update the local `memo-annotate-color-map`.
@@ -188,6 +181,45 @@ Refreshes font-lock highlighting."
   "Return the memo head ID associated with the text at POS (defaults to point).
 Returns nil if no memo head ID property is found at POS."
   (get-text-property (or pos (point)) 'memo-head-id))
+
+
+
+;;;  annotation action.
+(defun memo-annotate-insert-tags (start end headid)
+  "Insert memo annotation tags around region from START to END with HEADID.
+   This will insert <memo-head-id:HEADID> before START and </memo-head-id> after END."
+  (save-excursion
+    (goto-char end)
+    (insert "</memo-head-id>")
+    (goto-char start)
+    (insert (format "<memo-head-id:%s>" headid))
+    ;; 刷新高亮
+    (when (bound-and-true-p memo-annotate-mode)
+      (font-lock-flush))))
+
+(defun memo-annotate-point-inside-p (&optional pos)
+  "Return t if point (or POS if provided) is inside a memo annotation.
+   Returns nil otherwise."
+  (let ((pos (or pos (point)))
+        (inside nil))
+    (save-excursion
+      (goto-char pos)
+      ;; 首先检查当前位置是否有memo-head-id属性
+      (if (get-text-property pos 'memo-head-id)
+          (setq inside t)
+        ;; 如果没有，尝试向前搜索开始标签
+        (let ((start-pos nil)
+              (end-pos nil))
+          (save-excursion
+            ;; 向前搜索开始标签
+            (when (re-search-backward memo-annotate-regex nil t)
+              (setq start-pos (match-beginning 0))
+              (setq end-pos (match-end 0))
+              ;; 向后搜索结束标签
+              (when (re-search-forward "</memo-head-id>" nil t)
+                (when (and (> pos start-pos) (< pos (point)))
+                  (setq inside t)))))))
+      inside))
 
 (provide 'memo-annotate)
 
