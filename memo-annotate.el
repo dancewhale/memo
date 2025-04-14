@@ -221,7 +221,7 @@ Returns nil if no memo head ID property is found at POS."
               (when (re-search-forward "</memo-head-id>" nil t)
                 (when (and (> pos start-pos) (< pos (point)))
                   (setq inside t)))))))
-      inside))
+      inside)))
 
 (defun memo-annotate-get-annotation-at-point (&optional pos)
   "Return a memo-annotation object if point (or POS if provided) is inside a memo annotation.
@@ -262,11 +262,11 @@ Returns nil if no memo head ID property is found at POS."
               (when (re-search-forward "</memo-head-id>" nil t)
                 (setq end-pos (match-end 0))
                 (when (and (> pos start-pos) (< pos end-pos))
-                  (make-memo-annotation :begin start-pos :end end-pos :id id)))))))))
+                  (make-memo-annotation :begin start-pos :end end-pos :id id))))))))))
 
 (defun memo-annotate-get-annotations-in-region (start end)
   "Return a list of memo-annotation objects in the region from START to END.
-   Returns nil if no annotations are found.
+Returns nil if no annotations are found.
    This function also includes annotations that partially overlap with the region."
   (let ((annotations nil)
         (start-anno nil)

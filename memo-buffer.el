@@ -166,6 +166,8 @@
       (insert (memo-api--get-content-byid (memo-note-id head)))
       (set-buffer-modified-p nil)
       (org-mode)
+      (setq-local header-line-format (memo-note-title head))
+      (memo-set-local-header-line-face)
       (goto-char (point-min))
       (setq memo--buffer-local-note head)
       (setq memo--buffer-local-note-path path)
@@ -293,9 +295,20 @@ This function must be used with an active region. The region will be
       (insert (memo-api--get-virt-file-byid (memo-note-id head)))
       (set-buffer-modified-p nil)
       (org-mode)
+      (setq-local header-line-format (memo-note-title head))
+      (memo-set-local-header-line-face)
       (setq memo--buffer-local-note head)
       (setq write-contents-functions '(memo-update-current-virt-note-content)))))
 
+(defun memo-set-local-header-line-face ()
+  "设置当前缓冲区的 header-line face 样式。"
+  (interactive)
+  (setq-local face-remapping-alist
+              (append face-remapping-alist
+                      '((header-line :height 1.5
+                                     :background "#333"
+                                     :foreground "#ddd"
+                                     :box (:line-width 3 :color "#444"))))))
 
 ;;;-------------------------------------------------
 ;;  treemacs action
