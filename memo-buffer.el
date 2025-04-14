@@ -222,17 +222,18 @@
       (goto-char (point-min)))))
 
 ;; annotation head
-(defun memo-get-content-from-input-buffer ()
+(defun memo-get-content-from-input-buffer (&optional default)
   "Get content from a temporary input buffer with org-mode.
- Return the content entered by the user."
+DEFAULT is the initial content to insert in the buffer.
+Return the content entered by the user."
   (let ((memo--window-config (current-window-configuration))
         (memo--temp-content nil)
         (temp-buffer (generate-new-buffer "*memo-content-input*")))
     (with-current-buffer temp-buffer
       (org-mode)
-      (insert "Enter content here, then press C-c C-c to confirm")
-      (goto-char (point-min))
-      (kill-line)
+      (when default
+        (insert default)
+        (insert "\n\n"))
       (let ((map (make-sparse-keymap)))
         (define-key map (kbd "C-c C-c")
           (lambda ()
@@ -248,26 +249,35 @@
       (recursive-edit))
     memo--temp-content))
 
-(defun memo-create-virt-head ()
-  "Create a virtual head with user input title and content under head with ID."
+(defun memo-create-annotation ()
+  "Create a annotation with user input title and content under head with ID.
+This function must be used with an active region. The region will be
+ annotated after creating the annotation head."
   (interactive)
   (if (not (equal (buffer-name (current-buffer)) memo--read-buffer-name))
       (user-error "This function can only be used in the memo read buffer")
-    (let* ((id (memo-note-id memo--buffer-local-note))
-           (content (if (use-region-p)
-                        (buffer-substring-no-properties (region-beginning) (region-end))
-                      (memo-get-content-from-input-buffer)))
-           (title  (read-string "Enter title (or leave empty to use content start): ")))
-      (if (string-empty-p title)
-          (setq title (substring content 0 (min (length content) 24))))
-      (when (and title content)
-        (memo-api--create-virt-head id title content)
-        (message "Virtual head created successfully."))
-      (when (or (string-empty-p title) (string-empty-p content))
-        (user-error "Title and content cannot be empty")))))
+    (if (not (use-region-p))
+        (user-error "You must select a region to create a annotation head")
+      (let* ((id (memo-note-id memo--buffer-local-note))
+             (region-start (region-beginning))
+             (region-end (region-end))
+             (annotations (memo-annotate-get-annotations-in-region region-start region-end)))
+        (when annotations
+          (user-error "The selected region contains annotations. Cannot create annotation head"))
+        (let* ((content (buffer-substring-no-properties region-start region-end))
+               (processed-content (memo-get-content-from-input-buffer content))
+               (title (read-string "Enter title (or leave empty to use content start): ")))
+          (when (string-empty-p title)
+            (setq title (substring processed-content 0 (min (length processed-content) 24))))
+          (if (and title (not (string-empty-p processed-content)))
+              (let ((head-id (memo-api--create-annotation-head id title processed-content)))
+                ;; Apply annotation to the region using the returned ID from API
+                (memo-annotate-insert-tags region-start region-end head-id)
+                (message "Virtual head created successfully and region annotated."))
+            (user-error "Title and content cannot be empty")))))))
 
-(defun memo-open-virthead-in-virt-buffer ()
-  "Open virt head under current HEAD in virt buffer."
+(defun memo-open-annotation-in-virt-buffer ()
+  "Open annotation head under current HEAD in virt buffer."
   (interactive)
   (let* ((buf (get-buffer-create memo--virt-buffer-name))
 	 (head memo--buffer-local-note))

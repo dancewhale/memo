@@ -28,12 +28,6 @@
   (cdr (assoc (read key) x)))
 
 ;;; Properties and Value setting.
-(defconst memo-note-normal-type  1
-  "Memo virt type.")
-
-(defconst memo-note-virt-type  2
-  "Memo virt type.")
-
 (defconst memo-prop-note-schedule  "MEMO_NOTE_SCHEDULE"
   "Property used to store the cards type;
 and used for backend to indentify memo head.")
@@ -187,20 +181,20 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headid key)))
     (memo--parse-result result)))
 
-(defun memo-api--create-virt-head (id title content)
-  "Create virt head with TITLE and CONTENT under head with ID."
-  (let ((result (memo-bridge-call-sync "CreateVirtHead" id title content)))
-    (memo--parse-result result)
-    t))
-
-(defun memo-api--update-virt-file (headid content)
-  "Upload the CONTENT of file by HEADID."
-  (let ((result (memo-bridge-call-sync "UploadVirtFile" headid content 1)))
+(defun memo-api--create-annotation-head (id title content)
+  "Create annotation head with TITLE and CONTENT under head with ID.
+   Returns the ID of the created annotation head."
+  (let ((result (memo-bridge-call-sync "CreateAnnotationHead" id title content)))
     (memo--parse-result result)))
 
-(defun memo-api--get-virt-file-byid (headid)
+(defun memo-api--update-annotation-file (headid content)
+  "Upload the CONTENT of file by HEADID."
+  (let ((result (memo-bridge-call-sync "UploadAnnotationFile" headid content 1)))
+    (memo--parse-result result)))
+
+(defun memo-api--get-annotation-file-byid (headid)
   "Get the content of file by HEADID."
-  (let ((result (memo-bridge-call-sync "GetVirtFile" headid)))
+  (let ((result (memo-bridge-call-sync "GetAnnotationFile" headid)))
     (memo--parse-result result)))
 
 (defun memo-api--get-read-files ()
