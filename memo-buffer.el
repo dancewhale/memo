@@ -186,13 +186,17 @@
   (let* ((id  (memo-note-id memo--buffer-local-note))
 	 (file (memo-api--get-note-path id))
 	 (position (org-id-find-id-in-file id file 'markerp)))
-      (pop-to-buffer-same-window (marker-buffer  position))
-      (goto-char position)
-      (move-marker position nil)
-      (widen)
-      (org-fold-show-context)
-      (memo-narrow-to-org-subtree-content)
-      (org-tidy-mode 1)))
+    (if (not position)
+        (user-error "Can't find id '%s' in file '%s'" id file))
+    (pop-to-buffer-same-window (marker-buffer  position))
+    (goto-char position)
+    (move-marker position nil)
+    (widen)
+    (org-fold-show-context)
+    (memo-narrow-to-org-subtree-content)
+    (org-tidy-mode 1)))
+
+
 
 ;; jump to the source of node.
 (defun memo-goto-source-direct ()
@@ -305,6 +309,14 @@ This function must be used with an active region. The region will be
       ())))
 
 
+
+(defun memo-reload-org (filepath)
+  "Force revert buffer of FILEPATH if it exists, otherwise return nil."
+  (let ((buf (get-file-buffer filepath)))
+    (when buf
+      (with-current-buffer buf
+        (revert-buffer t t t)
+        t))))
 
 (provide 'memo-buffer)
 ;;; memo-buffer.el ends here

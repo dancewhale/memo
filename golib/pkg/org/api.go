@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"memo/pkg/card"
+	"memo/pkg/client"
 	"memo/pkg/logger"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
@@ -180,6 +181,11 @@ func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
 	err = file.SaveToDiskFile(filePath)
 	if err != nil {
 		return err
+	}
+	if filePath == "" {
+		client.EClient.EvalInEmacs("memo-reload-org", file.path)
+	} else {
+		client.EClient.EvalInEmacs("memo-reload-org", filePath)
 	}
 	return nil
 }
