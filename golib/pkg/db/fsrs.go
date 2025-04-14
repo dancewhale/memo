@@ -139,7 +139,7 @@ func (f *FsrsDB) Review(rlog *storage.ReviewLog, fsrsinfo *storage.FsrsInfo) err
 		return logger.Errorf("Add review log in db failed: %v", err)
 	}
 
-	return nil
+	return db.Commit()
 }
 
 func (f *FsrsDB) UndoReview(rlog *storage.ReviewLog) error {
@@ -168,10 +168,7 @@ func (f *FsrsDB) UndoReview(rlog *storage.ReviewLog) error {
 		return logger.Errorf("Delete review log failed: %v", err)
 	}
 
-	if err := db.Commit().Error; err != nil {
-		return logger.Errorf("Commit transaction failed: %v", err)
-	}
-	return nil
+	return db.Commit()
 }
 
 func (f *FsrsDB) GetTodayLatestReviewLog(headlineID string) (*storage.ReviewLog, error) {
