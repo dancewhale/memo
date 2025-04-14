@@ -279,7 +279,7 @@ This function must be used with an active region. The region will be
               (let ((head-id (memo-api--create-annotation-head id title processed-content)))
                 ;; Apply annotation to the region using the returned ID from API
                 (memo-annotate-insert-tags region-start region-end head-id)
-                (message "Virtual head created successfully and region annotated."))
+                (message "Annotation head created successfully and region annotated."))
             (user-error "Title and content cannot be empty")))))))
 
 (defun memo-open-annotation-in-virt-buffer ()

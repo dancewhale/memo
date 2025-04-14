@@ -55,17 +55,17 @@ func (o *OrgApi) GetChildrenAnnotationPropertyMap(headid, key string) db.Result 
 func (o *OrgApi) CreateAnnotationHead(headid, title, content string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
-		return db.Result{Data: false, Err: err}
+		return db.Result{Data: "", Err: err}
 	}
 	content = strings.ReplaceAll(content, "\\\\", "\\")
 	content = strings.ReplaceAll(content, "\\\"", "\"")
 	content += "\n"
-	err = headdb.CreateAnnotationHead(headid, title, content)
+	id, err := headdb.CreateAnnotationHead(headid, title, content)
 	if err != nil {
-		return db.Result{Data: false, Err: err}
+		return db.Result{Data: "", Err: err}
 	}
 	card.ScanInitFsrs()
-	return db.Result{Data: true, Err: nil}
+	return db.Result{Data: id, Err: nil}
 }
 
 func (o *OrgApi) GetAnnotationfileContent(headid string) db.Result {

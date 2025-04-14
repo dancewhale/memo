@@ -411,19 +411,19 @@ func (h *OrgHeadlineDB) GetFileByHeadlineID(headlineID string) (*storage.File, e
 	}
 }
 
-func (h *OrgHeadlineDB) CreateAnnotationHead(headID, title, content string) error {
+func (h *OrgHeadlineDB) CreateAnnotationHead(headID, title, content string) (string, error) {
 	head := dal.Headline
 	parentHead, err := head.WithContext(context.Background()).
-		Where(head.HeadlineID.Eq(headID)).
+		Where(head.ID.Eq(headID)).
 		First()
 	if err != nil {
-		return logger.Errorf("CreateAnnotationHead: Find parentHead with id %s error: %v", headID, err)
+		return "", logger.Errorf("CreateAnnotationHead: Find parentHead with id %s error: %v", headID, err)
 	}
 
 	count, err := head.WithContext(context.Background()).
 		Where(head.HeadlineID.Eq(headID)).Where(head.Level.Eq(1)).Count()
 	if err != nil {
-		return logger.Errorf("Count virtual headline by parent id %s error: %v", headID, err)
+		return "", logger.Errorf("Count virtual headline by parent id %s error: %v", headID, err)
 	}
 
 	headline := storage.Headline{ID: parser.GenerateID(),
@@ -439,7 +439,7 @@ func (h *OrgHeadlineDB) CreateAnnotationHead(headID, title, content string) erro
 
 	err = head.WithContext(context.Background()).Create(&headline)
 	if err != nil {
-		return logger.Errorf("Create virtual headline by parent id failed: %v", err)
+		return "", logger.Errorf("Create virtual headline by parent id failed: %v", err)
 	}
-	return err
+	return headline.ID, err
 }

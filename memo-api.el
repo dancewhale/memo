@@ -183,7 +183,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 
 (defun memo-api--create-annotation-head (id title content)
   "Create annotation head with TITLE and CONTENT under head with ID.
-   Returns the ID of the created annotation head."
+Returns the ID of the created annotation head."
   (let ((result (memo-bridge-call-sync "CreateAnnotationHead" id title content)))
     (memo--parse-result result)))
 
