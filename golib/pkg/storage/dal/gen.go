@@ -21,7 +21,6 @@ var (
 	File      *file
 	FsrsInfo  *fsrsInfo
 	Headline  *headline
-	Location  *location
 	Property  *property
 	ReviewLog *reviewLog
 	Tag       *tag
@@ -33,7 +32,6 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	File = &Q.File
 	FsrsInfo = &Q.FsrsInfo
 	Headline = &Q.Headline
-	Location = &Q.Location
 	Property = &Q.Property
 	ReviewLog = &Q.ReviewLog
 	Tag = &Q.Tag
@@ -46,7 +44,6 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		File:      newFile(db, opts...),
 		FsrsInfo:  newFsrsInfo(db, opts...),
 		Headline:  newHeadline(db, opts...),
-		Location:  newLocation(db, opts...),
 		Property:  newProperty(db, opts...),
 		ReviewLog: newReviewLog(db, opts...),
 		Tag:       newTag(db, opts...),
@@ -60,7 +57,6 @@ type Query struct {
 	File      file
 	FsrsInfo  fsrsInfo
 	Headline  headline
-	Location  location
 	Property  property
 	ReviewLog reviewLog
 	Tag       tag
@@ -75,7 +71,6 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		File:      q.File.clone(db),
 		FsrsInfo:  q.FsrsInfo.clone(db),
 		Headline:  q.Headline.clone(db),
-		Location:  q.Location.clone(db),
 		Property:  q.Property.clone(db),
 		ReviewLog: q.ReviewLog.clone(db),
 		Tag:       q.Tag.clone(db),
@@ -97,7 +92,6 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		File:      q.File.replaceDB(db),
 		FsrsInfo:  q.FsrsInfo.replaceDB(db),
 		Headline:  q.Headline.replaceDB(db),
-		Location:  q.Location.replaceDB(db),
 		Property:  q.Property.replaceDB(db),
 		ReviewLog: q.ReviewLog.replaceDB(db),
 		Tag:       q.Tag.replaceDB(db),
@@ -109,7 +103,6 @@ type queryCtx struct {
 	File      IFileDo
 	FsrsInfo  IFsrsInfoDo
 	Headline  IHeadlineDo
-	Location  ILocationDo
 	Property  IPropertyDo
 	ReviewLog IReviewLogDo
 	Tag       ITagDo
@@ -121,7 +114,6 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		File:      q.File.WithContext(ctx),
 		FsrsInfo:  q.FsrsInfo.WithContext(ctx),
 		Headline:  q.Headline.WithContext(ctx),
-		Location:  q.Location.WithContext(ctx),
 		Property:  q.Property.WithContext(ctx),
 		ReviewLog: q.ReviewLog.WithContext(ctx),
 		Tag:       q.Tag.WithContext(ctx),

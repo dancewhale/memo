@@ -36,12 +36,15 @@ func newReviewLog(db *gorm.DB, opts ...gen.DOOption) reviewLog {
 	_reviewLog.ElapsedDays = field.NewUint64(tableName, "elapsed_days")
 	_reviewLog.Review = field.NewTime(tableName, "review")
 	_reviewLog.State = field.NewInt8(tableName, "state")
-	_reviewLog.Due = field.NewTime(tableName, "due")
-	_reviewLog.Stability = field.NewFloat64(tableName, "stability")
-	_reviewLog.Difficulty = field.NewFloat64(tableName, "difficulty")
-	_reviewLog.Reps = field.NewUint64(tableName, "reps")
-	_reviewLog.Lapses = field.NewUint64(tableName, "lapses")
-	_reviewLog.LastReview = field.NewTime(tableName, "last_review")
+	_reviewLog.CardDue = field.NewTime(tableName, "card_due")
+	_reviewLog.CardStability = field.NewFloat64(tableName, "card_stability")
+	_reviewLog.CardDifficulty = field.NewFloat64(tableName, "card_difficulty")
+	_reviewLog.CardElapsedDays = field.NewUint64(tableName, "card_elapsed_days")
+	_reviewLog.CardScheduledDays = field.NewUint64(tableName, "card_scheduled_days")
+	_reviewLog.CardReps = field.NewUint64(tableName, "card_reps")
+	_reviewLog.CardLapses = field.NewUint64(tableName, "card_lapses")
+	_reviewLog.CardState = field.NewInt8(tableName, "card_state")
+	_reviewLog.CardLastReview = field.NewTime(tableName, "card_last_review")
 	_reviewLog.HeadlineID = field.NewString(tableName, "headline_id")
 
 	_reviewLog.fillFieldMap()
@@ -52,23 +55,26 @@ func newReviewLog(db *gorm.DB, opts ...gen.DOOption) reviewLog {
 type reviewLog struct {
 	reviewLogDo
 
-	ALL           field.Asterisk
-	ID            field.Uint
-	CreatedAt     field.Time
-	UpdatedAt     field.Time
-	DeletedAt     field.Field
-	Rating        field.Int8
-	ScheduledDays field.Uint64
-	ElapsedDays   field.Uint64
-	Review        field.Time
-	State         field.Int8
-	Due           field.Time
-	Stability     field.Float64
-	Difficulty    field.Float64
-	Reps          field.Uint64
-	Lapses        field.Uint64
-	LastReview    field.Time
-	HeadlineID    field.String
+	ALL               field.Asterisk
+	ID                field.Uint
+	CreatedAt         field.Time
+	UpdatedAt         field.Time
+	DeletedAt         field.Field
+	Rating            field.Int8
+	ScheduledDays     field.Uint64
+	ElapsedDays       field.Uint64
+	Review            field.Time
+	State             field.Int8
+	CardDue           field.Time
+	CardStability     field.Float64
+	CardDifficulty    field.Float64
+	CardElapsedDays   field.Uint64
+	CardScheduledDays field.Uint64
+	CardReps          field.Uint64
+	CardLapses        field.Uint64
+	CardState         field.Int8
+	CardLastReview    field.Time
+	HeadlineID        field.String
 
 	fieldMap map[string]field.Expr
 }
@@ -94,12 +100,15 @@ func (r *reviewLog) updateTableName(table string) *reviewLog {
 	r.ElapsedDays = field.NewUint64(table, "elapsed_days")
 	r.Review = field.NewTime(table, "review")
 	r.State = field.NewInt8(table, "state")
-	r.Due = field.NewTime(table, "due")
-	r.Stability = field.NewFloat64(table, "stability")
-	r.Difficulty = field.NewFloat64(table, "difficulty")
-	r.Reps = field.NewUint64(table, "reps")
-	r.Lapses = field.NewUint64(table, "lapses")
-	r.LastReview = field.NewTime(table, "last_review")
+	r.CardDue = field.NewTime(table, "card_due")
+	r.CardStability = field.NewFloat64(table, "card_stability")
+	r.CardDifficulty = field.NewFloat64(table, "card_difficulty")
+	r.CardElapsedDays = field.NewUint64(table, "card_elapsed_days")
+	r.CardScheduledDays = field.NewUint64(table, "card_scheduled_days")
+	r.CardReps = field.NewUint64(table, "card_reps")
+	r.CardLapses = field.NewUint64(table, "card_lapses")
+	r.CardState = field.NewInt8(table, "card_state")
+	r.CardLastReview = field.NewTime(table, "card_last_review")
 	r.HeadlineID = field.NewString(table, "headline_id")
 
 	r.fillFieldMap()
@@ -117,7 +126,7 @@ func (r *reviewLog) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (r *reviewLog) fillFieldMap() {
-	r.fieldMap = make(map[string]field.Expr, 16)
+	r.fieldMap = make(map[string]field.Expr, 19)
 	r.fieldMap["id"] = r.ID
 	r.fieldMap["created_at"] = r.CreatedAt
 	r.fieldMap["updated_at"] = r.UpdatedAt
@@ -127,12 +136,15 @@ func (r *reviewLog) fillFieldMap() {
 	r.fieldMap["elapsed_days"] = r.ElapsedDays
 	r.fieldMap["review"] = r.Review
 	r.fieldMap["state"] = r.State
-	r.fieldMap["due"] = r.Due
-	r.fieldMap["stability"] = r.Stability
-	r.fieldMap["difficulty"] = r.Difficulty
-	r.fieldMap["reps"] = r.Reps
-	r.fieldMap["lapses"] = r.Lapses
-	r.fieldMap["last_review"] = r.LastReview
+	r.fieldMap["card_due"] = r.CardDue
+	r.fieldMap["card_stability"] = r.CardStability
+	r.fieldMap["card_difficulty"] = r.CardDifficulty
+	r.fieldMap["card_elapsed_days"] = r.CardElapsedDays
+	r.fieldMap["card_scheduled_days"] = r.CardScheduledDays
+	r.fieldMap["card_reps"] = r.CardReps
+	r.fieldMap["card_lapses"] = r.CardLapses
+	r.fieldMap["card_state"] = r.CardState
+	r.fieldMap["card_last_review"] = r.CardLastReview
 	r.fieldMap["headline_id"] = r.HeadlineID
 }
 

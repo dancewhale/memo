@@ -32,7 +32,6 @@ type OrgBackupData struct {
 	Properties []*storage.Property `json:"properties"`
 	Clocks     []*storage.Clock    `json:"clocks"`
 	Tags       []*storage.Tag      `json:"tags"`
-	Locations  []*storage.Location `json:"locations"`
 	BackupTime time.Time           `json:"backup_time"`
 }
 
@@ -349,13 +348,6 @@ func (f *FsrsDB) ExportOrgData() (string, error) {
 		return "", logger.Errorf("Get Tag data failed: %v", err)
 	}
 
-	// 获取Location表数据
-	location := dal.Location
-	locations, err := location.WithContext(ctx).Find()
-	if err != nil {
-		return "", logger.Errorf("Get Location data failed: %v", err)
-	}
-
 	// 创建备份数据结构
 	backupData := OrgBackupData{
 		Files:      files,
@@ -363,7 +355,6 @@ func (f *FsrsDB) ExportOrgData() (string, error) {
 		Properties: properties,
 		Clocks:     clocks,
 		Tags:       tags,
-		Locations:  locations,
 		BackupTime: currentTime,
 	}
 
@@ -406,7 +397,6 @@ func (f *FsrsDB) ImportOrgData(date string) error {
 	property := dal.Property
 	clock := dal.Clock
 	tag := dal.Tag
-	location := dal.Location
 
 	// 删除数据时需要考虑外键约束，按照依赖关系顺序删除
 	_, err = tag.WithContext(ctx).Unscoped().Delete()
@@ -427,11 +417,6 @@ func (f *FsrsDB) ImportOrgData(date string) error {
 		return logger.Errorf("Delete existing Clock data failed: %v", err)
 	}
 
-	_, err = location.WithContext(ctx).Unscoped().Delete()
-	if err != nil {
-		tx.Rollback()
-		return logger.Errorf("Delete existing Location data failed: %v", err)
-	}
 	_, err = headline.WithContext(ctx).Unscoped().Delete()
 	if err != nil {
 		tx.Rollback()
@@ -478,13 +463,7 @@ func (f *FsrsDB) ImportOrgData(date string) error {
 			return logger.Errorf("Import Tag data failed: %v", err)
 		}
 	}
-	for _, locationData := range backupData.Locations {
-		err = location.WithContext(ctx).Create(locationData)
-		if err != nil {
-			tx.Rollback()
-			return logger.Errorf("Import Location data failed: %v", err)
-		}
-	}
+
 	// 提交事务并清除缓存
 	return commitTransactionAndInvalidateCache(tx)
 }

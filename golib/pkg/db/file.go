@@ -142,7 +142,7 @@ func FileDBUpdate(fd *storage.File, force bool, filetype int) error {
 		if head != nil {
 			if head.AnnotationFileHash == nil || *head.AnnotationFileHash != fd.Hash || force {
 				_, err := h.WithContext(context.Background()).Where(h.ID.Eq(fd.ID)).
-					UpdateSimple(h.VirtFileHash.Value(fd.Hash))
+					UpdateSimple(h.AnnotationFileHash.Value(fd.Hash))
 				if err != nil {
 					return logger.Errorf("Update virt file record in db error: %v", err)
 				}

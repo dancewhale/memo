@@ -85,15 +85,6 @@ type Tag struct {
 	Name       string   `gorm:"primarykey;not null"`
 }
 
-// Wait for complement.
-type Location struct {
-	ID       uint `gorm:"primarykey"`
-	Protocol string
-	Link     string
-	ExLink   string
-	Type     string
-}
-
 //--------------------------------------------------
 // output for sql struct.
 

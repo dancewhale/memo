@@ -47,7 +47,7 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 	_headline.Priority = field.NewString(tableName, "priority")
 	_headline.FileID = field.NewString(tableName, "file_id")
 	_headline.HeadlineID = field.NewString(tableName, "headline_id")
-	_headline.VirtFileHash = field.NewString(tableName, "virt_file_hash")
+	_headline.AnnotationFileHash = field.NewString(tableName, "annotation_file_hash")
 	_headline.Properties = headlineHasManyProperties{
 		db: db.Session(&gorm.Session{}),
 
@@ -66,7 +66,7 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 			Children struct {
 				field.RelationField
 			}
-			VirtChildren struct {
+			AnnotationChildren struct {
 				field.RelationField
 			}
 			LogBook struct {
@@ -106,10 +106,10 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 			}{
 				RelationField: field.NewRelation("Properties.Headline.Children", "storage.Headline"),
 			},
-			VirtChildren: struct {
+			AnnotationChildren: struct {
 				field.RelationField
 			}{
-				RelationField: field.NewRelation("Properties.Headline.VirtChildren", "storage.Headline"),
+				RelationField: field.NewRelation("Properties.Headline.AnnotationChildren", "storage.Headline"),
 			},
 			LogBook: struct {
 				field.RelationField
@@ -146,10 +146,10 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 		RelationField: field.NewRelation("Children", "storage.Headline"),
 	}
 
-	_headline.VirtChildren = headlineHasManyVirtChildren{
+	_headline.AnnotationChildren = headlineHasManyAnnotationChildren{
 		db: db.Session(&gorm.Session{}),
 
-		RelationField: field.NewRelation("VirtChildren", "storage.Headline"),
+		RelationField: field.NewRelation("AnnotationChildren", "storage.Headline"),
 	}
 
 	_headline.LogBook = headlineHasManyLogBook{
@@ -178,33 +178,33 @@ func newHeadline(db *gorm.DB, opts ...gen.DOOption) headline {
 type headline struct {
 	headlineDo
 
-	ALL           field.Asterisk
-	ID            field.String
-	CreatedAt     field.Time
-	UpdatedAt     field.Time
-	DeletedAt     field.Field
-	Weight        field.Int64
-	Source        field.String
-	ScheduledType field.String
-	Title         field.String
-	Hash          field.String
-	Content       field.String
-	ParentID      field.String
-	Level         field.Int
-	Order_        field.Int
-	Status        field.String
-	Scheduled     field.Time
-	Deadline      field.Time
-	Closed        field.Time
-	Priority      field.String
-	FileID        field.String
-	HeadlineID    field.String
-	VirtFileHash  field.String
-	Properties    headlineHasManyProperties
+	ALL                field.Asterisk
+	ID                 field.String
+	CreatedAt          field.Time
+	UpdatedAt          field.Time
+	DeletedAt          field.Field
+	Weight             field.Int64
+	Source             field.String
+	ScheduledType      field.String
+	Title              field.String
+	Hash               field.String
+	Content            field.String
+	ParentID           field.String
+	Level              field.Int
+	Order_             field.Int
+	Status             field.String
+	Scheduled          field.Time
+	Deadline           field.Time
+	Closed             field.Time
+	Priority           field.String
+	FileID             field.String
+	HeadlineID         field.String
+	AnnotationFileHash field.String
+	Properties         headlineHasManyProperties
 
 	Children headlineHasManyChildren
 
-	VirtChildren headlineHasManyVirtChildren
+	AnnotationChildren headlineHasManyAnnotationChildren
 
 	LogBook headlineHasManyLogBook
 
@@ -247,7 +247,7 @@ func (h *headline) updateTableName(table string) *headline {
 	h.Priority = field.NewString(table, "priority")
 	h.FileID = field.NewString(table, "file_id")
 	h.HeadlineID = field.NewString(table, "headline_id")
-	h.VirtFileHash = field.NewString(table, "virt_file_hash")
+	h.AnnotationFileHash = field.NewString(table, "annotation_file_hash")
 
 	h.fillFieldMap()
 
@@ -285,7 +285,7 @@ func (h *headline) fillFieldMap() {
 	h.fieldMap["priority"] = h.Priority
 	h.fieldMap["file_id"] = h.FileID
 	h.fieldMap["headline_id"] = h.HeadlineID
-	h.fieldMap["virt_file_hash"] = h.VirtFileHash
+	h.fieldMap["annotation_file_hash"] = h.AnnotationFileHash
 
 }
 
@@ -318,7 +318,7 @@ type headlineHasManyProperties struct {
 		Children struct {
 			field.RelationField
 		}
-		VirtChildren struct {
+		AnnotationChildren struct {
 			field.RelationField
 		}
 		LogBook struct {
@@ -472,13 +472,13 @@ func (a headlineHasManyChildrenTx) Count() int64 {
 	return a.tx.Count()
 }
 
-type headlineHasManyVirtChildren struct {
+type headlineHasManyAnnotationChildren struct {
 	db *gorm.DB
 
 	field.RelationField
 }
 
-func (a headlineHasManyVirtChildren) Where(conds ...field.Expr) *headlineHasManyVirtChildren {
+func (a headlineHasManyAnnotationChildren) Where(conds ...field.Expr) *headlineHasManyAnnotationChildren {
 	if len(conds) == 0 {
 		return &a
 	}
@@ -491,27 +491,27 @@ func (a headlineHasManyVirtChildren) Where(conds ...field.Expr) *headlineHasMany
 	return &a
 }
 
-func (a headlineHasManyVirtChildren) WithContext(ctx context.Context) *headlineHasManyVirtChildren {
+func (a headlineHasManyAnnotationChildren) WithContext(ctx context.Context) *headlineHasManyAnnotationChildren {
 	a.db = a.db.WithContext(ctx)
 	return &a
 }
 
-func (a headlineHasManyVirtChildren) Session(session *gorm.Session) *headlineHasManyVirtChildren {
+func (a headlineHasManyAnnotationChildren) Session(session *gorm.Session) *headlineHasManyAnnotationChildren {
 	a.db = a.db.Session(session)
 	return &a
 }
 
-func (a headlineHasManyVirtChildren) Model(m *storage.Headline) *headlineHasManyVirtChildrenTx {
-	return &headlineHasManyVirtChildrenTx{a.db.Model(m).Association(a.Name())}
+func (a headlineHasManyAnnotationChildren) Model(m *storage.Headline) *headlineHasManyAnnotationChildrenTx {
+	return &headlineHasManyAnnotationChildrenTx{a.db.Model(m).Association(a.Name())}
 }
 
-type headlineHasManyVirtChildrenTx struct{ tx *gorm.Association }
+type headlineHasManyAnnotationChildrenTx struct{ tx *gorm.Association }
 
-func (a headlineHasManyVirtChildrenTx) Find() (result []*storage.Headline, err error) {
+func (a headlineHasManyAnnotationChildrenTx) Find() (result []*storage.Headline, err error) {
 	return result, a.tx.Find(&result)
 }
 
-func (a headlineHasManyVirtChildrenTx) Append(values ...*storage.Headline) (err error) {
+func (a headlineHasManyAnnotationChildrenTx) Append(values ...*storage.Headline) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -519,7 +519,7 @@ func (a headlineHasManyVirtChildrenTx) Append(values ...*storage.Headline) (err 
 	return a.tx.Append(targetValues...)
 }
 
-func (a headlineHasManyVirtChildrenTx) Replace(values ...*storage.Headline) (err error) {
+func (a headlineHasManyAnnotationChildrenTx) Replace(values ...*storage.Headline) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -527,7 +527,7 @@ func (a headlineHasManyVirtChildrenTx) Replace(values ...*storage.Headline) (err
 	return a.tx.Replace(targetValues...)
 }
 
-func (a headlineHasManyVirtChildrenTx) Delete(values ...*storage.Headline) (err error) {
+func (a headlineHasManyAnnotationChildrenTx) Delete(values ...*storage.Headline) (err error) {
 	targetValues := make([]interface{}, len(values))
 	for i, v := range values {
 		targetValues[i] = v
@@ -535,11 +535,11 @@ func (a headlineHasManyVirtChildrenTx) Delete(values ...*storage.Headline) (err 
 	return a.tx.Delete(targetValues...)
 }
 
-func (a headlineHasManyVirtChildrenTx) Clear() error {
+func (a headlineHasManyAnnotationChildrenTx) Clear() error {
 	return a.tx.Clear()
 }
 
-func (a headlineHasManyVirtChildrenTx) Count() int64 {
+func (a headlineHasManyAnnotationChildrenTx) Count() int64 {
 	return a.tx.Count()
 }
 
