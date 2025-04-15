@@ -35,9 +35,7 @@
 ;; 这是默认高亮笔的定义，在浅色主题下使用浅绿色背景和下划线，在深色主题下使用深绿色背景。
 (defface memo-annotate-default-face
   '((((class color) (min-colors 88) (background light))
-     :underline "#aecf90" :background "#ecf7ed")
-    (((class color) (min-colors 88) (background dark))
-     :underline "#00422a" :background "#1d3c25")
+     :underline "#aecf90" :background "#1d3c25")
     (t
      :inherit highlight))
   "Face for the default highlighter pen.")
@@ -45,7 +43,7 @@
 ;; 定义默认颜色字符串 (例如，使用 face 的背景色)
 ;; 这里我们用 face symbol, 但也可以用具体颜色字符串 "#ecf7ed"
 ;; 注意: 默认颜色主要在 memo-annotate-get-color 逻辑中使用
-(defvar memo-annotate-default-color "#ecf7ed"
+(defvar memo-annotate-default-color "#1d3c25"
   "Default background color string to use when no specific color is set.")
 
 ;; 使用哈希表存储 ID (string) -> Color (string) 的映射
@@ -56,7 +54,7 @@
   (rx "<memo-head-id:"
       (group (one-or-more (in "0-9" "A-Z" "a-z" "-"))) ; Group 1: ID
       ">"
-      (group (*? not-newline)) ; Group 2: Content
+      (group (*? (or not-newline "\n"))) ; Group 2: Content
       "</memo-head-id>")
   "Regex to match the memo text block using rx syntax.")
 
@@ -66,6 +64,7 @@
      ;; Group 1 (ID): 不高亮，仅用于查找。隐藏起始标签部分。
      (1 (prog1 nil
            (put-text-property (match-beginning 0) (match-end 0) 'rear-nonsticky t)
+           (put-text-property (match-beginning 0) (match-end 0) 'font-lock-multiline t)
            (put-text-property (match-beginning 0) (match-beginning 2) 'invisible t)))
 
      ;; Group 2 (Content): 应用动态颜色，并设置 text property.
@@ -99,8 +98,8 @@
         (font-lock-flush)  ; 确保启用时立即应用
         (font-lock-ensure))
     ;; 在 mode 禁用时移除关键字
-    (font-lock-remove-keywords nil memo-annotate-font-lock-keywords)
-    (font-lock-flush))) ; 刷新以移除高亮
+    (font-lock-remove-keywords nil memo-annotate-font-lock-keywords))
+  (font-lock-flush)) ; 刷新以移除高亮
 
 ;; 4. 提供用于更新映射并刷新高亮的函数
 (defun memo-annotate-update-color-map (parent-headid)
