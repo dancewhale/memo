@@ -69,10 +69,10 @@ func newFile(db *gorm.DB, opts ...gen.DOOption) file {
 		}{
 			RelationField: field.NewRelation("Headlines.Children", "storage.Headline"),
 		},
-		AnnotationChildren: struct {
+		VirtChildren: struct {
 			field.RelationField
 		}{
-			RelationField: field.NewRelation("Headlines.AnnotationChildren", "storage.Headline"),
+			RelationField: field.NewRelation("Headlines.VirtChildren", "storage.Headline"),
 		},
 		LogBook: struct {
 			field.RelationField
@@ -199,7 +199,7 @@ type fileHasManyHeadlines struct {
 	Children struct {
 		field.RelationField
 	}
-	AnnotationChildren struct {
+	VirtChildren struct {
 		field.RelationField
 	}
 	LogBook struct {

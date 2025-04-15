@@ -17,31 +17,31 @@ type HeadlineStats struct {
 
 // HeadlineWithFsrs 包含headline和fsrsInfo信息的结构体
 type HeadlineWithFsrs struct {
-	ID                 string    `gorm:"primarykey;not null"`
-	Path               []string  `json:"path"`
-	Weight             int64     `json:"weight"`
-	Source             string    `json:"source"`
-	ScheduledType      string    `json:"scheduled_type"`
-	Title              string    `json:"title"`
-	Hash               string    `json:"hash" hash:"ignore"`
-	ParentID           *string   `json:"parent_id"`
-	FileID             *string   `gorm:"primaryKey"`
-	HeadlineID         *string   `json:"headline_id"`
-	AnnotationFileHash *string   `json:"annotation_file_hash"`
-	Level              int       `json:"level"`
-	Order              int       `json:"order"`
-	Status             string    `json:"status"`
-	Priority           string    `json:"priority"`
-	Due                time.Time `json:"Due"`
-	Stability          float64   `json:"Stability"`
-	Difficulty         float64   `json:"Difficulty"`
-	ElapsedDays        uint64    `json:"ElapsedDays"`
-	ScheduledDays      uint64    `json:"ScheduledDays"`
-	Reps               uint64    `json:"Reps"`
-	Lapses             uint64    `json:"Lapses"`
-	State              uint64    `json:"State"`
-	NeedReview         bool      `json:"NeedReview"`
-	LastReview         time.Time `json:"LastReview"`
+	ID            string    `gorm:"primarykey;not null"`
+	Path          []string  `json:"path"`
+	Weight        int64     `json:"weight"`
+	Source        string    `json:"source"`
+	ScheduledType string    `json:"scheduled_type"`
+	Title         string    `json:"title"`
+	Hash          string    `json:"hash" hash:"ignore"`
+	ParentID      *string   `json:"parent_id"`
+	FileID        *string   `gorm:"primaryKey"`
+	HeadlineID    *string   `json:"headline_id"`
+	VirtFileHash  *string   `json:"virt_file_hash"`
+	Level         int       `json:"level"`
+	Order         int       `json:"order"`
+	Status        string    `json:"status"`
+	Priority      string    `json:"priority"`
+	Due           time.Time `json:"Due"`
+	Stability     float64   `json:"Stability"`
+	Difficulty    float64   `json:"Difficulty"`
+	ElapsedDays   uint64    `json:"ElapsedDays"`
+	ScheduledDays uint64    `json:"ScheduledDays"`
+	Reps          uint64    `json:"Reps"`
+	Lapses        uint64    `json:"Lapses"`
+	State         uint64    `json:"State"`
+	NeedReview    bool      `json:"NeedReview"`
+	LastReview    time.Time `json:"LastReview"`
 
 	TotalCards     int // 总卡片数量
 	TotalVirtCards int // 总虚拟卡片数量

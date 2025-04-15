@@ -282,7 +282,7 @@ func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
 	return nil
 }
 
-func (h *OrgHeadlineDB) GetAnnotationPropertyMap(headID, key string) map[string]string {
+func (h *OrgHeadlineDB) GetVirtPropertyMap(headID, key string) map[string]string {
 	headline := dal.Headline
 	heads, err := headline.WithContext(context.Background()).Preload(headline.Properties).
 		Where(headline.HeadlineID.Eq(headID)).Find()
@@ -411,13 +411,13 @@ func (h *OrgHeadlineDB) GetFileByHeadlineID(headlineID string) (*storage.File, e
 	}
 }
 
-func (h *OrgHeadlineDB) CreateAnnotationHead(headID, title, content string) (string, error) {
+func (h *OrgHeadlineDB) CreateVirtHead(headID, title, content string) (string, error) {
 	head := dal.Headline
 	parentHead, err := head.WithContext(context.Background()).
 		Where(head.ID.Eq(headID)).
 		First()
 	if err != nil {
-		return "", logger.Errorf("CreateAnnotationHead: Find parentHead with id %s error: %v", headID, err)
+		return "", logger.Errorf("CreateVirtHead: Find parentHead with id %s error: %v", headID, err)
 	}
 
 	count, err := head.WithContext(context.Background()).

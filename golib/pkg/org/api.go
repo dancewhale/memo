@@ -36,23 +36,23 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
 	service.RegisterMethod(epc.MakeMethod("GetOrgHeadProperty", o.GetOrgHeadProperty, "string", "Get org head property by id."))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
-	service.RegisterMethod(epc.MakeMethod("CreateAnnotationHead", o.CreateAnnotationHead, "string", "Create annotation head."))
-	service.RegisterMethod(epc.MakeMethod("GetAnnotationFile", o.GetAnnotationfileContent, "string", "Get annotation file content."))
-	service.RegisterMethod(epc.MakeMethod("UploadAnnotationFile", o.UploadAnnotationFile, "string", "upload annotation file content."))
-	service.RegisterMethod(epc.MakeMethod("GetChildAnnotationPropertyMap", o.GetChildrenAnnotationPropertyMap, "string", "Get child annotate head property."))
+	service.RegisterMethod(epc.MakeMethod("CreateVirtHead", o.CreateVirtHead, "string", "Create virt head."))
+	service.RegisterMethod(epc.MakeMethod("GetVirtFile", o.GetVirtfileContent, "string", "Get virt file content."))
+	service.RegisterMethod(epc.MakeMethod("UploadVirtFile", o.UploadVirtFile, "string", "upload virt file content."))
+	service.RegisterMethod(epc.MakeMethod("GetChildVirtPropertyMap", o.GetChildrenVirtPropertyMap, "string", "Get child virt head property."))
 	return service
 }
 
-func (o *OrgApi) GetChildrenAnnotationPropertyMap(headid, key string) db.Result {
+func (o *OrgApi) GetChildrenVirtPropertyMap(headid, key string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
-	data := headdb.GetAnnotationPropertyMap(headid, key)
+	data := headdb.GetVirtPropertyMap(headid, key)
 	return db.Result{Data: data, Err: nil}
 }
 
-func (o *OrgApi) CreateAnnotationHead(headid, title, content string) db.Result {
+func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return db.Result{Data: "", Err: err}
@@ -60,7 +60,7 @@ func (o *OrgApi) CreateAnnotationHead(headid, title, content string) db.Result {
 	content = strings.ReplaceAll(content, "\\\\", "\\")
 	content = strings.ReplaceAll(content, "\\\"", "\"")
 	content += "\n"
-	id, err := headdb.CreateAnnotationHead(headid, title, content)
+	id, err := headdb.CreateVirtHead(headid, title, content)
 	if err != nil {
 		return db.Result{Data: "", Err: err}
 	}
@@ -68,7 +68,7 @@ func (o *OrgApi) CreateAnnotationHead(headid, title, content string) db.Result {
 	return db.Result{Data: id, Err: nil}
 }
 
-func (o *OrgApi) GetAnnotationfileContent(headid string) db.Result {
+func (o *OrgApi) GetVirtfileContent(headid string) db.Result {
 	file, err := GetFileFromID(headid, storage.VirtualFile)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
@@ -77,14 +77,14 @@ func (o *OrgApi) GetAnnotationfileContent(headid string) db.Result {
 	return db.Result{Data: content, Err: nil}
 }
 
-func (o *OrgApi) UploadAnnotationFile(headid, content string, fo int) db.Result {
+func (o *OrgApi) UploadVirtFile(headid, content string, fo int) db.Result {
 	var force bool
 	if fo == 0 {
 		force = false
 	} else {
 		force = true
 	}
-	f, err := NewAnnotationFileFromHeadID(headid)
+	f, err := NewVirtFileFromHeadID(headid)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	} else if f == nil {

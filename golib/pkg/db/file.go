@@ -99,8 +99,8 @@ func (f *OrgFileDB) GetFileByID(id string, filetype int) (*storage.File, error) 
 			return nil, nil
 		} else if len(heads) > 1 {
 			return nil, logger.Errorf("Found duplicate head id %s", id)
-		} else if heads[0].AnnotationFileHash != nil {
-			file.Hash = *heads[0].AnnotationFileHash
+		} else if heads[0].VirtFileHash != nil {
+			file.Hash = *heads[0].VirtFileHash
 		}
 		headlist, err := f.GetHeadTree(id, filetype)
 		if err != nil {
@@ -140,9 +140,9 @@ func FileDBUpdate(fd *storage.File, force bool, filetype int) error {
 			return logger.Errorf("Check virt file record in db by head %s error: %v", fd.ID, err)
 		}
 		if head != nil {
-			if head.AnnotationFileHash == nil || *head.AnnotationFileHash != fd.Hash || force {
+			if head.VirtFileHash == nil || *head.VirtFileHash != fd.Hash || force {
 				_, err := h.WithContext(context.Background()).Where(h.ID.Eq(fd.ID)).
-					UpdateSimple(h.AnnotationFileHash.Value(fd.Hash))
+					UpdateSimple(h.VirtFileHash.Value(fd.Hash))
 				if err != nil {
 					return logger.Errorf("Update virt file record in db error: %v", err)
 				}
@@ -175,7 +175,7 @@ func IfFileDBNeedUpdate(id, hash string, filetype int) (bool, error) {
 			return false, logger.Errorf("Check virt file record in db error: %v", err)
 		}
 		if head != nil {
-			if head.AnnotationFileHash != nil && *head.AnnotationFileHash == hash {
+			if head.VirtFileHash != nil && *head.VirtFileHash == hash {
 				return false, nil
 			} else {
 				return true, nil

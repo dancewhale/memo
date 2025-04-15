@@ -66,10 +66,10 @@ func newClock(db *gorm.DB, opts ...gen.DOOption) clock {
 		}{
 			RelationField: field.NewRelation("Headline.Children", "storage.Headline"),
 		},
-		AnnotationChildren: struct {
+		VirtChildren: struct {
 			field.RelationField
 		}{
-			RelationField: field.NewRelation("Headline.AnnotationChildren", "storage.Headline"),
+			RelationField: field.NewRelation("Headline.VirtChildren", "storage.Headline"),
 		},
 		LogBook: struct {
 			field.RelationField
@@ -187,7 +187,7 @@ type clockHasOneHeadline struct {
 	Children struct {
 		field.RelationField
 	}
-	AnnotationChildren struct {
+	VirtChildren struct {
 		field.RelationField
 	}
 	LogBook struct {
