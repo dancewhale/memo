@@ -279,13 +279,7 @@ Return the content entered by the user."
 
 
 
-(defun memo-reload-org (filepath)
-  "Force revert buffer of FILEPATH if it exists, otherwise return nil."
-  (let ((buf (get-file-buffer filepath)))
-    (when buf
-      (with-current-buffer buf
-        (revert-buffer t t t)
-        t))))
+
 
 (provide 'memo-buffer)
 ;;; memo-buffer.el ends here

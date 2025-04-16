@@ -92,19 +92,6 @@ make it bold."
 		  (point)))))))
 
 
-;;; Generate id for all headline in current buffer.
-(defun memo-generate-head-ids ()
-  "Generate for any headings that are missing one."
-  (interactive)
-  (let ((existing-ids (org-map-entries 
-                (lambda () (org-entry-get nil "ID")))))
-    (org-map-entries
-     (lambda ()
-       (let* ((id (org-entry-get nil "ID"))
-              (heading (org-heading-components)))
-         (when (not id)
-           (org-entry-put nil "ID" (org-id-new))))))))
-
 ;;; Insert file id at begin of file.
 (defun memo-generate-file-ids ()
   "Generate id and insert current file."
@@ -112,6 +99,7 @@ make it bold."
   (save-excursion
    (goto-char (point-min)))
    (insert ":PROPERTIES:\n:ID: " (org-id-uuid) "\n:END:\n\n"))
+
 
 
 (provide 'memo-core)

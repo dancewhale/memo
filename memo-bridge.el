@@ -107,6 +107,14 @@
   ;; Return nil to avoid epc error `Got too many arguments in the reply'.
   nil)
 
+(defun memo-reload-org (filepath)
+  "Force revert buffer of FILEPATH if it exists, otherwise return nil, Used by golang recall."
+  (let ((buf (get-file-buffer filepath)))
+    (when buf
+      (with-current-buffer buf
+        (revert-buffer t t t)
+        t))))
+
 (defun memo-bridge--get-emacs-var-func (var-name)
   (let* ((var-symbol (intern var-name))
          (var-value (symbol-value var-symbol))
