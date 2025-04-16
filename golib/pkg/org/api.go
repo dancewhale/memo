@@ -283,12 +283,12 @@ func (o *OrgApi) CreateAnnotation(headlineID string, startPos, endPos uint, anno
 		CommentText: commentText,
 	}
 
-	err := o.annotationDB.CreateAnnotation(annotation)
+	anno, err := o.annotationDB.CreateAnnotation(annotation)
 	if err != nil {
 		return db.Result{Data: nil, Err: logger.Errorf("Failed to create annotation: %v", err)}
 	}
 
-	return db.Result{Data: annotation.ID, Err: nil}
+	return db.Result{Data: anno, Err: nil}
 }
 
 // GetAnnotationByID retrieves an annotation by its ID
