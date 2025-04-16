@@ -118,6 +118,27 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
         (-map #'memo-make-note-from-alist y)
       nil)))
 
+(cl-defstruct memo-annotation id start end  headid face text  srctext)
+
+(defun memo-make-annotation-from-alist (x)
+  "Generate memo annotation object from alist X."
+  (if (memo-alist-get x "ID")
+      (make-annotation-note :id (memo-alist-get x "ID")
+		      :start (memo-alist-get x "Start")
+		      :end (memo-alist-get x "End")
+		      :headid (memo-alist-get x "HeadlineID")
+		      :face (memo-alist-get x "Face")
+		      :text (memo-alist-get x "CommentText")
+		      :srctext (memo-alist-get x "AnnoText"))))
+
+(defun memo-make-annotation-from-return (y)
+  "Try to parser annotation object from return value Y."
+  (if (memo-alist-get y "ID")
+      (memo-make-annotation-from-alist y)
+    (if (memo-alist-get (car y) "ID")
+        (-map #'memo-make-annotation-from-alist y)
+      nil)))
+
 (cl-defstruct memo-file
   fileid filepath hash totalcards totalvirtcards
   expiredcards waitingcards reviewingcards)
@@ -181,20 +202,20 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headid key)))
     (memo--parse-result result)))
 
-(defun memo-api--create-annotation-head (id title content)
-  "Create annotation head with TITLE and CONTENT under head with ID.
-Returns the ID of the created annotation head."
-  (let ((result (memo-bridge-call-sync "CreateAnnotationHead" id title content)))
+(defun memo-api--create-virt-head (id title content)
+  "Create virt head with TITLE and CONTENT under head with ID.
+Returns the ID of the created virt head."
+  (let ((result (memo-bridge-call-sync "CreateVirtHead" id title content)))
     (memo--parse-result result)))
 
-(defun memo-api--update-annotation-file (headid content)
+(defun memo-api--update-virt-file (headid content)
   "Upload the CONTENT of file by HEADID."
-  (let ((result (memo-bridge-call-sync "UploadAnnotationFile" headid content 1)))
+  (let ((result (memo-bridge-call-sync "UploadVirtFile" headid content 1)))
     (memo--parse-result result)))
 
-(defun memo-api--get-annotation-file-byid (headid)
+(defun memo-api--get-virt-file-byid (headid)
   "Get the content of file by HEADID."
-  (let ((result (memo-bridge-call-sync "GetAnnotationFile" headid)))
+  (let ((result (memo-bridge-call-sync "GetVirtFile" headid)))
     (memo--parse-result result)))
 
 (defun memo-api--get-read-files ()
@@ -212,19 +233,37 @@ Returns the ID of the created annotation head."
   (let ((result (memo-bridge-call-sync "GetHeadChildrenCard" headid fileid)))
     (memo-make-note-from-return (memo--parse-result result))))
 
-(defun memo-api--get-child-annotation-color-map (headid)
-  "Get the color property map of children annotation by HEADID."
-  (let ((result (memo-bridge-call-sync "GetChildAnnotationPropertyMap" headid memo-prop-annotation-color)))
+(defun memo-api--get-annotations-by-headid (headid)
+  "Get the annotations by HEADID."
+  (let ((result (memo-bridge-call-sync "GetAnnotationsByHeadlineID" headid)))
+    (memo-make-annotation (memo--parse-result result))))
+
+(defun memo-api--get-annotation-by-id (id)
+  "Get the annotation by Annotation ID."
+  (let ((result (memo-bridge-call-sync "GetAnnotationByID" id)))
+    (memo-make-annotation (memo--parse-result result))))
+
+(defun memo-api--create-annotation (headid startPos endPos annoText commentText)
+  "Create annotation in HEADID and region from STARTPOS to ENDPOS.
+with origin text ANNOTEXT and comment text COMMENTTEXT."
+  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" headid startPos endPos annoText commentText)))
     (memo--parse-result result)))
 
-(defun memo-api--get-annotation-color (headid)
-  "Get the color property by HEADID."
-  (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headid memo-prop-annotation-color)))
+(defun memo-api--update-annotation (annotationObject)
+  "Update the annotation by ANNOTATIONOBJECT."
+  (let ((result (memo-bridge-call-sync "UpdateAnnotation"
+				       (memo-annotate-id annotationObject)
+				       (memo-annotate-start annotationObject)
+				       (memo-annotate-end annotationObject)
+				       (memo-annotate-headid annotationObject)
+				       (memo-annotate-face annotationObject)
+				       (memo-annotate-text annotationObject)
+				       (memo-annotate-srctext annotationObject))))
     (memo--parse-result result)))
 
-(defun memo-api--set-annotation-color (headid color)
-  "Set the COLOR(string) property of head with HEADID."
-  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" headid memo-prop-annotation-color color)))
+(defun memo-api--delete-annotation-by-id (id)
+  "Delete the annotation by Annotation ID."
+  (let ((result (memo-bridge-call-sync "DeleteAnnotationByID" id)))
     (memo--parse-result result)))
 
 ;; sync org file under dir.
