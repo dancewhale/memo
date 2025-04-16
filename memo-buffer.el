@@ -238,8 +238,7 @@ Return the content entered by the user."
     (with-current-buffer temp-buffer
       (org-mode)
       (when default
-        (insert default)
-        (insert "\n\n"))
+        (insert default))
       (let ((map (make-sparse-keymap)))
         (define-key map (kbd "C-c C-c")
           (lambda ()

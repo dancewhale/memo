@@ -252,13 +252,13 @@ with origin text ANNOTEXT and comment text COMMENTTEXT and FACE."
 (defun memo-api--update-annotation (annotationObject)
   "Update the annotation by ANNOTATIONOBJECT."
   (let ((result (memo-bridge-call-sync "UpdateAnnotation"
-				       (memo-annotate-id annotationObject)
-				       (memo-annotate-start annotationObject)
-				       (memo-annotate-end annotationObject)
-				       (memo-annotate-headid annotationObject)
-				       (memo-annotate-face annotationObject)
-				       (memo-annotate-text annotationObject)
-				       (memo-annotate-srctext annotationObject))))
+				       (memo-annotation-id annotationObject)
+				       (memo-annotation-start annotationObject)
+				       (memo-annotation-end annotationObject)
+				       (memo-annotation-headid annotationObject)
+				       (memo-annotation-face annotationObject)
+				       (memo-annotation-text annotationObject)
+				       (memo-annotation-srctext annotationObject))))
     (memo--parse-result result)))
 
 (defun memo-api--delete-annotation-by-id (id)

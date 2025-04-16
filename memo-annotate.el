@@ -25,6 +25,7 @@
 (require 'rx)
 (require 'ov)
 (require 'memo-api) ; <-- Added require for memo-api
+(require 'posframe) ; <-- Added require for posframe
 
 (defun memo-face-to-string (face)
   "Convert a face specification to a string representation.
@@ -308,6 +309,45 @@ Uses the region text as the annotation source text."
                   (cl-return))
              finally (message "No annotation found at point"))))
 
+(defun memo-edit-annotation-comment-at-point ()
+  "Edit the comment of annotation at point if one exists."
+  (interactive)
+  (let ((overlays (overlays-at (point))))
+    (cl-loop for overlay in overlays
+             when (overlay-get overlay 'memo-annotation-id)
+             do (let* ((anno-id (overlay-get overlay 'memo-annotation-id))
+                       (annotation (memo-annotate-get-annotation-by-id anno-id))
+                       (comment (memo-annotation-text annotation)))
+                  (when annotation
+                    (let ((new-comment (memo-get-content-from-input-buffer comment)))
+                      (when new-comment
+                        (setf (memo-annotation-text annotation) new-comment)
+                        (memo-annotate-update-annotation annotation)
+                        (message "Annotation comment updated"))))
+                  (cl-return))
+             finally (message "No annotation found at point"))))
+
+(defun memo-show-annotation-comment-at-point ()
+  "Show the comment of annotation at point using posframe.
+Displays the annotation text in a posframe popup near the cursor."
+  (interactive)
+  (let ((overlays (overlays-at (point))))
+    (cl-loop for overlay in overlays
+             when (overlay-get overlay 'memo-annotation-id)
+             do (let* ((anno-id (overlay-get overlay 'memo-annotation-id))
+                       (annotation (memo-annotate-get-annotation-by-id anno-id))
+                       (comment (memo-annotation-text annotation)))
+                  (when (and annotation comment)
+                    (posframe-show "*memo-annotation*"
+                                  :string comment
+                                  :position (point)
+                                  :internal-border-width 1
+                                  :internal-border-color "gray80"
+                                  :background-color "#f0f0f0"
+                                  :foreground-color "#303030"
+                                  :timeout 5))
+                  (cl-return))
+             finally (message "No annotation found at point"))))
 
 (provide 'memo-annotate)
 ;;; memo-annotate.el ends here
