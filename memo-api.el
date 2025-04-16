@@ -123,7 +123,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 (defun memo-make-annotation-from-alist (x)
   "Generate memo annotation object from alist X."
   (if (memo-alist-get x "ID")
-      (make-annotation-note :id (memo-alist-get x "ID")
+      (make-memo-annotation :id (memo-alist-get x "ID")
 		      :start (memo-alist-get x "Start")
 		      :end (memo-alist-get x "End")
 		      :headid (memo-alist-get x "HeadlineID")
@@ -236,18 +236,18 @@ Returns the ID of the created virt head."
 (defun memo-api--get-annotations-by-headid (headid)
   "Get the annotations by HEADID."
   (let ((result (memo-bridge-call-sync "GetAnnotationsByHeadlineID" headid)))
-    (memo-make-annotation (memo--parse-result result))))
+    (memo-make-annotation-from-return (memo--parse-result result))))
 
 (defun memo-api--get-annotation-by-id (id)
   "Get the annotation by Annotation ID."
   (let ((result (memo-bridge-call-sync "GetAnnotationByID" id)))
-    (memo-make-annotation (memo--parse-result result))))
+    (memo-make-annotation-from-return (memo--parse-result result))))
 
-(defun memo-api--create-annotation (headid startPos endPos annoText commentText)
+(defun memo-api--create-annotation (headid startPos endPos annoText commentText face)
   "Create annotation in HEADID and region from STARTPOS to ENDPOS.
-with origin text ANNOTEXT and comment text COMMENTTEXT."
-  (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" headid startPos endPos annoText commentText)))
-    (memo--parse-result result)))
+with origin text ANNOTEXT and comment text COMMENTTEXT and FACE."
+  (let ((result (memo-bridge-call-sync "CreateAnnotation" headid startPos endPos annoText commentText face)))
+    (memo-make-annotation-from-return (memo--parse-result result))))
 
 (defun memo-api--update-annotation (annotationObject)
   "Update the annotation by ANNOTATIONOBJECT."

@@ -159,11 +159,11 @@ Removes from cache and calls the API function."
             (setq memo-annotate-overlays (delq old-overlay memo-annotate-overlays))
             (delete-overlay old-overlay)))))))
 
-(defun memo-annotate-create-annotation (headid start-pos end-pos anno-text comment-text)
+(defun memo-annotate-create-annotation (headid start-pos end-pos anno-text comment-text face)
   "Create a new annotation in HEADID from START-POS to END-POS.
-With original text ANNO-TEXT and comment text COMMENT-TEXT."
+With original text ANNO-TEXT and comment text COMMENT-TEXT and FACE."
   ;; 调用 API 创建注释并获取返回的注释对象
-  (let ((new-annotation (memo-api--create-annotation headid start-pos end-pos anno-text comment-text)))
+  (let ((new-annotation (memo-api--create-annotation headid start-pos end-pos anno-text comment-text face)))
     (when new-annotation
       ;; 更新缓存
       (let ((id (memo-annotation-id new-annotation)))
@@ -253,12 +253,9 @@ First tries to get from cache, then from server if not found."
 
 (defun memo-annotate-get-current-headid ()
   "Get the headid of the current buffer or section.
-   Returns nil if no headid is found."
-  ;; 这个函数需要根据实际应用场景来实现
-  ;; 例如，可以从当前buffer的属性中获取，或者从当前光标位置的org元素中获取
-  ;; 下面是一个示例实现，假设headid存储在buffer-local变量中
-  (when (boundp 'memo-current-headid)
-    memo-current-headid))
+Returns nil if no headid is found."
+  (when memo--buffer-local-note
+    (memo-note-id memo--buffer-local-note)))
 
 ;;;###autoload
 (define-minor-mode memo-annotate-mode
@@ -277,6 +274,39 @@ First tries to get from cache, then from server if not found."
             (memo-annotate-init-overlays headid))))
      ;; 在 mode 禁用时清除所有overlay
      (memo-annotate-clear-overlays)))
+
+;;;;;;;annotation operator function
+(defun memo-annotate-get-face ()
+  "Get face for new annotation.
+This function can be customized to return different faces based on various conditions."
+  'memo-annotate-default-face)
+
+(defun memo-create-annotation-at-region ()
+  "Create a new annotation for the selected region.
+Uses the region text as the annotation source text."
+  (interactive)
+  (when (use-region-p)
+    (let* ((start (region-beginning))
+           (end (region-end))
+           (text (buffer-substring-no-properties start end))
+           (headid (memo-annotate-get-current-headid)))
+      (if headid
+          (memo-annotate-create-annotation headid start end text "" (memo-face-to-string (memo-annotate-get-face)))
+        (message "No headid found in current buffer")))))
+
+(defun memo-delete-annotation-at-point ()
+  "Delete the annotation at point if one exists."
+  (interactive)
+  (let ((overlays (overlays-at (point))))
+    (cl-loop for overlay in overlays
+             when (overlay-get overlay 'memo-annotation-id)
+             do (let ((anno-id (overlay-get overlay 'memo-annotation-id)))
+                  (let ((annotation (memo-annotate-get-annotation-by-id anno-id)))
+                    (when annotation
+                      (memo-annotate-delete-annotation annotation)
+                      (message "Annotation deleted")))
+                  (cl-return))
+             finally (message "No annotation found at point"))))
 
 
 (provide 'memo-annotate)

@@ -255,50 +255,6 @@ Return the content entered by the user."
       (recursive-edit))
     memo--temp-content))
 
-(defun memo-create-annotation ()
-  "Create a annotation with user input title and content under head with ID.
-This function must be used with an active region. The region will be
- annotated after creating the annotation head."
-  (interactive)
-  (if (not (equal (buffer-name (current-buffer)) memo--read-buffer-name))
-      (user-error "This function can only be used in the memo read buffer")
-    (if (not (use-region-p))
-        (user-error "You must select a region to create a annotation head")
-      (let* ((id (memo-note-id memo--buffer-local-note))
-             (region-start (region-beginning))
-             (region-end (region-end))
-             (annotations (memo-annotate-get-annotations-in-region region-start region-end)))
-        (when annotations
-          (user-error "The selected region contains annotations. Cannot create annotation head"))
-        (let* ((content (buffer-substring-no-properties region-start region-end))
-               (processed-content (memo-get-content-from-input-buffer content))
-               (title (read-string "Enter title (or leave empty to use content start): ")))
-          (when (string-empty-p title)
-            (setq title (substring processed-content 0 (min (length processed-content) 24))))
-          (if (and title (not (string-empty-p processed-content)))
-              (let ((head-id (memo-api--create-annotation-head id title processed-content)))
-                ;; Apply annotation to the region using the returned ID from API
-                (memo-annotate-insert-tags region-start region-end head-id)
-                (message "Annotation head created successfully and region annotated."))
-            (user-error "Title and content cannot be empty")))))))
-
-(defun memo-open-annotation-in-virt-buffer ()
-  "Open annotation head under current HEAD in virt buffer."
-  (interactive)
-  (let* ((buf (get-buffer-create memo--virt-buffer-name))
-	 (head memo--buffer-local-note))
-    (if (not (memo-note-id head))
-      (user-error "Memo-note object is nil"))
-    (pop-to-buffer buf)
-    (with-current-buffer buf
-      (erase-buffer)
-      (insert (memo-api--get-virt-file-byid (memo-note-id head)))
-      (set-buffer-modified-p nil)
-      (org-mode)
-      (setq-local header-line-format (memo-note-title head))
-      (memo-set-local-header-line-face)
-      (setq memo--buffer-local-note head)
-      (setq write-contents-functions '(memo-update-current-virt-note-content)))))
 
 (defun memo-set-local-header-line-face ()
   "设置当前缓冲区的 header-line face 样式。"

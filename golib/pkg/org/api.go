@@ -274,13 +274,14 @@ func (o *OrgApi) GetOrgHeadProperty(orgid, key string) db.Result {
 }
 
 // CreateAnnotation creates a new annotation for a headline
-func (o *OrgApi) CreateAnnotation(headlineID string, startPos, endPos uint, annoText, commentText string) db.Result {
+func (o *OrgApi) CreateAnnotation(headlineID string, startPos, endPos uint, annoText, commentText, face string) db.Result {
 	annotation := &storage.Annotation{
 		HeadlineID:  headlineID,
 		Start:       startPos,
 		End:         endPos,
 		AnnoText:    annoText,
 		CommentText: commentText,
+		Face:        face,
 	}
 
 	anno, err := o.annotationDB.CreateAnnotation(annotation)
