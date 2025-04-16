@@ -90,6 +90,7 @@ type Annotation struct {
 	Start       uint   `gorm:"not null"`
 	End         uint   `gorm:"not null"`
 	HeadlineID  string `gorm:"not null"`
+	Face        string
 	CommentText string
 	AnnoText    string
 }

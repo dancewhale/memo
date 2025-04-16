@@ -25,63 +25,51 @@
 (require 'rx)
 (require 'memo-api) ; <-- Added require for memo-api
 
-;(defface memo-annotate-default-face
-;  '((t :background "LightGray")) ; Example: Light gray background for default
-;  "Default face for memo annotations when ID is not in the dynamic map.")
+(cl-defstruct memo-annotation id begin end  headid face text  srctext)
 
-(cl-defstruct memo-annotation  begin end id)
+(defun memo-face-to-string (face)
+  "Convert a face specification to a string representation.
+   The face can be a face name (symbol) or a property list."
+  (cond
+   ((null face) "nil")
+   ((symbolp face) (symbol-name face))
+   ((listp face)
+    (let ((str ""))
+      (while face
+        (let ((prop (pop face))
+              (val (pop face)))
+          (setq str (concat str
+                           (if (> (length str) 0) " ")
+                           (format ":%s %s"
+                                   (symbol-name prop)
+                                   (if (stringp val)
+                                       (format "\"%s\"" val)
+                                     val))))))
+      (concat "(" str ")")))
+   (t (format "%S" face))))
 
-;; 1. 定义默认 Face 和动态映射使用的哈希表
-;; 这是默认高亮笔的定义，在浅色主题下使用浅绿色背景和下划线，在深色主题下使用深绿色背景。
-(defface memo-annotate-default-face
-  '((((class color) (min-colors 88) (background light))
-     :underline "#aecf90" :background "#1d3c25")
-    (t
-     :inherit highlight))
-  "Face for the default highlighter pen.")
+(defun memo-string-to-face (str)
+  "Convert a string representation back to a face specification.
+   The string should be in the format produced by `memo-face-to-string'."
+  (when (and str (not (string-empty-p str)))
+    (cond
+     ((string= str "nil") nil)
+     ((string-prefix-p "(" str)
+      (condition-case nil
+          (car (read-from-string str))
+        (error nil)))
+     (t (intern str))))))
 
 ;; 定义默认颜色字符串 (例如，使用 face 的背景色)
 ;; 这里我们用 face symbol, 但也可以用具体颜色字符串 "#ecf7ed"
 ;; 注意: 默认颜色主要在 memo-annotate-get-color 逻辑中使用
-(defvar memo-annotate-default-color "#1d3c25"
-  "Default background color string to use when no specific color is set.")
+(defface memo-annotate-default-face  nil
+  "Default annotation face string to use when no specific face is set.")
 
 ;; 使用哈希表存储 ID (string) -> Color (string) 的映射
-(defvar memo-annotate-color-map (make-hash-table :test 'equal)
-  "Hash table mapping memo head IDs (string) to background color strings.")
+(defvar memo-annotate-overlay-map (make-hash-table :test 'equal)
+  "Hash table mapping annotation ID (string) to annotation face strings.")
 
-(defconst memo-annotate-regex
-  (rx "<memo-head-id:"
-      (group (one-or-more (in "0-9" "A-Z" "a-z" "-"))) ; Group 1: ID
-      ">"
-      (group (*? (or not-newline "\n"))) ; Group 2: Content
-      "</memo-head-id>")
-  "Regex to match the memo text block using rx syntax.")
-
-;; 3. 修改 font-lock 关键字定义
-(defconst memo-annotate-font-lock-keywords
-  `((,memo-annotate-regex
-     ;; Group 1 (ID): 不高亮，仅用于查找。隐藏起始标签部分。
-     (1 (prog1 nil
-           (put-text-property (match-beginning 0) (match-end 0) 'rear-nonsticky t)
-           (put-text-property (match-beginning 0) (match-end 0) 'font-lock-multiline t)
-           (put-text-property (match-beginning 0) (match-beginning 2) 'invisible t)))
-
-     ;; Group 2 (Content): 应用动态颜色，并设置 text property.
-     (2 (let* ((id (match-string-no-properties 1))
-               ;; 使用新的获取颜色函数
-               (color (memo-annotate-get-color id)))
-          (prog1 (if (and color (not (string-equal color ""))) ; 确保 color 有效
-                     `(face (:background ,color))
-                   ;; 使用默认 face
-                   'memo-annotate-default-face)
-            ;; 设置 memo-head-id 属性
-            (put-text-property (match-beginning 2) (match-end 2) 'memo-head-id id))))
-
-     ;; Group 0 (整个匹配): 隐藏结束标签
-     (0 (prog1 nil
-           (put-text-property (match-end 2) (match-end 0) 'invisible t))))) 
-  "Font lock keywords for memo-annotate-mode.")
 
 ;;;###autoload
 (define-minor-mode memo-annotate-mode
@@ -92,32 +80,18 @@
   ;; 在 mode 启用时，可以考虑清除或初始化 map（如果需要）
   ;; (clrhash memo-annotate-color-map) ; 如果每次启用都需要重置
   (if memo-annotate-mode
-      (progn
-        (font-lock-add-keywords nil memo-annotate-font-lock-keywords 'append) ; 使用 'append 或 t
-        (font-lock-mode 1)
-        (font-lock-flush)  ; 确保启用时立即应用
-        (font-lock-ensure))
+      (progn)
     ;; 在 mode 禁用时移除关键字
     (font-lock-remove-keywords nil memo-annotate-font-lock-keywords))
   (font-lock-flush)) ; 刷新以移除高亮
 
 ;; 4. 提供用于更新映射并刷新高亮的函数
-(defun memo-annotate-update-color-map (parent-headid)
+(defun memo-annotate-update-color-map (headid)
   "Fetch child annotation colors for PARENT-HEADID from the backend
 and update the local `memo-annotate-color-map`.
 Refreshes font-lock highlighting."
   (interactive "sParent Head ID: ")
-  (let ((color-alist (memo-api--get-child-annotation-color-map parent-headid)))
-    (when (listp color-alist)
-      (dolist (pair color-alist)
-        (when (consp pair)
-          (let ((id (car pair))
-                (color (cdr pair)))
-            (when (and (stringp id) (stringp color))
-              (puthash id color memo-annotate-color-map))))))
-    ;; 刷新高亮
-    (when (bound-and-true-p memo-annotate-mode)
-      (font-lock-flush))))
+)
 
 (defun memo-annotate-get-color (id)
   "Get the background color string for memo annotation with ID.
@@ -161,145 +135,33 @@ Refreshes font-lock highlighting."
   (when (derived-mode-p 'memo-annotate-mode)
     (font-lock-flush)))
 
-;; 添加调试函数
-(defun memo-debug-annotate ()
-  "Test the memo text property regex and highlight matches in current buffer."
-  (interactive)
-  (save-excursion
-    (let ((count 0))
-      (goto-char (point-min))
-      (while (re-search-forward memo-annotate-regex nil t)
-        (setq count (1+ count))
-        (message "Match %d - ID: %s, Content: %s"
-                 count
-                 (match-string-no-properties 1)
-                 (match-string-no-properties 2)))
-      (if (= count 0)
-          (message "No matches found for memo text property regex")
-        (message "Found %d matches" count)))))
-
 (defun memo-get-head-id-at-point (&optional pos)
   "Return the memo head ID associated with the text at POS (defaults to point).
-Returns nil if no memo head ID property is found at POS."
-  (get-text-property (or pos (point)) 'memo-head-id))
+Returns nil if no memo head ID property is found at POS.")
 
 
 
 ;;;  annotation action.
-(defun memo-annotate-insert-tags (start end headid)
-  "Insert memo annotation tags around region from START to END with HEADID.
-   This will insert <memo-head-id:HEADID> before START and </memo-head-id> after END."
-  (save-excursion
-    (goto-char end)
-    (insert "</memo-head-id>")
-    (goto-char start)
-    (insert (format "<memo-head-id:%s>" headid))
-    ;; 刷新高亮
-    (when (bound-and-true-p memo-annotate-mode)
-      (font-lock-flush))))
-
 (defun memo-annotate-point-inside-p (&optional pos)
   "Return t if point (or POS if provided) is inside a memo annotation.
    Returns nil otherwise."
-  (let ((pos (or pos (point)))
-        (inside nil))
-    (save-excursion
-      (goto-char pos)
-      ;; 首先检查当前位置是否有memo-head-id属性
-      (if (get-text-property pos 'memo-head-id)
-          (setq inside t)
-        ;; 如果没有，尝试向前搜索开始标签
-        (let ((start-pos nil)
-              (end-pos nil))
-          (save-excursion
-            ;; 向前搜索开始标签
-            (when (re-search-backward memo-annotate-regex nil t)
-              (setq start-pos (match-beginning 0))
-              (setq end-pos (match-end 0))
-              ;; 向后搜索结束标签
-              (when (re-search-forward "</memo-head-id>" nil t)
-                (when (and (> pos start-pos) (< pos (point)))
-                  (setq inside t)))))))
-      inside)))
+)
+
 
 (defun memo-annotate-get-annotation-at-point (&optional pos)
   "Return a memo-annotation object if point (or POS if provided) is inside a memo annotation.
-   Returns nil otherwise."
-  (let ((pos (or pos (point))))
-    (save-excursion
-      (goto-char pos)
-      ;; 首先检查当前位置是否有memo-head-id属性
-      (if (get-text-property pos 'memo-head-id)
-          (let ((id (get-text-property pos 'memo-head-id))
-                (begin nil)
-                (end nil))
-            ;; 向前搜索找到开始位置
-            (save-excursion
-              (while (and (> (point) (point-min))
-                          (get-text-property (1- (point)) 'memo-head-id)
-                          (string= (get-text-property (1- (point)) 'memo-head-id) id))
-                (backward-char 1))
-              (setq begin (point)))
-            ;; 向后搜索找到结束位置
-            (save-excursion
-              (while (and (< (point) (point-max))
-                          (get-text-property (point) 'memo-head-id)
-                          (string= (get-text-property (point) 'memo-head-id) id))
-                (forward-char 1))
-              (setq end (point)))
-            (make-memo-annotation :begin begin :end end :id id))
-        ;; 如果没有text property，尝试通过正则表达式查找
-        (let ((start-pos nil)
-              (end-pos nil)
-              (id nil))
-          (save-excursion
-            ;; 向前搜索开始标签
-            (when (re-search-backward memo-annotate-regex nil t)
-              (setq start-pos (match-beginning 0))
-              (setq id (match-string-no-properties 1))
-              ;; 向后搜索结束标签
-              (when (re-search-forward "</memo-head-id>" nil t)
-                (setq end-pos (match-end 0))
-                (when (and (> pos start-pos) (< pos end-pos))
-                  (make-memo-annotation :begin start-pos :end end-pos :id id))))))))))
+Returns nil otherwise.")
 
 (defun memo-annotate-get-annotations-in-region (start end)
   "Return a list of memo-annotation objects in the region from START to END.
 Returns nil if no annotations are found.
    This function also includes annotations that partially overlap with the region."
-  (let ((annotations nil)
-        (start-anno nil)
-        (end-anno nil))
-    ;; 检查区域起始位置是否在某个注释内部
-    (setq start-anno (memo-annotate-get-annotation-at-point start))
-    (when start-anno
-      (push start-anno annotations))
-    ;; 检查区域结束位置是否在某个注释内部
-    (setq end-anno (memo-annotate-get-annotation-at-point end))
-    (when (and end-anno
-               ;; 确保不是与start-anno相同的注释
-               (or (not start-anno)
-                   (not (string= (memo-annotation-id start-anno)
-                                (memo-annotation-id end-anno)))))
-      (push end-anno annotations))
-    ;; 查找区域内的所有完整注释
-    (save-excursion
-      (goto-char start)
-      (while (re-search-forward memo-annotate-regex end t)
-        (let ((anno-start (match-beginning 0))
-              (anno-end (match-end 0))
-              (id (match-string-no-properties 1))
-              (duplicate nil))
-          ;; 检查是否与已有注释重复
-          (dolist (anno annotations)
-            (when (string= (memo-annotation-id anno) id)
-              (setq duplicate t)))
-          (unless duplicate
-            (push (make-memo-annotation :begin anno-start :end anno-end :id id) annotations))))) 
-    (nreverse annotations)))
+  ( ))
 
 
 (provide 'memo-annotate)
 
 ;;; memo-annotate.el ends here
+
+
 

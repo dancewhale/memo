@@ -13,7 +13,7 @@ func main() {
 	})
 
 	g.ApplyBasic(storage.FsrsInfo{}, storage.ReviewLog{}, storage.Headline{}, storage.File{},
-		storage.Clock{}, storage.Property{}, storage.Tag{})
+		storage.Clock{}, storage.Property{}, storage.Tag{}, storage.Annotation{})
 
 	g.Execute()
 }

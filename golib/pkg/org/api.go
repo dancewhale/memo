@@ -20,13 +20,22 @@ import (
 var muteFile = sync.Mutex{}
 
 type OrgApi struct {
-	db *gorm.DB
+	db           *gorm.DB
+	annotationDB *db.AnnotationDB
 }
 
 func NewOrgApi() (*OrgApi, error) {
 	DB, err := storage.InitDBEngine()
+	if err != nil {
+		return nil, err
+	}
 
-	return &OrgApi{db: DB}, err
+	annotationDB, err := db.NewAnnotationDB()
+	if err != nil {
+		return nil, err
+	}
+
+	return &OrgApi{db: DB, annotationDB: annotationDB}, nil
 }
 
 func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
@@ -40,6 +49,12 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("GetVirtFile", o.GetVirtfileContent, "string", "Get virt file content."))
 	service.RegisterMethod(epc.MakeMethod("UploadVirtFile", o.UploadVirtFile, "string", "upload virt file content."))
 	service.RegisterMethod(epc.MakeMethod("GetChildVirtPropertyMap", o.GetChildrenVirtPropertyMap, "string", "Get child virt head property."))
+	// Annotation API methods
+	service.RegisterMethod(epc.MakeMethod("CreateAnnotation", o.CreateAnnotation, "string", "Create a new annotation"))
+	service.RegisterMethod(epc.MakeMethod("GetAnnotationByID", o.GetAnnotationByID, "string", "Get annotation by ID"))
+	service.RegisterMethod(epc.MakeMethod("GetAnnotationsByHeadlineID", o.GetAnnotationsByHeadlineID, "string", "Get all annotations for a headline"))
+	service.RegisterMethod(epc.MakeMethod("UpdateAnnotation", o.UpdateAnnotation, "string", "Update an existing annotation"))
+	service.RegisterMethod(epc.MakeMethod("DeleteAnnotationByID", o.DeleteAnnotationByID, "string", "Delete annotation by ID"))
 	return service
 }
 
@@ -249,11 +264,84 @@ func (o *OrgApi) UpdateOrgHeadProperty(orgid, key, value string) db.Result {
 	return db.Result{Data: true, Err: nil}
 }
 
-func (o OrgApi) GetOrgHeadProperty(orgid, key string) db.Result {
+func (o *OrgApi) GetOrgHeadProperty(orgid, key string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
 	value := headdb.GetPropertyValue(orgid, key)
 	return db.Result{Data: value, Err: nil}
+}
+
+// CreateAnnotation creates a new annotation for a headline
+func (o *OrgApi) CreateAnnotation(headlineID string, startPos, endPos uint, annoText, commentText string) db.Result {
+	annotation := &storage.Annotation{
+		HeadlineID:  headlineID,
+		Start:       startPos,
+		End:         endPos,
+		AnnoText:    annoText,
+		CommentText: commentText,
+	}
+
+	err := o.annotationDB.CreateAnnotation(annotation)
+	if err != nil {
+		return db.Result{Data: nil, Err: logger.Errorf("Failed to create annotation: %v", err)}
+	}
+
+	return db.Result{Data: annotation.ID, Err: nil}
+}
+
+// GetAnnotationByID retrieves an annotation by its ID
+func (o *OrgApi) GetAnnotationByID(annotationID uint) db.Result {
+	annotation, err := o.annotationDB.GetAnnotationByID(annotationID)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+
+	return db.Result{Data: annotation, Err: nil}
+}
+
+// GetAnnotationsByHeadlineID retrieves all annotations for a headline
+func (o *OrgApi) GetAnnotationsByHeadlineID(headlineID string) db.Result {
+	annotations, err := o.annotationDB.GetAnnotationsByHeadlineID(headlineID)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+
+	return db.Result{Data: annotations, Err: nil}
+}
+
+// UpdateAnnotation updates an existing annotation
+func (o *OrgApi) UpdateAnnotation(annotationID uint, startPos, endPos uint, headid, face, annoText, commentText string) db.Result {
+	// First get the existing annotation to ensure it exists
+	existingAnnotation, err := o.annotationDB.GetAnnotationByID(annotationID)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+
+	// Update the annotation fields
+	existingAnnotation.Start = startPos
+	existingAnnotation.End = endPos
+	existingAnnotation.HeadlineID = headid
+	existingAnnotation.Face = face
+	existingAnnotation.AnnoText = annoText
+	existingAnnotation.CommentText = commentText
+
+	// Save the updated annotation
+	err = o.annotationDB.UpdateAnnotation(existingAnnotation)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+
+	return db.Result{Data: true, Err: nil}
+}
+
+// DeleteAnnotationByID deletes an annotation by its ID
+func (o *OrgApi) DeleteAnnotationByID(annotationID uint) db.Result {
+	err := o.annotationDB.DeleteAnnotationByID(annotationID)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+
+	return db.Result{Data: true, Err: nil}
 }
