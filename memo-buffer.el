@@ -172,6 +172,7 @@
       (setq memo--buffer-local-note head)
       (setq memo--buffer-local-note-path path)
       (setq memo--buffer-local-note-buffer buffer)
+      (memo-annotate-mode)
       (setq write-contents-functions '(memo-update-current-note-content)))))
 
 (defun memo-open-file-from-treemacs (file)
@@ -253,8 +254,6 @@
 	(temp-buffer (generate-new-buffer memo-posframe-edit-buffer-name)))
     (with-current-buffer temp-buffer
       (org-mode)
-      (when content
-	(insert content))
       (let ((map (make-sparse-keymap)))
         (define-key map (kbd "C-c C-c")
           (lambda ()
@@ -269,7 +268,7 @@
             (exit-recursive-edit)))
         (use-local-map map))
       (setq-local header-line-format "Use C-c C-c to commit, C-c C-k to exit.")
-      (memo-posframe-edit-window-create temp-buffer)
+      (memo-posframe-edit-window-create temp-buffer content)
       (recursive-edit)
       (posframe-delete temp-buffer))
    memo--temp-content))

@@ -318,6 +318,8 @@ Uses the region text as the annotation source text."
              do (let* ((anno-id (overlay-get overlay 'memo-annotation-id))
                        (annotation (memo-annotate-get-annotation-by-id anno-id))
                        (comment (memo-annotation-text annotation)))
+		  (when (equal comment "")
+		    (setq comment (memo-annotation-srctext annotation)))
                   (when annotation
                     (let ((new-comment (memo-get-content-from-posframe comment)))
                       (when new-comment
