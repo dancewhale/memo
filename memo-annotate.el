@@ -319,7 +319,7 @@ Uses the region text as the annotation source text."
                        (annotation (memo-annotate-get-annotation-by-id anno-id))
                        (comment (memo-annotation-text annotation)))
                   (when annotation
-                    (let ((new-comment (memo-get-content-from-input-buffer comment)))
+                    (let ((new-comment (memo-get-content-from-posframe comment)))
                       (when new-comment
                         (setf (memo-annotation-text annotation) new-comment)
                         (memo-annotate-update-annotation annotation)

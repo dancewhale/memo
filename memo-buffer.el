@@ -227,32 +227,52 @@
       (org-mode)
       (goto-char (point-min)))))
 
-;; annotation head
-(defun memo-get-content-from-input-buffer (&optional default)
-  "Get content from a temporary input buffer with org-mode.
-DEFAULT is the initial content to insert in the buffer.
-Return the content entered by the user."
-  (let ((memo--window-config (current-window-configuration))
-        (memo--temp-content nil)
-        (temp-buffer (generate-new-buffer "*memo-content-input*")))
+(defconst memo-posframe-edit-buffer-name "*memo-content-input*")
+
+(defun memo-posframe-edit-window-create (buffer &optional content)
+  "Create posframe for edit, when exit need recursive-edit-exit."
+  (when (posframe-workable-p)
+    (posframe-show buffer
+		   :string content
+		   :border-color "#ee7b29"
+		   :border-width 2
+		   :poshandler 'posframe-poshandler-frame-center
+		   :height (round(* (frame-height) 0.90))
+		   :width (round(* (frame-width) 0.75))
+		   :override-parameters '((cursor-type box))
+		   :respect-header-line t
+		   :accept-focus t
+		   )
+      (setq-local cursor-type t)
+      (setq-local cursor-in-non-selected-windows 'box)))
+
+(defun memo-get-content-from-posframe (&optional content)
+  "Show posframe for edit."
+  (interactive)
+  (let ((memo--temp-content nil)
+	(temp-buffer (generate-new-buffer memo-posframe-edit-buffer-name)))
     (with-current-buffer temp-buffer
       (org-mode)
-      (when default
-        (insert default))
+      (when content
+	(insert content))
       (let ((map (make-sparse-keymap)))
         (define-key map (kbd "C-c C-c")
           (lambda ()
             (interactive)
             (let ((content (buffer-substring-no-properties (point-min) (point-max))))
-              (kill-buffer)
-              (set-window-configuration memo--window-config)
               (setq memo--temp-content content)
               (exit-recursive-edit))))
+        (define-key map (kbd "C-c C-k")
+          (lambda ()
+            (interactive)
+            (setq memo--temp-content nil)
+            (exit-recursive-edit)))
         (use-local-map map))
-      (switch-to-buffer-other-window temp-buffer)
-      (message "Enter content, then press C-c C-c to confirm")
-      (recursive-edit))
-    memo--temp-content))
+      (setq-local header-line-format "Use C-c C-c to commit, C-c C-k to exit.")
+      (memo-posframe-edit-window-create temp-buffer)
+      (recursive-edit)
+      (posframe-delete temp-buffer))
+   memo--temp-content))
 
 
 (defun memo-set-local-header-line-face ()
