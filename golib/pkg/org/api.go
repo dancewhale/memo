@@ -3,6 +3,7 @@ package org
 import (
 	"errors"
 	"memo/pkg/db"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -12,8 +13,8 @@ import (
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
 
+	epc "github.com/dancewhale/go-elrpc"
 	"github.com/karrick/godirwalk"
-	epc "github.com/kiwanami/go-elrpc"
 	"gorm.io/gorm"
 )
 
@@ -54,6 +55,7 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("GetAnnotationByID", o.GetAnnotationByID, "string", "Get annotation by ID"))
 	service.RegisterMethod(epc.MakeMethod("GetAnnotationsByHeadlineID", o.GetAnnotationsByHeadlineID, "string", "Get all annotations for a headline"))
 	service.RegisterMethod(epc.MakeMethod("UpdateAnnotation", o.UpdateAnnotation, "string", "Update an existing annotation"))
+	service.RegisterMethod(epc.MakeMethod("UpdateAnnotations", o.UpdateAnnotations, "string", "Update a lot of annotation in a list one time"))
 	service.RegisterMethod(epc.MakeMethod("DeleteAnnotationByID", o.DeleteAnnotationByID, "string", "Delete annotation by ID"))
 	return service
 }
@@ -334,6 +336,65 @@ func (o *OrgApi) UpdateAnnotation(annotationID uint, startPos, endPos uint, head
 		return db.Result{Data: false, Err: err}
 	}
 
+	return db.Result{Data: true, Err: nil}
+}
+
+func (o *OrgApi) UpdateAnnotations(annotations []map[string]string) db.Result {
+	for _, anno := range annotations {
+		annotationID, ok := anno["id"]
+		if !ok || annotationID == "" {
+			return db.Result{Data: false, Err: errors.New("Annotation ID is required.")}
+		}
+		startPos, ok := anno["start"]
+		if !ok || startPos == "" {
+			return db.Result{Data: false, Err: errors.New("Start position is required.")}
+		}
+		endPos, ok := anno["end"]
+		if !ok || endPos == "" {
+			return db.Result{Data: false, Err: errors.New("End position is required.")}
+		}
+		headid, ok := anno["headid"]
+		if !ok || headid == "" {
+			return db.Result{Data: false, Err: errors.New("Headline ID is required.")}
+		}
+		face, ok := anno["face"]
+		if !ok || face == "" {
+			return db.Result{Data: false, Err: errors.New("Face is required.")}
+		}
+		annoText, ok := anno["annotext"]
+		if !ok || annoText == "" {
+			return db.Result{Data: false, Err: errors.New("Annotation text is required.")}
+		}
+		commentText, ok := anno["commenttext"]
+		if !ok || commentText == "" {
+			return db.Result{Data: false, Err: errors.New("Comment text is required.")}
+		}
+		annotationIDUint, err := strconv.ParseUint(annotationID, 10, 32)
+		if err != nil {
+			return db.Result{Data: false, Err: err}
+		}
+		startPosUint, err := strconv.ParseUint(startPos, 10, 32)
+		if err != nil {
+			return db.Result{Data: false, Err: err}
+		}
+		endPosUint, err := strconv.ParseUint(endPos, 10, 32)
+		if err != nil {
+			return db.Result{Data: false, Err: err}
+		}
+		a := storage.Annotation{
+			ID:          uint(annotationIDUint),
+			Start:       uint(startPosUint),
+			End:         uint(endPosUint),
+			HeadlineID:  headid,
+			Face:        face,
+			AnnoText:    annoText,
+			CommentText: commentText,
+		}
+		err = o.annotationDB.UpdateAnnotation(&a)
+		if err != nil {
+			return db.Result{Data: false, Err: err}
+		}
+	}
 	return db.Result{Data: true, Err: nil}
 }
 

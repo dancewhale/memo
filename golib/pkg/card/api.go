@@ -7,7 +7,7 @@ import (
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 
-	epc "github.com/kiwanami/go-elrpc"
+	epc "github.com/dancewhale/go-elrpc"
 
 	//	"github.com/spewerspew/spew"
 	"gorm.io/gorm"

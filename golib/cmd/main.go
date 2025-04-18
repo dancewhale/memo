@@ -16,7 +16,7 @@ import (
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
 
-	"github.com/kiwanami/go-elrpc"
+	"github.com/dancewhale/go-elrpc"
 	"github.com/urfave/cli/v3"
 )
 

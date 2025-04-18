@@ -6,7 +6,7 @@ import (
 
 	"memo/pkg/logger"
 
-	"github.com/kiwanami/go-elrpc"
+	"github.com/dancewhale/go-elrpc"
 )
 
 var EClient *EmacsEpcClient
