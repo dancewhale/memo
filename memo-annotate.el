@@ -49,8 +49,8 @@
    (t (format "%S" face))))
 
 (defun memo-string-to-face (str)
-  "Convert a string representation back to a face specification.
-   The string should be in the format produced by `memo-face-to-string'."
+  "Convert a string STR representation back to a face specification.
+The string should be in the format produced by `memo-face-to-string'."
   (when (and str (not (string-empty-p str)))
     (cond
      ((string= str "nil") nil)
@@ -83,17 +83,18 @@
 (defun memo-annotation--get-by-headid (headid)
   "Get all annotations for the headline with HEADID.
 Returns a list of annotation objects and initializes the hash tables."
-  (let ((annotations (gethash headid memo-annotation--headid-map)))
+  (let ((annotations (gethash headid memo-annotation--headid-map))
+	(memo-annotation--id-map (clrhash memo-annotaion--id-map)))
     (if annotations
         annotations
       ;; 如果缓存中没有，则从服务器获取
       (let ((result (memo-api--get-annotations-by-headid headid)))
         (when result
-          ;; 更新 headid -> annotations 映射
-          (puthash headid result memo-annotation--headid-map)
           ;; 更新 id -> annotation 映射
           (dolist (anno result)
-            (puthash (memo-annotation--id anno) anno memo-annotation--id-map)))
+            (puthash (memo-annotation--id anno) anno memo-annotation--id-map))
+          ;; 更新 headid -> annotations hash 映射
+          (puthash headid memo-annotation--id-map memo-annotation--headid-map))
         result))))
 
 (defun memo-annotation--update (annotation-object)
@@ -105,16 +106,8 @@ Updates both the cache and calls the API function."
           (headid (memo-annotation-headid annotation-object)))
       ;; 更新 id -> annotation 映射
       (puthash id annotation-object memo-annotation--id-map)
-      ;; 更新 headid -> annotations 映射
-      (let ((annotations (gethash headid memo-annotation--headid-map)))
-        (when annotations
-          (setq annotations
-                (mapcar (lambda (anno)
-                          (if (equal (memo-annotation-id anno) id)
-                              annotation-object
-                            anno))
-                        annotations))
-          (puthash headid annotations memo-annotation--headid-map)))
+      ;; 更新 headid -> annotations hash 映射
+      (puthash headid memo-annotation--id-map memo-annotation--headid-map)
       ;; 调用 API 更新服务器数据
       (memo-api--update-annotation annotation-object)
       
@@ -139,14 +132,8 @@ Removes from cache and calls the API function."
           (headid (memo-annotation-headid annotation-object)))
       ;; 从 id -> annotation 映射中删除
       (remhash id memo-annotation--id-map)
-      ;; 更新 headid -> annotations 映射
-      (let ((annotations (gethash headid memo-annotation--headid-map)))
-        (when annotations
-          (setq annotations
-                (cl-remove-if (lambda (anno)
-                                (equal (memo-annotation-id anno) id))
-                              annotations))
-          (puthash headid annotations memo-annotation--headid-map)))
+      ;; 更新 headid -> annotations hash 映射
+      (puthash headid memo-annotation--id-map memo-annotation--headid-map)
       ;; 调用 API 从服务器删除
       (memo-api--delete-annotation-by-id id)
       
@@ -170,15 +157,12 @@ With original text ANNO-TEXT and comment text COMMENT-TEXT and FACE."
       (let ((id (memo-annotation-id new-annotation)))
         ;; 更新 id -> annotation 映射
         (puthash id new-annotation memo-annotation--id-map)
-        ;; 更新 headid -> annotations 映射
-        (let ((annotations (gethash headid memo-annotation--headid-map)))
-          (if annotations
-              (puthash headid (cons new-annotation annotations) memo-annotation--headid-map)
-            (puthash headid (list new-annotation) memo-annotation--headid-map))))
+        ;; 更新 headid -> annotations hash 映射
+        (puthash headid memo-annotation--id-map memo-annotation--headid-map))
       ;; 如果memo-annotation-mode已启用，为新注释创建overlay
       (when memo-annotation-mode
-        (memo-annotation--create-overlay new-annotation))
-      new-annotation)))
+        (memo-annotation--create-overlay new-annotation)))
+    new-annotation))
 
 (defun memo-annotation--get-by-id (id)
   "Get annotation object by ID.
@@ -189,13 +173,7 @@ First tries to get from cache, then from server if not found."
           ;; 更新缓存
           (puthash id annotation memo-annotation--id-map)
           ;; 可能还需要更新 headid -> annotations 映射
-          (let* ((headid (memo-annotation-headid annotation))
-                 (annotations (gethash headid memo-annotation--headid-map)))
-            (when annotations
-              (unless (cl-find-if (lambda (anno)
-                                    (equal (memo-annotation-id anno) id))
-                                  annotations)
-                (puthash headid (cons annotation annotations) memo-annotation--headid-map)))))
+          (puthash headid memo-annotation--id-map memo-annotation--headid-map))
         annotation)))
 
 
