@@ -172,7 +172,7 @@
       (setq memo--buffer-local-note head)
       (setq memo--buffer-local-note-path path)
       (setq memo--buffer-local-note-buffer buffer)
-      (memo-annotate-mode)
+      (memo-annotation-mode)
       (setq write-contents-functions '(memo-update-current-note-content)))))
 
 (defun memo-open-file-from-treemacs (file)

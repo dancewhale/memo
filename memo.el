@@ -94,7 +94,7 @@ if nil will default use user home dir.")
   (require 'memo-card)
   (require 'memo-cloze)
   (require 'memo-treemacs)
-  (require 'memo-annotate)
+  (require 'memo-annotation)
   (memo-start))
 
 (provide 'memo)
