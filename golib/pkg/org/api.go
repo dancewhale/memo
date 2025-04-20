@@ -3,7 +3,6 @@ package org
 import (
 	"errors"
 	"memo/pkg/db"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -339,58 +338,58 @@ func (o *OrgApi) UpdateAnnotation(annotationID uint, startPos, endPos uint, head
 	return db.Result{Data: true, Err: nil}
 }
 
-func (o *OrgApi) UpdateAnnotations(annotations []map[string]string) db.Result {
+func (o *OrgApi) UpdateAnnotations(annotations []map[string]interface{}) db.Result {
 	for _, anno := range annotations {
-		annotationID, ok := anno["id"]
+		annotationID, ok := anno["ID"]
 		if !ok || annotationID == "" {
 			return db.Result{Data: false, Err: errors.New("Annotation ID is required.")}
 		}
-		startPos, ok := anno["start"]
+		startPos, ok := anno["Start"]
 		if !ok || startPos == "" {
 			return db.Result{Data: false, Err: errors.New("Start position is required.")}
 		}
-		endPos, ok := anno["end"]
+		endPos, ok := anno["End"]
 		if !ok || endPos == "" {
 			return db.Result{Data: false, Err: errors.New("End position is required.")}
 		}
-		headid, ok := anno["headid"]
+		headid, ok := anno["HeadlineID"]
 		if !ok || headid == "" {
 			return db.Result{Data: false, Err: errors.New("Headline ID is required.")}
 		}
-		face, ok := anno["face"]
+		face, ok := anno["Face"]
 		if !ok || face == "" {
 			return db.Result{Data: false, Err: errors.New("Face is required.")}
 		}
-		annoText, ok := anno["annotext"]
+		annoText, ok := anno["AnnoText"]
 		if !ok || annoText == "" {
 			return db.Result{Data: false, Err: errors.New("Annotation text is required.")}
 		}
-		commentText, ok := anno["commenttext"]
+		commentText, ok := anno["CommentText"]
 		if !ok || commentText == "" {
 			return db.Result{Data: false, Err: errors.New("Comment text is required.")}
 		}
-		annotationIDUint, err := strconv.ParseUint(annotationID, 10, 32)
-		if err != nil {
-			return db.Result{Data: false, Err: err}
+		annotationIDUint, ok := annotationID.(int)
+		if !ok {
+			return db.Result{Data: false, Err: errors.New("Invalid annotation ID type.")}
 		}
-		startPosUint, err := strconv.ParseUint(startPos, 10, 32)
-		if err != nil {
-			return db.Result{Data: false, Err: err}
+		startPosUint, ok := startPos.(int)
+		if !ok {
+			return db.Result{Data: false, Err: errors.New("Invalid start position type.")}
 		}
-		endPosUint, err := strconv.ParseUint(endPos, 10, 32)
-		if err != nil {
-			return db.Result{Data: false, Err: err}
+		endPosUint, ok := endPos.(int)
+		if !ok {
+			return db.Result{Data: false, Err: errors.New("Invalid end position type.")}
 		}
 		a := storage.Annotation{
 			ID:          uint(annotationIDUint),
 			Start:       uint(startPosUint),
 			End:         uint(endPosUint),
-			HeadlineID:  headid,
-			Face:        face,
-			AnnoText:    annoText,
-			CommentText: commentText,
+			HeadlineID:  headid.(string),
+			Face:        face.(string),
+			AnnoText:    annoText.(string),
+			CommentText: commentText.(string),
 		}
-		err = o.annotationDB.UpdateAnnotation(&a)
+		err := o.annotationDB.UpdateAnnotation(&a)
 		if err != nil {
 			return db.Result{Data: false, Err: err}
 		}

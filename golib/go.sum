@@ -39,8 +39,8 @@ github.com/cznic/b v0.0.0-20181122101859-a26611c4d92d h1:SwD98825d6bdB+pEuTxWOXi
 github.com/cznic/b v0.0.0-20181122101859-a26611c4d92d/go.mod h1:URriBxXwVq5ijiJ12C7iIZqlA69nTlI+LgI6/pwftG8=
 github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548/go.mod h1:e6NPNENfs9mPDVNRekM7lKScauxd5kXTr1Mfyig6TDM=
 github.com/cznic/strutil v0.0.0-20181122101858-275e90344537/go.mod h1:AHHPPPXTw0h6pVabbcbyGRK1DckRn7r/STdZEeIDzZc=
-github.com/dancewhale/go-elrpc v0.0.0-20250417232400-846129522aa7 h1:H8K5iXqAWJWWFTuYekPHZbSc4WELRmg6/P/RBauBziY=
-github.com/dancewhale/go-elrpc v0.0.0-20250417232400-846129522aa7/go.mod h1:rE3G9DFrpf5Fg8KLD/n30B6sstAYSc1xuand10eYrhc=
+github.com/dancewhale/go-elrpc v0.0.0-20250418025256-77950b1d60b0 h1:jOEiVONL0u6pVVu/X/r2uF3FePHRECgrT2kx/BqS52c=
+github.com/dancewhale/go-elrpc v0.0.0-20250418025256-77950b1d60b0/go.mod h1:rE3G9DFrpf5Fg8KLD/n30B6sstAYSc1xuand10eYrhc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=

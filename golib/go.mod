@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	github.com/blevesearch/bleve v1.0.14
-	github.com/dancewhale/go-elrpc v0.0.0-20250417232400-846129522aa7
+	github.com/dancewhale/go-elrpc v0.0.0-20250418025256-77950b1d60b0
 	github.com/emirpasic/gods v1.18.1
 	github.com/google/uuid v1.6.0
 	github.com/karrick/godirwalk v1.17.0

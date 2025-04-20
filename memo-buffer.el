@@ -101,7 +101,7 @@
       (org-mode))
     (switch-to-buffer buf)
     (setq memo--buffer-local-note memo--review-note)
-    (setq write-contents-functions '(memo-update-current-note-content))
+    (setq write-contents-functions '(memo-save-buffer))
     (save-excursion  (memo-treemacs-update))))
 
 
@@ -173,7 +173,7 @@
       (setq memo--buffer-local-note-path path)
       (setq memo--buffer-local-note-buffer buffer)
       (memo-annotation-mode)
-      (setq write-contents-functions '(memo-update-current-note-content)))))
+      (setq write-contents-functions '(memo-save-buffer)))))
 
 (defun memo-open-file-from-treemacs (file)
   "Open FILE in view buffer and jump to TITLE."
@@ -227,6 +227,13 @@
       (org-link-open-from-string source)
       (org-mode)
       (goto-char (point-min)))))
+
+(defun memo-save-buffer ()
+  "Save current buffer content and annotation to db."
+  (let ((result (memo-update-current-note-content)))
+    (if result
+        (memo-annotation-overlays-save-batch)
+      nil)))
 
 (defconst memo-posframe-edit-buffer-name "*memo-content-input*")
 

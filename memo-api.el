@@ -118,6 +118,9 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
         (-map #'memo-make-note-from-alist y)
       nil)))
 
+;;; --------------------------------------------------
+;;;  annotation relate function
+;;; --------------------------------------------------
 (cl-defstruct memo-annotation id start end  headid face text  srctext)
 
 (defun memo-make-annotation-from-alist (x)
@@ -139,6 +142,30 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
         (-map #'memo-make-annotation-from-alist y)
       nil)))
 
+(defun memo-make-alist-from-annotation (annotation)
+  "Convert ANNOTATION object back to an alist format."
+  (list (cons "ID" (memo-annotation-id annotation))
+        (cons "Start" (memo-annotation-start annotation))
+        (cons "End" (memo-annotation-end annotation))
+        (cons "HeadlineID" (memo-annotation-headid annotation))
+        (cons "Face" (memo-annotation-face annotation))
+        (cons "CommentText" (memo-annotation-text annotation))
+        (cons "AnnoText" (memo-annotation-srctext annotation))))
+
+(defun memo-make-list-from-annotations-table (hash)
+  "Convert HASH table of ANNOTATIONS objects to a list of alists."
+  (unless (hash-table-p hash)
+    (user-error "The arg you pass is not hash table"))
+  (let ((anno-list nil))
+    (dolist (id (hash-table-keys hash))
+      (let ((anno (gethash id hash)))
+	(setq anno-list (append anno-list (list (memo-make-alist-from-annotation anno))))))
+    anno-list))
+
+
+;;; --------------------------------------------------
+;;;  memo file relate function
+;;; --------------------------------------------------
 (cl-defstruct memo-file
   fileid filepath hash totalcards totalvirtcards
   expiredcards waitingcards reviewingcards)
@@ -163,6 +190,10 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
         (-map #'memo-make-file-from-alist y)
       nil)))
 
+
+;;; --------------------------------------------------
+;;;  memo api function
+;;; --------------------------------------------------
 (defun memo-api--get-note-path (id)
   "Get current note with ID."
   (let ((result (memo-bridge-call-sync "GetHeadFilePath" id)))
@@ -261,6 +292,11 @@ with origin text ANNOTEXT and comment text COMMENTTEXT and FACE."
 				       (memo-annotation-srctext annotationObject))))
     (memo--parse-result result)))
 
+(defun memo-api--update-annotations (annotationList)
+  "Update the annotations in ANNOTATIONLIST."
+  (let ((result (memo-bridge-call-sync "UpdateAnnotations" annotationList)))
+    (memo--parse-result result)))
+
 (defun memo-api--delete-annotation-by-id (id)
   "Delete the annotation by Annotation ID."
   (let ((result (memo-bridge-call-sync "DeleteAnnotationByID" id)))
@@ -300,3 +336,5 @@ with origin text ANNOTEXT and comment text COMMENTTEXT and FACE."
 
 (provide 'memo-api)
 ;;; memo-api.el ends here
+
+
