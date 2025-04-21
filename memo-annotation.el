@@ -18,7 +18,7 @@
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;;  <memo-head-id:uuid>TEXT</memo-head-id> annotation.
+;;  
 ;;; Code:
 
 (require 'font-lock)
@@ -61,9 +61,14 @@ The string should be in the format produced by `memo-face-to-string'."
      (t (intern str)))))
 
 ;;---------------------------------------------------------
-;; annotation operator function
+;; annotation overlay region change
 ;;---------------------------------------------------------
 
+
+
+;;---------------------------------------------------------
+;; annotation operator function
+;;---------------------------------------------------------
 ;; 定义默认颜色字符串 (例如，使用 face 的背景色)
 ;; 这里我们用 face symbol, 但也可以用具体颜色字符串 "#ecf7ed"
 ;; 注意: 默认颜色主要在 memo-annotation-get-color 逻辑中使用
@@ -282,14 +287,22 @@ This function retrieves all annotations for the given headid
   "Minor mode to render memo text blocks using text properties with dynamic colors."
   :init-value nil
   :lighter " MemoAn" ; 可选：更改 lighter 字符串
-  :keymap nil
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "C-c C-a r") #'memo-annotation-adjust-region-at-point)
+            (define-key map (kbd "C-c C-a c") #'memo-annotation-create-at-region)
+            (define-key map (kbd "C-c C-a d") #'memo-annotation-delete-at-point)
+            (define-key map (kbd "C-c C-a e") #'memo-annotation-edit-comment-at-point)
+            (define-key map (kbd "C-c C-a s") #'memo-annotation-show-comment-at-point)
+            map)
   ;; 在 mode 启用时，初始化overlay
   (if memo-annotation-mode
       (progn
         ;; 清除之前的overlays，确保干净的状态
         (memo-annotation-overlays-clear)
         ;; 初始化当前buffer中的annotations
-	(memo-annotation-overlays-init))
+        (memo-annotation-overlays-init)
+        ;; 加载依赖的区域调整功能
+        (require 'memo-annotation-region))
      ;; 在 mode 禁用时清除所有overlay
      (memo-annotation-overlays-clear)))
 
