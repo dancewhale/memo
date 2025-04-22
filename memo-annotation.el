@@ -318,6 +318,8 @@ This function retrieves all annotations for the given headid
             (define-key map (kbd "C-c C-a d") #'memo-annotation-delete-at-point)
             (define-key map (kbd "C-c C-a e") #'memo-annotation-edit-comment-at-point)
             (define-key map (kbd "C-c C-a s") #'memo-annotation-show-comment-at-point)
+            (define-key map (kbd "C-c C-a n") #'memo-annotation-goto-next-overlay) ; <-- Add keybinding for next overlay
+            (define-key map (kbd "C-c C-a p") #'memo-annotation-goto-prev-overlay) ; <-- Add keybinding for previous overlay
             map)
   ;; 在 mode 启用时，初始化overlay
   (if memo-annotation-mode
@@ -421,6 +423,52 @@ Reads all overlays, updates the hash tables, and calls the API to update the ser
         (memo-api--update-annotations (memo-make-list-from-annotations-table memo-annotation--map))
         t)
       (message "No annotations found in current buffer")))
+
+;;---------------------------------------------------------
+;; Overlay Navigation Functions
+;;---------------------------------------------------------
+
+(defun memo-annotation--get-all-overlays ()
+  "Return a list of all memo annotation overlays in the current buffer."
+  (let ((overlays '()))
+    (maphash (lambda (_key overlay) (push overlay overlays))
+             memo-annotation--overlays-map)
+    overlays))
+
+(defun memo-annotation--sort-overlays (overlays)
+  "Sort a list of OVERLAYS by their start position."
+  (sort overlays #'(lambda (o1 o2) (< (overlay-start o1) (overlay-start o2)))))
+
+(defun memo-annotation--find-next-overlay (sorted-overlays current-pos)
+  "Find the next overlay in SORTED-OVERLAYS after CURRENT-POS."
+  (cl-find-if (lambda (ov) (> (overlay-start ov) current-pos))
+              sorted-overlays))
+
+(defun memo-annotation--find-prev-overlay (sorted-overlays current-pos)
+  "Find the previous overlay in SORTED-OVERLAYS before CURRENT-POS."
+  (let ((rev-overlays (reverse sorted-overlays)))
+    (cl-find-if (lambda (ov) (< (overlay-start ov) current-pos))
+                rev-overlays)))
+
+(defun memo-annotation-goto-next-overlay ()
+  "Move point to the start of the next memo annotation overlay."
+  (interactive)
+  (let* ((all-overlays (memo-annotation--get-all-overlays))
+         (sorted-overlays (memo-annotation--sort-overlays all-overlays))
+         (next-ov (memo-annotation--find-next-overlay sorted-overlays (point))))
+    (if next-ov
+        (goto-char (overlay-start next-ov))
+      (message "No next annotation overlay found"))))
+
+(defun memo-annotation-goto-prev-overlay ()
+  "Move point to the start of the previous memo annotation overlay."
+  (interactive)
+  (let* ((all-overlays (memo-annotation--get-all-overlays))
+         (sorted-overlays (memo-annotation--sort-overlays all-overlays))
+         (prev-ov (memo-annotation--find-prev-overlay sorted-overlays (point))))
+    (if prev-ov
+        (goto-char (overlay-start prev-ov))
+      (message "No previous annotation overlay found"))))
 
 (provide 'memo-annotation)
 ;;; memo-annotation.el ends here
