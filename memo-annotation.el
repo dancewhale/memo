@@ -174,7 +174,7 @@ With original text ANNO-TEXT and comment text COMMENT-TEXT and FACE."
 (defun memo-annotation--get-by-id (id)
   "Get annotation object by ID.
 First tries to get from cache, then from server if not found."
-  (or (memo-annotation--get-by-id-in-cache)
+  (or (memo-annotation--get-by-id-in-cache id)
       (let ((annotation (memo-api--get-annotation-by-id id)))
         (when annotation
 	  (let ((memo-annotation--map
@@ -322,14 +322,14 @@ This function retrieves all annotations for the given headid
   ;; 在 mode 启用时，初始化overlay
   (if memo-annotation-mode
       (progn
-        ;; 清除之前的overlays，确保干净的状态
-        (memo-annotation-overlays-clear)
         ;; 初始化当前buffer中的annotations
         (memo-annotation-overlays-init)
         ;; 加载依赖的区域调整功能
         (require 'memo-annotation-region))
-     ;; 在 mode 禁用时清除所有overlay
-     (memo-annotation-overlays-clear)))
+      ;; 在 mode 禁用时清除所有overlay
+      (progn 
+	(memo-annotation-overlays-clear)
+	(memo-annotation--clear-cache))))
 
 (defun memo-annotation-create-at-region ()
   "Create a new annotation for the selected region.
