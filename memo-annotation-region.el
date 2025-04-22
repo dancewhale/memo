@@ -41,6 +41,9 @@
 (defvar memo-annotation-region--cursor-type cursor-type
   "Store original cursor type during region adjustment.")
 
+(defvar memo-annotation-region--evil-original-cursor nil
+  "Store original evil cursor type during region adjustment.")
+
 (defvar memo-annotation-region-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<right>") #'memo-annotation-region-expand-right)
@@ -54,7 +57,17 @@
     (define-key map (kbd "RET") #'memo-annotation-region-confirm)
     (define-key map (kbd "<escape>") #'memo-annotation-region-cancel)
     map)
-  "Keymap for memo annotation region adjustment mode.")
+  "Keymap for memo annotation region adjustment mode (Emacs state).")
+
+
+;;; Helper function to check Evil state
+
+(defun memo-annotation-region--evil-normal-state-p ()
+  "Return non-nil if current buffer is in Evil normal state."
+  (and (boundp 'evil-local-mode)
+       evil-local-mode
+       (boundp 'evil-state) ; Ensure evil-state is bound
+       (eq evil-state 'normal)))
 
 ;;; Core functions for finding and selecting overlays
 
@@ -96,8 +109,8 @@ Returns the first overlay found with the memo-annotation property."
            (new-start (max (1- start) (point-min))))
       (move-overlay overlay new-start (overlay-end overlay)))))
 
-(defun memo-annotation-region-shrink-right ()
-  "Shrink the active annotation region one character from the right."
+(defun memo-annotation-region-shrink-left ()
+  "Shrink the active annotation region one character from the left."
   (interactive)
   (when memo-annotation-region--active-overlay
     (let* ((overlay memo-annotation-region--active-overlay)
@@ -106,8 +119,8 @@ Returns the first overlay found with the memo-annotation property."
            (new-end (max (1- end) (1+ start))))  ; Ensure at least 1 char width
       (move-overlay overlay start new-end))))
 
-(defun memo-annotation-region-shrink-left ()
-  "Shrink the active annotation region one character from the left."
+(defun memo-annotation-region-shrink-right ()
+  "Shrink the active annotation region one character from the right."
   (interactive)
   (when memo-annotation-region--active-overlay
     (let* ((overlay memo-annotation-region--active-overlay)
@@ -286,12 +299,17 @@ Returns the first overlay found with the memo-annotation property."
 
 (defun memo-annotation-region--cleanup ()
   "Clean up state after region adjustment is complete."
-  ;; Restore cursor type using the buffer-local value stored earlier
-  (setq-local cursor-type memo-annotation-region--cursor-type)
+  ;; Restore cursor based on which one was stored
+  (if memo-annotation-region--evil-original-cursor
+      (when (boundp 'evil-normal-state-cursor) ; Check if variable exists
+        (setq evil-normal-state-cursor memo-annotation-region--evil-original-cursor))
+    ;; Restore Emacs cursor type using the buffer-local value stored earlier
+    (setq-local cursor-type memo-annotation-region--cursor-type))
+
+  ;; Clear stored values
   (setq memo-annotation-region--active-overlay nil)
   (setq memo-annotation-region--original-overlay-props nil)
-  ;; Remove the recursive call that causes max-lisp-eval-depth error
-  ;; (memo-annotation-region-mode -1)
+  (setq memo-annotation-region--evil-original-cursor nil) ; Reset evil cursor store
   )
 
 (defun memo-annotation-region-confirm ()
@@ -319,13 +337,15 @@ Returns the first overlay found with the memo-annotation property."
         (memo-annotation--update-db annotation)
         (message "Annotation region updated"))))
   
-  (memo-annotation-region--cleanup))
+  (memo-annotation-region--cleanup)
+  (memo-annotation-region-mode -1))
 
 (defun memo-annotation-region-cancel ()
   "Cancel region adjustment and restore original overlay."
   (interactive)
   (memo-annotation-region--restore-overlay)
   (memo-annotation-region--cleanup)
+  (memo-annotation-region-mode -1)
   (message "Annotation region adjustment cancelled"))
 
 ;;;###autoload
@@ -333,13 +353,22 @@ Returns the first overlay found with the memo-annotation property."
   "Minor mode for adjusting memo annotation regions."
   :init-value nil
   :lighter " MemoRegion"
-  :keymap memo-annotation-region-mode-map
+  :keymap memo-annotation-region-mode-map ; Keep standard map for now, can be overridden
   (if memo-annotation-region-mode
       (progn
-        ;; Store the original buffer-local cursor type
-        (setq memo-annotation-region--cursor-type cursor-type)
-        ;; Set the buffer-local cursor type to nil to hide it
-        (setq-local cursor-type nil))
+        (if (memo-annotation-region--evil-normal-state-p)
+            (progn
+              ;; Handle Evil normal state cursor
+              (when (boundp 'evil-normal-state-cursor) ; Check if variable exists
+                (setq memo-annotation-region--evil-original-cursor evil-normal-state-cursor)
+                ;; Set cursor to hollow or another less intrusive style
+                (setq evil-normal-state-cursor '(hollow . 1))))
+          (progn
+            ;; Handle Emacs state cursor
+            ;; Store the original buffer-local cursor type
+            (setq memo-annotation-region--cursor-type cursor-type)
+            ;; Set the buffer-local cursor type to nil to hide it
+            (setq-local cursor-type nil))))
     ;; When disabling the mode, call the cleanup function
     (memo-annotation-region--cleanup)))
 

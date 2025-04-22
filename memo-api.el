@@ -156,10 +156,12 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   "Convert HASH table of ANNOTATIONS objects to a list of alists."
   (unless (hash-table-p hash)
     (user-error "The arg you pass is not hash table"))
-  (let ((anno-list nil))
-    (dolist (id (hash-table-keys hash))
-      (let ((anno (gethash id hash)))
-	(setq anno-list (append anno-list (list (memo-make-alist-from-annotation anno))))))
+  (let ((anno-list nil)
+	(ids (hash-table-keys hash)))
+    (when ids
+      (dolist (id ids)
+	(let ((anno (gethash id hash)))
+	  (setq anno-list (append anno-list (list (memo-make-alist-from-annotation anno)))))))
     anno-list))
 
 
