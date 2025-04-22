@@ -164,6 +164,7 @@
     (with-current-buffer buf
       (erase-buffer)
       (insert (memo-api--get-content-byid (memo-note-id head)))
+      (memo-buffer-undo-refresh)
       (set-buffer-modified-p nil)
       (org-mode)
       (setq-local header-line-format (memo-note-title head))
@@ -215,7 +216,7 @@
 
 ;; wait for use.
 (defun memo-goto-source ()
-"Open an org-mode LINK in a new buffer on the right side."
+  "Open an ORG-MODE LINK in a new buffer on the right side."
   (interactive)
   (if (not (memo-note-p memo--buffer-local-note))
       (user-error "Local buffer memo-note object is nil"))
@@ -227,6 +228,11 @@
       (org-link-open-from-string source)
       (org-mode)
       (goto-char (point-min)))))
+
+(defun memo-buffer-undo-refresh ()
+  "Refresh buffer undo list to stop previce change."
+  (buffer-disable-undo)
+  (buffer-enable-undo))
 
 (defun memo-save-buffer ()
   "Save current buffer content and annotation to db."
