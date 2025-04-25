@@ -1,0 +1,3 @@
+[submodule "go-elrpc"]
+	path = golib/elrpc
+	url = git@github.com:dancewhale/go-elrpc.git
