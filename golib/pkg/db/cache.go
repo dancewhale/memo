@@ -18,7 +18,7 @@ type HeadlineStats struct {
 // HeadlineWithFsrs 包含headline和fsrsInfo信息的结构体
 type HeadlineWithFsrs struct {
 	ID            string    `gorm:"primarykey;not null"`
-	Path          []string  `json:"path"`
+	Path          []string  `gorm:"-"`
 	Weight        int64     `json:"weight"`
 	Source        string    `json:"source"`
 	ScheduledType string    `json:"scheduled_type"`
@@ -396,7 +396,7 @@ func (c *FileHeadlineCache) findNextNewDFS(stats *HeadlineStats) *HeadlineWithFs
 }
 
 // GetFileFromCache 从缓存管理器获取指定文件的缓存，如果不存在或已过期则创建新缓存
-func (m *FileHeadlineCacheManager) GetFileFromCache(fileID string) (*FileHeadlineCache, error) {
+func (m *FileHeadlineCacheManager) GetFileCacheFromCache(fileID string) (*FileHeadlineCache, error) {
 	// 先尝试读取缓存
 	m.mutex.RLock()
 	cache, exists := m.caches[fileID]
@@ -432,6 +432,15 @@ func (m *FileHeadlineCacheManager) GetFileFromCache(fileID string) (*FileHeadlin
 	return newCache, nil
 }
 
+func (m *FileHeadlineCacheManager) GetFileFromCache(fileID string) (*FileInfo, error) {
+	cache, err := m.GetFileCacheFromCache(fileID)
+	if cache != nil {
+		return &cache.Info, err
+	} else {
+		return nil, err
+	}
+}
+
 // GetFilesFromCache 从缓存管理器获取多个指定文件的缓存，如果不存在或已过期则创建新缓存
 func (m *FileHeadlineCacheManager) GetFilesFromCache(fileIDs []string) ([]*FileInfo, error) {
 	result := make([]*FileInfo, 0, len(fileIDs))
@@ -439,7 +448,7 @@ func (m *FileHeadlineCacheManager) GetFilesFromCache(fileIDs []string) ([]*FileI
 
 	// 遍历所有fileID，获取各自的缓存
 	for _, fileID := range fileIDs {
-		cache, err := m.GetFileFromCache(fileID)
+		cache, err := m.GetFileCacheFromCache(fileID)
 		if err != nil {
 			// 记录第一个错误，但继续处理其他文件
 			if firstErr == nil {
@@ -492,7 +501,7 @@ func (m *FileHeadlineCacheManager) InvalidateCacheByHeadlineID(headlineID string
 // GetFileStatsByHeadlineID 获取指定headline及其所有子headline的统计信息
 func GetFileStatsByHeadlineID(fileID string, headlineID string) (*HeadlineStats, error) {
 	// 从缓存管理器获取缓存
-	cache, err := GetCacheManager().GetFileFromCache(fileID)
+	cache, err := GetCacheManager().GetFileCacheFromCache(fileID)
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +517,7 @@ func GetFileStatsByHeadlineID(fileID string, headlineID string) (*HeadlineStats,
 // GetFileStats 获取整个文件的统计信息
 func GetFileStats(fileID string) (totalCards, expiredCards, waitingCards, reviewingCards int, err error) {
 	// 从缓存管理器获取缓存
-	cache, err := GetCacheManager().GetFileFromCache(fileID)
+	cache, err := GetCacheManager().GetFileCacheFromCache(fileID)
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
@@ -536,7 +545,7 @@ func GetHeadIDByAncestorID(ancestorID string) []string {
 	}
 
 	// 从缓存管理器获取缓存
-	cache, err := GetCacheManager().GetFileFromCache(*heads[0].FileID)
+	cache, err := GetCacheManager().GetFileCacheFromCache(*heads[0].FileID)
 	if err != nil {
 		return headIDs
 	}
@@ -573,7 +582,7 @@ func GetHeadIDByAncestorIDs(ancestorIDs []string) []string {
 
 func GetChildrenByFileID(fileID string) ([]*HeadlineWithFsrs, error) {
 	// 从缓存管理器获取缓存
-	cache, err := GetCacheManager().GetFileFromCache(fileID)
+	cache, err := GetCacheManager().GetFileCacheFromCache(fileID)
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +597,7 @@ func GetChildrenByFileID(fileID string) ([]*HeadlineWithFsrs, error) {
 
 func GetChildrenByHeadlineID(headlineID, fileid string) ([]*HeadlineWithFsrs, error) {
 	// 从缓存管理器获取缓存
-	cache, err := GetCacheManager().GetFileFromCache(fileid)
+	cache, err := GetCacheManager().GetFileCacheFromCache(fileid)
 	if err != nil {
 		return nil, err
 	}
