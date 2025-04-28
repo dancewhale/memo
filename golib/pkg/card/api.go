@@ -100,7 +100,7 @@ func (api *CardApi) FindNoteList(q []string) db.Result {
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
-	err = bq.ExecuteScan(notes)
+	err = bq.ExecuteScan(&notes)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
@@ -117,7 +117,7 @@ func (api *CardApi) FindNote(q []string) db.Result {
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
-	err = bq.ExecuteScan(notes)
+	err = bq.ExecuteScan(&notes)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
