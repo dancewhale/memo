@@ -44,6 +44,8 @@ and used for backend to indentify memo head.")
   "Property used to store the color of annotation.")
 
 
+(defvar memo--review-note nil
+  "The memo-note object which store note info wait for review.")
 
 ;;; parse api call result; store value and throught err.
 (defvar  memo-api-return-err  nil
@@ -67,17 +69,14 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
     (user-error (memo-alist-get memo-api-return-err "s")))
   memo-api-return-value)
 
-;; get note for review.
+;; Setting note object.
 (cl-defstruct memo-note
   id path weight source scheduledtype type title hash
   parentid fileid level order status priority
   stability difficulty elapseddays scheduleddays
-  reps lapses  state needreview totalcards totalvirtcards
-  expiredcards waitingcards reviewingcards)
+  reps lapses  state needreview childvirtcards totalcards
+  totalvirtcards expiredcards waitingcards reviewingcards)
 
-
-(defvar memo--review-note nil
-  "The memo-note object which store note info wait for review.")
 
 (defun memo-make-note-from-alist (x)
   "Generate memo note object from alist X."
@@ -104,6 +103,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 		      :lapses (memo-alist-get x "Lapses")
 		      :state (memo-alist-get x "State")
 		      :needreview (memo-alist-get x "NeedReview")
+		      :childvirtcards (memo-alist-get x "ChildVirtCards")
 		      :totalcards (memo-alist-get x "TotalCards")
 		      :totalvirtcards (memo-alist-get x "TotalVirtCards")
 		      :expiredcards (memo-alist-get x "ExpiredCards")
@@ -196,16 +196,20 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 ;;; --------------------------------------------------
 ;;;  memo api function
 ;;; --------------------------------------------------
+(defun memo-api--get-note (querylist)
+  "Get note by query string list QUERYLIST."
+  (let ((result (memo-bridge-call-sync "FindNote" querylist)))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-note-list (querylist)
+  "Get note list by query string list QUERYLIST."
+  (let ((result (memo-bridge-call-sync "FindNoteList" querylist)))
+    (memo-make-note-from-return (memo--parse-result result))))
+
 (defun memo-api--get-note-path (id)
   "Get current note with ID."
   (let ((result (memo-bridge-call-sync "GetHeadFilePath" id)))
     (memo--parse-result result)))
-
-(defun memo-api--get-review-note-object ()
-  "Return memo-note object which need review from server."
-  (let ((result (memo-bridge-call-sync "GetNextReviewNote")))
-    (memo--parse-result result))
-  (setq memo--review-note (memo-make-note-from-alist memo-api-return-value)))
 
 (defun memo-api--get-content-byid (headid)
   "Get the content of head by HEADID and FILEID."
@@ -235,11 +239,22 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headid key)))
     (memo--parse-result result)))
 
+;; virt head relative code.
 (defun memo-api--create-virt-head (id title content)
   "Create virt head with TITLE and CONTENT under head with ID.
 Returns the ID of the created virt head."
   (let ((result (memo-bridge-call-sync "CreateVirtHead" id title content)))
     (memo--parse-result result)))
+
+(defun memo-api--get-children-virt-head (headid)
+  "Get children heads under head by HEADID."
+  (let ((result (memo-bridge-call-sync "GetChildrenVirtHead" headid)))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-virt-head-ancentor-head (headid)
+  "Get ancentor head by HEADID."
+  (let ((result (memo-bridge-call-sync "GetVirtHeadAncentorHead" headid)))
+    (memo-make-note-from-return (memo--parse-result result))))
 
 (defun memo-api--update-virt-file (headid content)
   "Upload the CONTENT of file by HEADID."
@@ -254,6 +269,16 @@ Returns the ID of the created virt head."
 (defun memo-api--get-read-files ()
   "Get files that need to read and not finish read yet."
   (let ((result (memo-bridge-call-sync "GetFileHasNewCard")))
+    (memo-make-file-from-return (memo--parse-result result))))
+
+(defun memo-api--get-file-by-filid (fileid)
+  "Get file by fileid."
+  (let ((result (memo-bridge-call-sync "GetFileByID" fileid)))
+    (memo-make-file-from-return (memo--parse-result result))))
+
+(defun memo-api--get-read-file-byid (fileid)
+  "Get the file info by FILEID."
+  (let ((result (memo-bridge-call-sync "GetFileByID" fileid)))
     (memo-make-file-from-return (memo--parse-result result))))
 
 (defun memo-api--get-file-children-heads (fileid)

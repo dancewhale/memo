@@ -27,9 +27,10 @@ type CardApi struct {
 func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
 	service.RegisterMethod(epc.MakeMethod("ReviewNote", api.ReviewNote, "string", "Review note"))
 	service.RegisterMethod(epc.MakeMethod("UndoReviewNote", api.UndoReviewNote, "string", "Undo today latest review record by headID"))
-	service.RegisterMethod(epc.MakeMethod("FindNoteFirst", api.FindNoteFirst, "string", "Find note with query"))
+	service.RegisterMethod(epc.MakeMethod("FindNote", api.FindNote, "string", "Find note with query"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteList", api.FindNoteList, "string", "Find notes with query"))
 	service.RegisterMethod(epc.MakeMethod("GetFileHasNewCard", api.GetFileHasNewCard, "string", "Get file has new card"))
+	service.RegisterMethod(epc.MakeMethod("GetFileByID", api.GetFileByID, "string", "Get file has new card"))
 	service.RegisterMethod(epc.MakeMethod("GetFileChildrenCard", api.GetFileChildrenCard, "string", "Get file children card"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadChildrenCard", api.GetHeadChildrenCard, "string", "Get head children card"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadContentByID", api.GetHeadContentByID, "string", "Get headline by id"))
@@ -53,6 +54,15 @@ func (api *CardApi) GetFileHasNewCard() db.Result {
 		return db.Result{Data: false, Err: err}
 	}
 	return db.Result{Data: fileInfos, Err: nil}
+}
+
+func (api *CardApi) GetFileByID(fileid string) db.Result {
+	fileInfo, err := db.GetCacheManager().GetFileFromCache(fileid)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	return db.Result{Data: fileInfo, Err: nil}
+
 }
 
 func (api *CardApi) GetHeadContentByID(headid string) db.Result {
@@ -100,7 +110,7 @@ func (api *CardApi) FindNoteList(q []string) db.Result {
 	return db.Result{Data: notes, Err: nil}
 }
 
-func (api *CardApi) FindNoteFirst(q []string) db.Result {
+func (api *CardApi) FindNote(q []string) db.Result {
 	var notes []db.HeadlineWithFsrs
 
 	bq, err := query.BuildQueryFromSyntax(q)
@@ -207,7 +217,7 @@ func (api *CardApi) getHeadlineWithFsrsByID(headID string) (*db.HeadlineWithFsrs
 
 	// 2. Get File Cache
 	cacheManager := db.GetCacheManager()
-	fileCache, err := cacheManager.GetFileFromCache(*fileID)
+	fileCache, err := cacheManager.GetFileCacheFromCache(*fileID)
 	if err != nil {
 		return nil, logger.Errorf("Failed to get file cache for file %s: %v", *fileID, err)
 	}

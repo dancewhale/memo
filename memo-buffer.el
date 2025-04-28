@@ -297,20 +297,24 @@
                                      :foreground "#ddd"
                                      :box (:line-width 3 :color "#444"))))))
 
-;;;-------------------------------------------------
-;;  treemacs action
-;;;-------------------------------------------------
-(defun memo-treemacs-read-next-note ()
-  "Read Next node."
-  (interactive)
-  (unless (equal (buffer-name (current-buffer)) memo--read-buffer-name)
-    (user-error "You should execute this command in buffer *memo-read*")
-    (let* ((memo-treemacs-buffer (get-buffer memo-treemacs-buffer-name)))
-      ())))
+
+;;;------------------------------------------------------------------
+;;; note find relative function.
+;;;------------------------------------------------------------------
+(defvar memo-next-note-query '["filter:dueBefore:0" "order:random"]
+  "Setting the query string to deter the method get next card.
+The query is like  operator:type:field:value,
+Operator is -/+, type is order/filter,
+When type is order field can be weight/due/level/seq/random and value can be asc/desc.
+When type is filter field can be fileid/ancestorid/dueAt/dueBefore/dueAfter/parentid/type/limit/state/tag/property.
+like filter:fileid:13089182-9F1D-4583-9076-A2B94998A030, filter:dueAt:-3, filter:tag:work,
+filter:property:id:123.
+Default Operator is +/- means:")
 
 
-
-
+(defun memo-query-next-note ()
+  "Find the next note by query in MEMO-NEXT-NOTE-QUERY."
+  (memo-api--get-note memo-next-note-query))
 
 (provide 'memo-buffer)
 ;;; memo-buffer.el ends here

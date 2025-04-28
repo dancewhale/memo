@@ -43,6 +43,7 @@ type HeadlineWithFsrs struct {
 	NeedReview    bool      `json:"NeedReview"`
 	LastReview    time.Time `json:"LastReview"`
 
+	ChildVirtCards int // 下级虚拟卡片数量
 	TotalCards     int // 总卡片数量
 	TotalVirtCards int // 总虚拟卡片数量
 	ExpiredCards   int // 超期未复习的卡片数量

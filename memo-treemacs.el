@@ -28,6 +28,12 @@
 
 (declare-function memo-treemacs--set-mode-line-format "memo-treemacs.el")
 
+(defcustom memo-treemacs-side-window-split-ratio 0.5
+  "The ratio for splitting the side window vertically when displaying note context.
+Value should be between 0 and 1, representing the proportion of the top window."
+  :type 'float
+  :group 'memo-treemacs)
+
 (defcustom memo-treemacs-virtual-head-expand-depth nil
   "Automatic expansion depth for `memo-treemacs-virtual-heads'."
   :type 'number
@@ -48,7 +54,7 @@ depending on if a custom mode line is detected."
            (setq mode-line-format title)))))
 
 
-(defvar memo-treemacs-virtual-head-position-params
+(defvar memo-treemacs-head-position-params
   `((side . ,treemacs-position)
     (slot . 1)
     (window-width . ,treemacs-width))
@@ -57,8 +63,12 @@ depending on if a custom mode line is detected."
   `memo-treemacs-virtual-heads'.")
 
 
-(defconst memo-treemacs-buffer-name "*MemoTree*"
+(defconst memo-treemacs-file-buffer-name "*MemoTreeFile"
   "Memo Buffer name store the tree.")
+
+(defconst memo-treemacs-note-buffer-name "*MemoTreeNote"
+  "Memo Buffer name store the tree.")
+
 
 (defun memo-resolve-value (value)
   "Resolve VALUE's value.
@@ -85,7 +95,7 @@ Otherwise returns value itself."
 	    (buffer memo--buffer-local-note-buffer))
 	(with-current-buffer buffer
 	  (treemacs-update-async-node path buffer)
-	  (display-buffer-in-side-window buf memo-treemacs-virtual-head-position-params)))
+	  (display-buffer-in-side-window buf memo-treemacs-head-position-params)))
     (error)))
 
 (defun memo-treemacs-goto ()
@@ -137,55 +147,40 @@ Otherwise returns value itself."
     (treemacs-pulse-on-failure "No Child head Found.")))
 
 ;;;----------------------------------
-;;;  treemacs tree render for review
+;;;  treemacs tree render for note
 ;;;----------------------------------
-
-(treemacs-define-expandable-node-type memo-treemacs-virtual-node
+(treemacs-define-expandable-node-type memo-treemacs-virt-head-node
   :closed-icon treemacs-icon-tag-closed
   :open-icon   treemacs-icon-tag-open
   :label
-  (if (equal (memo-note-expandable item) 1)
+  (if (> (memo-note-childvirtcards item) 0)
       (propertize (memo-note-title item) 'face 'font-lock-string-face)
     (propertize (memo-note-title item) 'face 'font-lock-variable-name-face))
   :key (memo-note-id item)
   :ret-action #'memo-treemacs-perform-ret-action
   :children
-  (when (equal (memo-note-expandable item) 1)
-    (let ((items (memo-api--get-virt-heads-by-parentid (memo-note-id item))))
+  (when (> (memo-note-childvirtcards item) 0)
+    (let ((items (memo-api--get-children-virt-head (memo-note-id item))))
       (funcall callback items)))
   :child-type
-  'memo-treemacs-virtual-node
+  'memo-treemacs-virt-head-node
   :more-properties
-  (if (equal (memo-note-expandable item) 0)
+  (if (> (memo-note-childvirtcards item) 0)
       `(:note ,item :leaf t :no-tab? t)
     `(:note ,item))
   :async? t)
 
-
-(treemacs-define-expandable-node-type memo-treemacs-review-node
-  :closed-icon treemacs-icon-tag-closed
-  :open-icon   treemacs-icon-tag-open
-  :label "--------------------------"
-  :key item
-  :children
-  (when (equal item "VirtHeadTree")
-    (let ((items  (list (memo-get-review-note))))
-      (funcall callback items)))
-  :child-type
-  'memo-treemacs-virtual-node
-  :async? t)
+(treemacs-define-variadic-entry-node-type memo-treemacs-virt-node
+  :key  "variadic-entry-node"
+  :children `(,(memo-api--get-virt-head-ancentor-head memo-local-note-id))
+  :child-type 'memo-treemacs-virt-head-node)
 
 
-(treemacs-define-variadic-entry-node-type memo-treemacs-review-mode-node
-  :key  "memo-treemacs-review-mode-node"
-  :children '("VirtHeadTree")
-  :child-type 'memo-treemacs-review-node)
-
-(defun memo-treemacs-review-render (title expand-depth
-                                 &optional buffer-name right-click-actions)
-  (let ((buffer (get-buffer-create (or buffer-name memo-treemacs-buffer-name))))
+(defun memo-treemacs-note-render (headid expand-depth
+                                 &optional right-click-actions)
+  (let ((buffer (get-buffer-create memo-treemacs-note-buffer-name)))
     (with-current-buffer buffer
-      (treemacs-initialize memo-treemacs-review-mode-node
+      (treemacs-initialize memo-treemacs-virt-node
         :with-expand-depth (or expand-depth 0)
         :and-do (progn
                   (memo-treemacs--set-mode-line-format buffer title)
@@ -193,6 +188,7 @@ Otherwise returns value itself."
                   (setq-local treemacs-default-visit-action 'treemacs-RET-action)
                   (setq-local memo-treemacs--right-click-actions right-click-actions)
                   (setq-local window-size-fixed nil)
+		  (setq-local memo-local-note-id headid)
                   (setq-local treemacs--width-is-locked nil)
                   (setq-local treemacs-space-between-root-nodes nil)
                   (when treemacs-text-scale
@@ -201,7 +197,7 @@ Otherwise returns value itself."
       (current-buffer))))
 
 ;;;----------------------------------
-;;;  treemacs tree render for read
+;;;  treemacs tree render for file
 ;;;----------------------------------
 (defun memo-treemacs-card-perform-ret-action (&rest _)
   (interactive)
@@ -250,7 +246,8 @@ Otherwise returns value itself."
       (memo-open-file-from-treemacs item)
     (treemacs-pulse-on-failure "No file Found.")))
 
-(treemacs-define-expandable-node-type memo-treemacs-read-file-node
+
+(treemacs-define-expandable-node-type memo-treemacs-read-node
   :closed-icon treemacs-icon-tag-closed
   :open-icon   treemacs-icon-tag-open
   :label
@@ -271,40 +268,28 @@ Otherwise returns value itself."
     `(:file ,item))
   :async? t)
 
-
-(treemacs-define-expandable-node-type memo-treemacs-read-node
-  :closed-icon treemacs-icon-tag-closed
-  :open-icon   treemacs-icon-tag-open
-  :label "The file wait reading."
-  :key item
-  :children
-  (when (equal item "ReadTree")
-    (let ((items  (memo-api--get-read-files)))
-      (funcall callback items)))
-  :child-type
-  'memo-treemacs-read-file-node
-  :async? t)
-
-
-(treemacs-define-variadic-entry-node-type memo-treemacs-read-mode-node
-  :key  "memo-treemacs-read-mode-node"
-  :children '("ReadTree")
+(treemacs-define-variadic-entry-node-type memo-treemacs-file-node
+  :key  "variadic-entry-node"
+  :children `(,(memo-api--get-file-by-filid memo-local-file-id))
   :child-type 'memo-treemacs-read-node)
 
-(defun memo-treemacs-read-render (title expand-depth
-                                 &optional buffer-name right-click-actions)
-  (let ((buffer (get-buffer-create (or buffer-name memo-treemacs-buffer-name))))
+
+(defun memo-treemacs-file-render (fileid expand-depth
+                                 &optional right-click-actions)
+  "Render treemacs buffer for file with FILEID EXPAND-DEPTH."
+  (let ((buffer (get-buffer-create memo-treemacs-file-buffer-name)))
     (with-current-buffer buffer
-      (treemacs-initialize memo-treemacs-read-mode-node
+      (treemacs-initialize memo-treemacs-file-node
         :with-expand-depth (or expand-depth 0)
         :and-do (progn
-                  (memo-treemacs--set-mode-line-format buffer title)
+                  (memo-treemacs--set-mode-line-format buffer fileid)
                   (setq-local face-remapping-alist '((button . default)))
                   (setq-local treemacs-default-visit-action 'treemacs-RET-action)
                   (setq-local memo-treemacs--right-click-actions right-click-actions)
                   (setq-local window-size-fixed nil)
                   (setq-local treemacs--width-is-locked nil)
                   (setq-local treemacs-space-between-root-nodes nil)
+		  (setq-local memo-local-file-id fileid)
                   (when treemacs-text-scale
                     (text-scale-increase treemacs-text-scale))
                   (memo-treemacs-generic-mode t)))
@@ -312,21 +297,37 @@ Otherwise returns value itself."
 
 ;;;----------------------------------
 
-(defun memo-treemacs-review-initialize ()
-  "Display heads in treemacs for review mode."
-  (interactive)
-  (display-buffer-in-side-window
-   (memo-treemacs-review-render
-    "*MemoTree*" memo-treemacs-virtual-head-expand-depth)
-   memo-treemacs-virtual-head-position-params))
+(defun memo-treemacs-display-note-context (note-object)
+  "Display note context (file or virtual head) in a split side window.
 
-(defun memo-treemacs-read-initialize ()
-  "Display heads in treemacs for read mode."
+Shows the Treemacs view (either file-based or virtual-head-based)
+in the top part and the '*memo-read*' buffer in the bottom part
+of a side window. The split ratio is controlled by
+`memo-treemacs-side-window-split-ratio`.
+
+Argument NOTE-OBJECT is the memo note object."
   (interactive)
-  (display-buffer-in-side-window
-   (memo-treemacs-read-render
-    "*MemoReadTree*" 1)
-   memo-treemacs-virtual-head-position-params))
+  (let* ((headid (memo-note-id note-object))
+         (fileid (memo-note-fileid note-object))
+         (treemacs-file-buffer  (get-buffer-create memo-treemacs-file-buffer-name))
+         (treemacs-note-buffer  (get-buffer-create memo-treemacs-note-buffer-name))
+         ;; Ensure the side window is displayed first
+         (side-window (display-buffer treemacs-file-buffer `((display-buffer-in-side-window . (
+                                                        (window-height . shrink-window-if-larger-than-buffer)
+                                                        ,@memo-treemacs-head-position-params))))))
+    (memo-treemacs-note-render headid memo-treemacs-virtual-head-expand-depth)
+    (memo-treemacs-file-render fileid 1)
+    (when side-window
+      (with-selected-window side-window
+        ;; Split the side window vertically
+        (let* ((total-height (window-height))
+               (top-height (max 1 (floor (* total-height memo-treemacs-side-window-split-ratio))))
+               (bottom-window (split-window-vertically (- total-height top-height))))
+          ;; Display treemacs buffer in the top window (already there)
+          ;; Display note buffer in the bottom window
+          (set-window-buffer bottom-window treemacs-note-buffer)
+          ;; Select the top window (treemacs) for focus
+          (select-window side-window))))))
 
 (provide 'memo-treemacs)
 ;;; memo-treemacs.el ends here
