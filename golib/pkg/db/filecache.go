@@ -468,7 +468,7 @@ func (m *FileHeadlineCacheManager) GetFilesFromCache(fileIDs []string) ([]*FileI
 	return result, firstErr
 }
 
-// InvalidateCache 使指定文件的缓存失效
+// InvalidateCache 刷新指定文件的缓存
 func (m *FileHeadlineCacheManager) InvalidateCache(fileID string) {
 	m.mutex.Lock()
 	delete(m.caches, fileID)
@@ -482,8 +482,19 @@ func (m *FileHeadlineCacheManager) InvalidateAllCache() {
 	m.mutex.Unlock()
 }
 
-// InvalidateCacheByHeadlineID 根据HeadlineID使相关缓存失效
-func (m *FileHeadlineCacheManager) InvalidateCacheByHeadlineID(headlineID string) error {
+// RefreshCacheByFileID 刷新指定文件的缓存
+func (m *FileHeadlineCacheManager) RefreshCacheByFileID(fileID string) {
+	m.mutex.Lock()
+	delete(m.caches, fileID)
+	m.mutex.Unlock()
+	go func() {
+		_, err := m.GetFileCacheFromCache(fileID)
+		logger.Errorf("Refresh cache for file %s failed: %v", fileID, err)
+	}()
+}
+
+// RefreshCacheByHeadlineID 根据HeadlineID 刷新相关缓存失效
+func (m *FileHeadlineCacheManager) RefreshCacheByHeadlineID(headlineID string) error {
 	// 查询headline所属的文件ID
 	headline := dal.Headline
 	heads, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).Find()
@@ -495,6 +506,11 @@ func (m *FileHeadlineCacheManager) InvalidateCacheByHeadlineID(headlineID string
 	if heads[0].FileID != nil {
 		m.InvalidateCache(*heads[0].FileID)
 	}
+
+	go func() {
+		_, err = m.GetFileCacheFromCache(*heads[0].FileID)
+		logger.Errorf("Refresh cache for file %s failed: %v", *heads[0].FileID, err)
+	}()
 
 	return nil
 }

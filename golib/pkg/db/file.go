@@ -125,13 +125,8 @@ func FileDBUpdate(fd *storage.File, force bool, filetype int) error {
 		if file.FilePath != fd.FilePath || file.Hash != fd.Hash || force {
 			_, err := f.WithContext(context.Background()).Where(f.ID.Eq(fd.ID)).
 				UpdateSimple(f.FilePath.Value(fd.FilePath), f.Hash.Value(fd.Hash), f.MetaContent.Value(fd.MetaContent))
-
 			if err != nil {
 				return logger.Errorf("Check file record in db error: %v", err)
-			}
-			// 使相关缓存失效
-			if cacheManager := GetCacheManager(); cacheManager != nil {
-				cacheManager.InvalidateCache(fd.ID)
 			}
 		}
 	} else if filetype == storage.VirtualFile {
@@ -146,14 +141,14 @@ func FileDBUpdate(fd *storage.File, force bool, filetype int) error {
 				if err != nil {
 					return logger.Errorf("Update virt file record in db error: %v", err)
 				}
-				// 使相关缓存失效
-				if cacheManager := GetCacheManager(); cacheManager != nil {
-					cacheManager.InvalidateCache(fd.ID)
-				}
 			}
 		}
 	}
 
+	// 使相关缓存失效
+	if cacheManager := GetCacheManager(); cacheManager != nil {
+		cacheManager.RefreshCacheByFileID(fd.ID)
+	}
 	return nil
 }
 

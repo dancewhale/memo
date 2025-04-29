@@ -169,7 +169,7 @@ func ReviewCard(headlineID string, rating gfsrs.Rating) error {
 
 		// 清除缓存
 		if cacheManager := db.GetCacheManager(); cacheManager != nil {
-			err = cacheManager.InvalidateCacheByHeadlineID(headlineID)
+			err = cacheManager.RefreshCacheByHeadlineID(headlineID)
 			if err != nil {
 				logger.Errorf("Invalidate Cache by headlineid %s failed: %v.", headlineID, err)
 			}
@@ -202,7 +202,7 @@ func UndoReviewCard(headlineID string) (bool, error) {
 
 	// 清除缓存
 	if cacheManager := db.GetCacheManager(); cacheManager != nil {
-		err = cacheManager.InvalidateCacheByHeadlineID(headlineID)
+		err = cacheManager.RefreshCacheByHeadlineID(headlineID)
 		if err != nil {
 			logger.Errorf("Invalidate Cache by headlineid %s failed: %v.", headlineID, err)
 		}

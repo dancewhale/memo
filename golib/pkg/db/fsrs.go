@@ -32,7 +32,7 @@ func (f *FsrsDB) CreateFsrs(fsrsInfo *storage.FsrsInfo) error {
 	}
 
 	if cacheManager := GetCacheManager(); cacheManager != nil {
-		cacheManager.InvalidateCache(fsrsInfo.HeadlineID)
+		cacheManager.RefreshCacheByHeadlineID(fsrsInfo.HeadlineID)
 	}
 	return nil
 }
@@ -50,7 +50,7 @@ func (f *FsrsDB) UpdateFsrs(Fsrs *storage.FsrsInfo) error {
 	}
 
 	if cacheManager := GetCacheManager(); cacheManager != nil {
-		cacheManager.InvalidateCache(Fsrs.HeadlineID)
+		cacheManager.RefreshCacheByHeadlineID(Fsrs.HeadlineID)
 	}
 	return nil
 }

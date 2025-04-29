@@ -345,12 +345,6 @@ func (h *OrgHeadlineDB) UpdateProperty(headID, key, value string) error {
 		return errors.New("property ID can't update direct in UpdateProperty")
 	}
 
-	if key == options.EmacsPropertyWeight || key == options.EmacsPropertySchedule {
-		if cacheManager := GetCacheManager(); cacheManager != nil {
-			cacheManager.InvalidateCache(*fileID)
-		}
-	}
-
 	if key == options.EmacsPropertyID {
 		return logger.Errorf("ID is not allowed to update.")
 	} else if key == options.EmacsPropertySource {
@@ -360,6 +354,9 @@ func (h *OrgHeadlineDB) UpdateProperty(headID, key, value string) error {
 	} else if key == options.EmacsPropertySchedule {
 		_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headID)).
 			UpdateSimple(headline.ScheduledType.Value(value))
+		if cacheManager := GetCacheManager(); cacheManager != nil {
+			cacheManager.RefreshCacheByFileID(*fileID)
+		}
 		return err
 	} else if key == options.EmacsPropertyWeight {
 		w, err := strconv.Atoi(value)
