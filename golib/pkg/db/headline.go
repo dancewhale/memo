@@ -210,50 +210,35 @@ func (h *OrgHeadlineDB) GetHeadFilePath(id string) (string, error) {
 }
 
 func (h *OrgHeadlineDB) GetFileIDByOrgID(orgid string) (*string, error) {
-	head := dal.Headline
-	currentID := orgid
-	// 添加迭代次数限制，防止无限循环（虽然理论上不应该发生）
-	maxIterations := 100
-
-	for i := 0; i < maxIterations; i++ {
-		var headlines []*storage.Headline
-		headlines, err := head.WithContext(context.Background()).
-			Where(head.ID.Eq(currentID)).
-			// 只需要查询 HeadlineID 和 FileID 字段
-			Select(head.ID, head.HeadlineID, head.FileID).
-			Find()
-
-		if err != nil {
-			return nil, logger.Errorf("Get headline by id %s failed during iteration: %v", currentID, err)
-		}
-
-		if len(headlines) == 0 {
-			return nil, logger.Errorf("Head with id %s not found.", orgid)
-		}
-
-		if len(headlines) > 1 {
-			return nil, logger.Errorf("Multiple headlines found for id %s.", orgid)
-		}
-
-		foundHeadline := headlines[0]
-
-		if foundHeadline.HeadlineID == nil || *foundHeadline.HeadlineID == "" {
-			// HeadlineID 为空，这是查找链的终点，检查 FileID
-			if foundHeadline.FileID == nil || *foundHeadline.FileID == "" {
-				// FileID 也为空，异常情况
-				return nil, logger.Errorf("Found terminal headline with id %s (started with %s), but its FileID is nil or empty.", foundHeadline.ID, orgid)
-			} else {
-				// FileID 有效，返回 FileID
-				return foundHeadline.FileID, nil
-			}
-		} else {
-			// HeadlineID 非空，继续向上查找
-			currentID = *foundHeadline.HeadlineID
-		}
+	head, err := h.GetFirstHeadByOrgID(orgid)
+	if err != nil {
+		return nil, err
 	}
+	if head != nil {
+		return head.FileID, nil
+	} else {
+		return nil, logger.Errorf("Get file by headline id %s error: file not found", orgid)
+	}
+}
 
-	// 如果循环次数过多，可能是数据结构有问题或陷入循环
-	return nil, logger.Errorf("Exceeded maximum iterations (%d) searching, for FileID starting from orgid %s. Possible loop or deep nesting.", maxIterations, orgid)
+func (h *OrgHeadlineDB) GetFirstHeadByOrgID(orgid string) (*storage.Headline, error) {
+	headline := dal.Headline
+	head, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(orgid)).First()
+	if err != nil {
+		return nil, logger.Errorf("Get headline by id %s error: %v", orgid, err)
+	}
+	if head.FileID != nil && *head.FileID != "" {
+		return head, nil
+	} else {
+		if head.HeadlineID != nil && *head.HeadlineID != "" {
+			head, err = headline.WithContext(context.Background()).Where(headline.ID.Eq(*head.HeadlineID)).First()
+			if err != nil {
+				return nil, logger.Errorf("Get first file headline by id %s error: %v", *head.HeadlineID, err)
+			}
+			return head, nil
+		}
+		return nil, logger.Errorf("Get first file headline by id %s error: head has no fileid or headlineid")
+	}
 }
 
 func (h *OrgHeadlineDB) UpdateHeadlineHash(id string) error {
@@ -392,19 +377,30 @@ func (h *OrgHeadlineDB) UpdateProperty(headID, key, value string) error {
 
 func (h *OrgHeadlineDB) GetFileByHeadlineID(headlineID string) (*storage.File, error) {
 	headline := dal.Headline
+	file := dal.File
 	head, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).First()
 	if err != nil {
 		return nil, logger.Errorf("Get headline by id %s error: %v", headlineID, err)
 	}
-	if head.FileID == nil {
-		return nil, logger.Errorf("OrgHeadlineDB %s has no file attach to it.", headlineID)
-	} else {
-		file := dal.Use(storage.Engine).File
+	if head.FileID != nil && *head.FileID != "" {
 		f, err := file.WithContext(context.Background()).Where(file.ID.Eq(*head.FileID)).First()
 		if err != nil {
 			return nil, logger.Errorf("Get file by id %s in db error: %v", *head.FileID, err)
 		}
 		return f, nil
+	} else {
+		if head.HeadlineID != nil && *head.HeadlineID != "" {
+			head, err = headline.WithContext(context.Background()).Where(headline.ID.Eq(*head.HeadlineID)).First()
+			if err != nil {
+				return nil, logger.Errorf("Get ancestor file headline by id %s error: %v", *head.HeadlineID, err)
+			}
+			f, err := file.WithContext(context.Background()).Where(file.ID.Eq(*head.FileID)).First()
+			if err != nil {
+				return nil, logger.Errorf("Get file by id %s in db error: %v", *head.FileID, err)
+			}
+			return f, nil
+		}
+		return nil, logger.Errorf("Get file by id %s error: head has no fileid or headlineid")
 	}
 }
 
@@ -418,18 +414,24 @@ func (h *OrgHeadlineDB) CreateVirtHead(headID, title, content string) (string, e
 	}
 
 	count, err := head.WithContext(context.Background()).
-		Where(head.HeadlineID.Eq(headID)).Where(head.Level.Eq(1)).Count()
+		Where(head.ParentID.Eq(headID)).Where(head.HeadlineID.IsNotNull()).Count()
 	if err != nil {
 		return "", logger.Errorf("Count virtual headline by parent id %s error: %v", headID, err)
+	}
+	var headlineID *string
+	if parentHead.HeadlineID != nil || *parentHead.HeadlineID != "" {
+		headlineID = parentHead.HeadlineID
+	} else {
+		headlineID = &parentHead.ID
 	}
 
 	headline := storage.Headline{ID: parser.GenerateID(),
 		Title:         title,
 		Content:       content,
 		Weight:        storage.DefaultWeight,
-		HeadlineID:    &headID,
+		ParentID:      &headID,
+		HeadlineID:    headlineID,
 		ScheduledType: storage.NORMAL,
-		Level:         parentHead.Level + 1,
 		Order:         int(count + 1),
 	}
 	headline.Hash = parser.HashContent(headline.String())

@@ -46,8 +46,6 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("GetOrgHeadProperty", o.GetOrgHeadProperty, "string", "Get org head property by id."))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
 	service.RegisterMethod(epc.MakeMethod("CreateVirtHead", o.CreateVirtHead, "string", "Create virt head."))
-	service.RegisterMethod(epc.MakeMethod("GetChildrenVirtHead", o.GetChildrenVirtHead, "string", "Get head virt children note"))
-	service.RegisterMethod(epc.MakeMethod("GetVirtHeadAncentorHead", o.GetVirtHeadAncentorHead, "string", "Get head ancestor card"))
 	service.RegisterMethod(epc.MakeMethod("GetVirtFile", o.GetVirtfileContent, "string", "Get virt file content."))
 	service.RegisterMethod(epc.MakeMethod("UploadVirtFile", o.UploadVirtFile, "string", "upload virt file content."))
 	service.RegisterMethod(epc.MakeMethod("GetChildVirtPropertyMap", o.GetChildrenVirtPropertyMap, "string", "Get child virt head property."))
@@ -84,30 +82,6 @@ func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
 	}
 	card.ScanInitFsrs()
 	return db.Result{Data: id, Err: nil}
-}
-
-func (api *OrgApi) GetChildrenVirtHead(headid string) db.Result {
-	virtDB, err := db.NewVirtHeadDB()
-	if err != nil {
-		return db.Result{Data: nil, Err: err}
-	}
-	heads, err := virtDB.GetVirtChildrenHeadTree(headid)
-	if err != nil {
-		return db.Result{Data: nil, Err: err}
-	}
-	return db.Result{Data: heads, Err: nil}
-}
-
-func (api *OrgApi) GetVirtHeadAncentorHead(headid string) db.Result {
-	virtDB, err := db.NewVirtHeadDB()
-	if err != nil {
-		return db.Result{Data: nil, Err: err}
-	}
-	head, err := virtDB.GetVirtAncestorID(headid)
-	if err != nil {
-		return db.Result{Data: nil, Err: err}
-	}
-	return db.Result{Data: head, Err: nil}
 }
 
 func (o *OrgApi) GetVirtfileContent(headid string) db.Result {

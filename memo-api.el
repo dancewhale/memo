@@ -246,14 +246,15 @@ Returns the ID of the created virt head."
   (let ((result (memo-bridge-call-sync "CreateVirtHead" id title content)))
     (memo--parse-result result)))
 
-(defun memo-api--get-children-virt-head (headid)
-  "Get children heads under head by HEADID."
-  (let ((result (memo-bridge-call-sync "GetChildrenVirtHead" headid)))
+(defun memo-api--get-first-file-head (id)
+  "Get first file head by ID."
+  (let ((result (memo-bridge-call-sync "GetFirstFileHeadCard" id)))
     (memo-make-note-from-return (memo--parse-result result))))
 
-(defun memo-api--get-virt-head-ancentor-head (headid)
-  "Get ancentor head by HEADID."
-  (let ((result (memo-bridge-call-sync "GetVirtHeadAncentorHead" headid)))
+
+(defun memo-api--get-children-virt-head (id  headlineid)
+  "Get children heads under head by ID and HEADLINEID."
+  (let ((result (memo-bridge-call-sync "GetHeadChildrenVirtCard" headid)))
     (memo-make-note-from-return (memo--parse-result result))))
 
 (defun memo-api--update-virt-file (headid content)
@@ -266,14 +267,9 @@ Returns the ID of the created virt head."
   (let ((result (memo-bridge-call-sync "GetVirtFile" headid)))
     (memo--parse-result result)))
 
-(defun memo-api--get-read-files ()
-  "Get files that need to read and not finish read yet."
-  (let ((result (memo-bridge-call-sync "GetFileHasNewCard")))
-    (memo-make-file-from-return (memo--parse-result result))))
-
 (defun memo-api--get-file-by-filid (fileid)
-  "Get file by fileid."
-  (let ((result (memo-bridge-call-sync "GetFileByID" fileid)))
+  "Get file info by FILEID."
+  (let ((result (memo-bridge-call-sync "GetFileByFileID" fileid)))
     (memo-make-file-from-return (memo--parse-result result))))
 
 (defun memo-api--get-read-file-byid (fileid)
@@ -282,7 +278,7 @@ Returns the ID of the created virt head."
     (memo-make-file-from-return (memo--parse-result result))))
 
 (defun memo-api--get-file-children-heads (fileid)
-  "Get first heads of file by FILEID."
+  "Get first level heads of file by FILEID."
   (let ((result (memo-bridge-call-sync "GetFileChildrenCard" fileid)))
     (memo-make-note-from-return (memo--parse-result result))))
 

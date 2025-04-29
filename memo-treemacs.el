@@ -28,12 +28,6 @@
 
 (declare-function memo-treemacs--set-mode-line-format "memo-treemacs.el")
 
-(defcustom memo-treemacs-side-window-split-ratio 0.5
-  "The ratio for splitting the side window vertically when displaying note context.
-Value should be between 0 and 1, representing the proportion of the top window."
-  :type 'float
-  :group 'memo-treemacs)
-
 (defcustom memo-treemacs-virtual-head-expand-depth nil
   "Automatic expansion depth for `memo-treemacs-virtual-heads'."
   :type 'number
@@ -54,14 +48,21 @@ depending on if a custom mode line is detected."
            (setq mode-line-format title)))))
 
 
-(defvar memo-treemacs-head-position-params
+(defvar memo-treemacs-file-position-params
+  `((side . ,treemacs-position)
+    (slot . 0)
+    (window-width . ,treemacs-width))
+  "The params which will be used by
+  `display-buffer-in-side-window' in
+  `memo-treemacs-file'.")
+
+(defvar memo-treemacs-note-position-params
   `((side . ,treemacs-position)
     (slot . 1)
     (window-width . ,treemacs-width))
   "The params which will be used by
   `display-buffer-in-side-window' in
-  `memo-treemacs-virtual-heads'.")
-
+  `memo-treemacs-virtual-note")
 
 (defconst memo-treemacs-file-buffer-name "*MemoTreeFile"
   "Memo Buffer name store the tree.")
@@ -139,12 +140,43 @@ Otherwise returns value itself."
 (define-minor-mode memo-treemacs-generic-mode "Treemacs generic mode."
   :keymap memo-treemacs-generic-map)
 
-(defun memo-treemacs-perform-ret-action (&rest _)
+(defun memo-treemacs-card-perform-ret-action (&rest _)
+  "Open note on other buffer when perform ret in note bottom."
+  (interactive)
+  (-if-let* ((button-node (treemacs-node-at-point))
+	     (item (button-get button-node :item)))
+      (memo-treemacs-open-note item)
+    (treemacs-pulse-on-failure "No Child head Found.")))
+
+(defun memo-treemacs-file-perform-ret-action (&rest _)
+  "Open file on other buffer when perform ret in file bottom."
   (interactive)
   (if-let (item (-> (treemacs-node-at-point)
                       (button-get :item)))
-      (memo-open-head-in-read-buffer item)
-    (treemacs-pulse-on-failure "No Child head Found.")))
+      (progn
+	(if (not (memo-file-filepath item))
+	    (treemacs-pulse-on-failure "File Path not exist."))
+	(find-file (memo-file-filepath item)))
+    (treemacs-pulse-on-failure "No file Found.")))
+
+(defun memo-treemacs-open-note (note)
+  "Open NOTE in view buffer."
+  (if (not (memo-note-id note))
+      (user-error "Memo-note object is nil"))
+  (let* ((buf (get-buffer-create memo--review-buffer-name)))
+    (pop-to-buffer buf)
+    (with-current-buffer buf
+      (erase-buffer)
+      (insert (memo-api--get-content-byid (memo-note-id note)))
+      (memo-buffer-undo-refresh)
+      (set-buffer-modified-p nil)
+      (org-mode)
+      (setq-local header-line-format (memo-note-title note))
+      (memo-set-local-header-line-face)
+      (goto-char (point-min))
+      (setq memo--buffer-local-note note)
+      (memo-annotation-mode)
+      (setq write-contents-functions '(memo-save-buffer)))))
 
 ;;;----------------------------------
 ;;;  treemacs tree render for note
@@ -157,7 +189,7 @@ Otherwise returns value itself."
       (propertize (memo-note-title item) 'face 'font-lock-string-face)
     (propertize (memo-note-title item) 'face 'font-lock-variable-name-face))
   :key (memo-note-id item)
-  :ret-action #'memo-treemacs-perform-ret-action
+  :ret-action #'memo-treemacs-card-perform-ret-action
   :children
   (when (> (memo-note-childvirtcards item) 0)
     (let ((items (memo-api--get-children-virt-head (memo-note-id item))))
@@ -165,30 +197,30 @@ Otherwise returns value itself."
   :child-type
   'memo-treemacs-virt-head-node
   :more-properties
-  (if (> (memo-note-childvirtcards item) 0)
+  (if (= (memo-note-childvirtcards item) 0)
       `(:note ,item :leaf t :no-tab? t)
     `(:note ,item))
   :async? t)
 
 (treemacs-define-variadic-entry-node-type memo-treemacs-virt-node
   :key  "variadic-entry-node"
-  :children `(,(memo-api--get-virt-head-ancentor-head memo-local-note-id))
+  :children `(,memo-local-note)
   :child-type 'memo-treemacs-virt-head-node)
 
 
-(defun memo-treemacs-note-render (headid expand-depth
+(defun memo-treemacs-note-render (note expand-depth
                                  &optional right-click-actions)
   (let ((buffer (get-buffer-create memo-treemacs-note-buffer-name)))
     (with-current-buffer buffer
       (treemacs-initialize memo-treemacs-virt-node
         :with-expand-depth (or expand-depth 0)
         :and-do (progn
-                  (memo-treemacs--set-mode-line-format buffer title)
+                  (memo-treemacs--set-mode-line-format buffer "memo-virt-note")
                   (setq-local face-remapping-alist '((button . default)))
                   (setq-local treemacs-default-visit-action 'treemacs-RET-action)
                   (setq-local memo-treemacs--right-click-actions right-click-actions)
                   (setq-local window-size-fixed nil)
-		  (setq-local memo-local-note-id headid)
+		  (setq-local memo-local-note note)
                   (setq-local treemacs--width-is-locked nil)
                   (setq-local treemacs-space-between-root-nodes nil)
                   (when treemacs-text-scale
@@ -199,16 +231,6 @@ Otherwise returns value itself."
 ;;;----------------------------------
 ;;;  treemacs tree render for file
 ;;;----------------------------------
-(defun memo-treemacs-card-perform-ret-action (&rest _)
-  (interactive)
-  (-if-let* ((button-node (treemacs-node-at-point))
-	     (item (button-get button-node :item))
-	     (parent-node (button-get button-node :parent))
-	     (path (button-get parent-node :path))
-	     (buffer (current-buffer)))
-      (memo-open-head-in-read-buffer item path buffer)
-    (treemacs-pulse-on-failure "No Child head Found.")))
-
 (treemacs-define-expandable-node-type memo-treemacs-read-head-node
   :closed-icon
   (if (= (memo-note-totalcards item) 1)
@@ -238,14 +260,6 @@ Otherwise returns value itself."
       `(:note ,item :leaf t :no-tab? t)
     `(:note ,item))
   :async? t)
-
-(defun memo-treemacs-file-perform-ret-action (&rest _)
-  (interactive)
-  (if-let (item (-> (treemacs-node-at-point)
-                      (button-get :item)))
-      (memo-open-file-from-treemacs item)
-    (treemacs-pulse-on-failure "No file Found.")))
-
 
 (treemacs-define-expandable-node-type memo-treemacs-read-node
   :closed-icon treemacs-icon-tag-closed
@@ -295,39 +309,40 @@ Otherwise returns value itself."
                   (memo-treemacs-generic-mode t)))
       (current-buffer))))
 
+
 ;;;----------------------------------
+;;;  treemacs tree operator
+;;;----------------------------------
+(defun memo-treemacs-buffer-move-button-to-note (note buffer)
+  "Move the bottom to the note in treemacs file buffer by NOTE and BUFFER."
+  (-if-let* ((buf (get-buffer buffer)))
+      (with-current-buffer buf
+	(treemacs-goto-extension-node (append '("variadic-entry-node") (memo-note-path note))))))
 
 (defun memo-treemacs-display-note-context (note-object)
   "Display note context (file or virtual head) in a split side window.
 
-Shows the Treemacs view (either file-based or virtual-head-based)
+Shows The Treemacs view (either file-based or virtual-head-based)
 in the top part and the '*memo-read*' buffer in the bottom part
-of a side window. The split ratio is controlled by
-`memo-treemacs-side-window-split-ratio`.
+of a side window.
 
 Argument NOTE-OBJECT is the memo note object."
   (interactive)
   (let* ((headid (memo-note-id note-object))
-         (fileid (memo-note-fileid note-object))
+	 (file-note-object (memo-api--get-first-file-head headid))
+         (fileid (memo-note-fileid file-note-object))
+	 (file-note-path (memo-note-path file-note-object))
+	 (window-sides-slots '(2 nil nil nil))
          (treemacs-file-buffer  (get-buffer-create memo-treemacs-file-buffer-name))
-         (treemacs-note-buffer  (get-buffer-create memo-treemacs-note-buffer-name))
-         ;; Ensure the side window is displayed first
-         (side-window (display-buffer treemacs-file-buffer `((display-buffer-in-side-window . (
-                                                        (window-height . shrink-window-if-larger-than-buffer)
-                                                        ,@memo-treemacs-head-position-params))))))
-    (memo-treemacs-note-render headid memo-treemacs-virtual-head-expand-depth)
+         (treemacs-note-buffer  (get-buffer-create memo-treemacs-note-buffer-name)))
+    (display-buffer treemacs-file-buffer
+		    `(display-buffer-in-side-window . (,@memo-treemacs-file-position-params)))
+    (display-buffer treemacs-note-buffer
+		    `(display-buffer-in-side-window . (,@memo-treemacs-note-position-params)))
+    (memo-treemacs-note-render file-note-object memo-treemacs-virtual-head-expand-depth)
     (memo-treemacs-file-render fileid 1)
-    (when side-window
-      (with-selected-window side-window
-        ;; Split the side window vertically
-        (let* ((total-height (window-height))
-               (top-height (max 1 (floor (* total-height memo-treemacs-side-window-split-ratio))))
-               (bottom-window (split-window-vertically (- total-height top-height))))
-          ;; Display treemacs buffer in the top window (already there)
-          ;; Display note buffer in the bottom window
-          (set-window-buffer bottom-window treemacs-note-buffer)
-          ;; Select the top window (treemacs) for focus
-          (select-window side-window))))))
+    (memo-treemacs-buffer-move-button-to-note file-note-object memo-treemacs-file-buffer-name))
+  (memo-treemacs-open-note note-object))
 
 (provide 'memo-treemacs)
 ;;; memo-treemacs.el ends here

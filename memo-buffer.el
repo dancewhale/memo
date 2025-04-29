@@ -26,12 +26,6 @@
 (defconst memo--review-buffer-name "*memo-review*"
   "The memo buffer for review note show and flip.")
 
-(defconst memo--virt-buffer-name "*memo-virt*"
-  "The memo buffer for view child virtual head.")
-
-(defconst memo--read-buffer-name "*memo-read*"
-  "The memo buffer for read resource.")
-
 (defconst memo--source-buffer-name "*memo-source*"
   "The memo buffer for review note show and flip.")
 
@@ -154,34 +148,6 @@
   (let* ((buf (get-buffer-create memo--review-buffer-name)))
     (with-current-buffer buf
       memo--buffer-local-note)))
-
-(defun memo-open-head-in-read-buffer (head path buffer)
-  "Open HEAD in view buffer, PATH is local var for update node in BUFFER."
-  (if (not (memo-note-id head))
-      (user-error "Memo-note object is nil"))
-  (let* ((buf (get-buffer-create memo--read-buffer-name)))
-    (pop-to-buffer buf)
-    (with-current-buffer buf
-      (erase-buffer)
-      (insert (memo-api--get-content-byid (memo-note-id head)))
-      (memo-buffer-undo-refresh)
-      (set-buffer-modified-p nil)
-      (org-mode)
-      (setq-local header-line-format (memo-note-title head))
-      (memo-set-local-header-line-face)
-      (goto-char (point-min))
-      (setq memo--buffer-local-note head)
-      (setq memo--buffer-local-note-path path)
-      (setq memo--buffer-local-note-buffer buffer)
-      (memo-annotation-mode)
-      (setq write-contents-functions '(memo-save-buffer)))))
-
-(defun memo-open-file-from-treemacs (file)
-  "Open FILE in view buffer and jump to TITLE."
-  (if (not (memo-file-filepath file))
-      (user-error "Memo-file object is nil"))
-  (let ((filepath (memo-file-filepath file)))
-    (find-file filepath)))
 
 ;; jump to org and enable editor.
 (defun memo-goto-org ()
@@ -315,6 +281,11 @@ Default Operator is +/- means:")
 (defun memo-query-next-note ()
   "Find the next note by query in MEMO-NEXT-NOTE-QUERY."
   (memo-api--get-note memo-next-note-query))
+
+(defun memo-read-next-note ()
+  "Open note in buffer and open side window."
+  (interactive)
+  (memo-treemacs-display-note-context (memo-query-next-note)))
 
 (provide 'memo-buffer)
 ;;; memo-buffer.el ends here

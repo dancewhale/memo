@@ -56,7 +56,7 @@ type Headline struct {
 	Properties    []Property `gorm:"foreignKey:HeadlineID;references:ID" json:"properties"`
 	Children      []Headline `gorm:"foreignKey:ParentID" json:"children" hash:"ignore"`
 	FileID        *string    `gorm:"primaryKey"`
-	HeadlineID    *string    `json:"headline_id"`
+	HeadlineID    *string    `json:"headline_id"` // which file headline that virtual head attach to
 	VirtChildren  []Headline `gorm:"foreignKey:HeadlineID" json:"virt_children" hash:"ignore"`
 	VirtFileHash  *string    `json:"virt_file_hash" hash:"ignore"`
 	File          File       `gorm:"foreignKey:FileID;references:ID" json:"file" hash:"ignore"`

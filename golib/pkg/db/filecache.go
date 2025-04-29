@@ -7,12 +7,15 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/samber/lo"
 )
 
 // HeadlineStats 存储headline及其子headline的统计信息
 type HeadlineStats struct {
-	Info     *HeadlineWithFsrs // headline和fsrs的详细信息
-	Children []*HeadlineStats  // 子headline的统计信息
+	Info         *HeadlineWithFsrs // headline和fsrs的详细信息
+	FileChildren []*HeadlineStats  // 实体文件headline的统计信息
+	VirtChildren []*HeadlineStats  // 笔记headline的统计信息
 }
 
 // HeadlineWithFsrs 包含headline和fsrsInfo信息的结构体
@@ -128,7 +131,7 @@ func fetchHeadlineAndFsrsData(fileID string) ([]*HeadlineWithFsrs, error) {
 
 	var results []*HeadlineWithFsrs
 	err := headline.WithContext(context.Background()).
-		Select(headline.ALL, fsrs.ALL).
+		Select(headline.ALL, fsrs.Due, fsrs.Stability, fsrs.Difficulty, fsrs.Lapses, fsrs.LastReview, fsrs.State, fsrs.Reps, fsrs.ScheduledDays, fsrs.ElapsedDays).
 		LeftJoin(fsrs, headline.ID.EqCol(fsrs.HeadlineID)).
 		Where(headline.FileID.Eq(fileID)).
 		Scan(&results)
@@ -139,7 +142,29 @@ func fetchHeadlineAndFsrsData(fileID string) ([]*HeadlineWithFsrs, error) {
 	return results, nil
 }
 
-// initializeCacheMaps 根据查询结果初始化缓存映射和计算初始统计信息
+func fetchVirtHeadlineAndFsrsData(heads []*HeadlineWithFsrs) ([]*HeadlineWithFsrs, error) {
+	fsrs := dal.FsrsInfo
+	headline := dal.Headline
+
+	var headids []string
+	headids = lo.Map(heads, func(head *HeadlineWithFsrs, index int) string {
+		return head.ID
+	})
+
+	var results []*HeadlineWithFsrs
+	err := headline.WithContext(context.Background()).
+		Select(headline.ALL, fsrs.Due, fsrs.Stability, fsrs.Difficulty, fsrs.Lapses, fsrs.LastReview, fsrs.State, fsrs.Reps, fsrs.ScheduledDays, fsrs.ElapsedDays).
+		LeftJoin(fsrs, headline.ID.EqCol(fsrs.HeadlineID)).
+		Where(headline.HeadlineID.In(headids...)).
+		Scan(&results)
+
+	if err != nil {
+		return nil, logger.Errorf("Query virt headline and fsrs info error: %v", err)
+	}
+	results = append(heads, results...)
+	return results, nil
+}
+
 func (c *FileHeadlineCache) initializeCacheMaps(results []*HeadlineWithFsrs, dayStart, dayEnd time.Time) (map[string][]string, error) {
 	headlineMap := make(map[string]*HeadlineWithFsrs)
 	parentChildrenMap := make(map[string][]string)
@@ -151,8 +176,9 @@ func (c *FileHeadlineCache) initializeCacheMaps(results []*HeadlineWithFsrs, day
 
 			// 初始化每个 headline 的统计信息
 			c.HeadMap[result.ID] = &HeadlineStats{
-				Info:     result,
-				Children: make([]*HeadlineStats, 0),
+				Info:         result,
+				FileChildren: make([]*HeadlineStats, 0),
+				VirtChildren: make([]*HeadlineStats, 0),
 			}
 
 			// 记录父子关系
@@ -172,7 +198,7 @@ func (c *FileHeadlineCache) initializeCacheMaps(results []*HeadlineWithFsrs, day
 		if stats, ok := c.HeadMap[result.ID]; ok {
 			// 总卡片数量+1
 			stats.Info.TotalCards++
-			if result.HeadlineID != nil {
+			if result.HeadlineID != nil && *result.HeadlineID != "" {
 				// 虚拟卡片数量+1
 				stats.Info.TotalVirtCards++
 			}
@@ -205,45 +231,35 @@ func (c *FileHeadlineCache) initializeCacheMaps(results []*HeadlineWithFsrs, day
 
 // buildHeadlinePaths 构建 headline 的路径信息
 func (c *FileHeadlineCache) buildHeadlinePaths() {
-	levelMap := make(map[int][]string)
-	maxLevel := 1
-
-	// 按 level 对 headline 进行分组
 	for headID, stats := range c.HeadMap {
-		level := stats.Info.Level
-		if level > maxLevel {
-			maxLevel = level
-		}
-		if _, ok := levelMap[level]; !ok {
-			levelMap[level] = make([]string, 0)
-		}
-		levelMap[level] = append(levelMap[level], headID)
-	}
+		path := []string{headID} // Start with the current headline ID
+		currentStats := stats
 
-	// 从 level 1 开始，逐层构建 Path
-	for level := 1; level <= maxLevel; level++ {
-		headIDs, ok := levelMap[level]
-		if !ok {
-			continue
-		}
-
-		for _, headID := range headIDs {
-			stats, ok := c.HeadMap[headID]
+		// Traverse upwards to prepend parent IDs
+		for currentStats.Info.ParentID != nil && *currentStats.Info.ParentID != "" {
+			parentID := *currentStats.Info.ParentID
+			parentStats, ok := c.HeadMap[parentID]
 			if !ok {
-				continue
+				// Should not happen in a consistent cache, but handle defensively
+				logger.Warnf("Parent headline %s not found in cache for headline %s", parentID, headID)
+				break
 			}
-
-			if level == 1 {
-				stats.Info.Path = []string{c.Info.FileID}
-			}
-
-			if stats.Info.ParentID != nil && *stats.Info.ParentID != "" {
-				parentID := *stats.Info.ParentID
-				if parentStats, ok := c.HeadMap[parentID]; ok && len(parentStats.Info.Path) > 0 {
-					stats.Info.Path = append(append([]string{}, parentStats.Info.Path...), parentID)
+			path = append([]string{parentID}, path...) // Prepend parent ID
+			currentStats = parentStats
+			// 如果是从虚拟卡片开始，则遍历到实体卡片时停止
+			if stats.Info.FileID == nil || *stats.Info.FileID == "" {
+				if currentStats.Info.FileID != nil && *currentStats.Info.FileID != "" {
+					// If we reach a file headline, stop traversing
+					break
 				}
 			}
 		}
+		// Prepend the root element (FileID or HeadlineID)
+		if stats.Info.FileID != nil && *stats.Info.FileID != "" {
+			// Entity file headline: Prepend FileID
+			path = append([]string{*stats.Info.FileID}, path...)
+		}
+		stats.Info.Path = path
 	}
 }
 
@@ -253,12 +269,22 @@ func (c *FileHeadlineCache) buildHeadlineTree(parentChildrenMap map[string][]str
 		if parentStats, ok := c.HeadMap[parentID]; ok {
 			for _, childID := range childrenIDs {
 				if childStats, ok := c.HeadMap[childID]; ok {
-					parentStats.Children = append(parentStats.Children, childStats)
+					if childStats.Info.HeadlineID != nil && *childStats.Info.HeadlineID != "" {
+						// 虚拟卡片
+						parentStats.VirtChildren = append(parentStats.VirtChildren, childStats)
+					} else {
+						// 实体文件卡片
+						parentStats.FileChildren = append(parentStats.FileChildren, childStats)
+					}
 				}
 			}
-			// 按 Order 值从小到大排序 Children 数组
-			sort.Slice(parentStats.Children, func(i, j int) bool {
-				return parentStats.Children[i].Info.Order < parentStats.Children[j].Info.Order
+			// 按 Order 值从小到大排序 FileChildren 数组
+			sort.Slice(parentStats.FileChildren, func(i, j int) bool {
+				return parentStats.FileChildren[i].Info.Order < parentStats.FileChildren[j].Info.Order
+			})
+			// 按 Order 值从小到大排序 VirtChildren 数组
+			sort.Slice(parentStats.VirtChildren, func(i, j int) bool {
+				return parentStats.VirtChildren[i].Info.Order < parentStats.VirtChildren[j].Info.Order
 			})
 		}
 	}
@@ -274,6 +300,11 @@ func (c *FileHeadlineCache) buildCache() error {
 	if err != nil {
 		return err
 	}
+	// append virt head to results
+	results, err = fetchVirtHeadlineAndFsrsData(results)
+	if err != nil {
+		return err
+	}
 
 	// 2. 初始化映射和计算初始统计
 	parentChildrenMap, err := c.initializeCacheMaps(results, dayStart, dayEnd)
@@ -282,11 +313,11 @@ func (c *FileHeadlineCache) buildCache() error {
 		return err
 	}
 
-	// 3. 构建路径
-	c.buildHeadlinePaths()
-
-	// 4. 构建树结构
+	// 3. 构建树结构
 	c.buildHeadlineTree(parentChildrenMap)
+
+	// 4. 构建路径
+	c.buildHeadlinePaths()
 
 	// 5. 聚合统计信息
 	for _, rootHead := range c.RootHeads {
@@ -301,7 +332,7 @@ func (c *FileHeadlineCache) buildCache() error {
 
 // aggregateStats 递归聚合headline及其子headline的统计信息
 func (c *FileHeadlineCache) aggregateStats(stats *HeadlineStats) {
-	for _, child := range stats.Children {
+	for _, child := range stats.FileChildren {
 		c.aggregateStats(child)
 
 		// 将子headline的统计信息累加到父headline
@@ -324,7 +355,7 @@ func (c *FileHeadlineCache) getChildrenIDs(headlineID string) []string {
 	}
 
 	// 递归获取所有子headline的ID
-	for _, child := range stats.Children {
+	for _, child := range stats.FileChildren {
 		childrenIDs = append(childrenIDs, child.Info.ID)
 		childrenIDs = append(childrenIDs, c.getChildrenIDs(child.Info.ID)...)
 	}
@@ -333,7 +364,7 @@ func (c *FileHeadlineCache) getChildrenIDs(headlineID string) []string {
 }
 
 // getChildren 获取指定headline的子headlineWithFsrs
-func (c *FileHeadlineCache) getChildren(headlineID string) []*HeadlineWithFsrs {
+func (c *FileHeadlineCache) GetFileHeadChildren(headlineID string) []*HeadlineWithFsrs {
 	var children []*HeadlineWithFsrs
 	// 获取当前headline的统计信息
 	stats := c.getHeadlineStats(headlineID)
@@ -341,7 +372,22 @@ func (c *FileHeadlineCache) getChildren(headlineID string) []*HeadlineWithFsrs {
 		return children
 	}
 	// 递归获取所有子headline的Fsrs
-	for _, child := range stats.Children {
+	for _, child := range stats.FileChildren {
+		children = append(children, child.Info)
+	}
+	return children
+}
+
+// getChildren 获取指定headline的virtual子headlineWithFsrs
+func (c *FileHeadlineCache) GetVirtHeadChildren(headlineID string) []*HeadlineWithFsrs {
+	var children []*HeadlineWithFsrs
+	// 获取当前headline的统计信息
+	stats := c.getHeadlineStats(headlineID)
+	if stats == nil {
+		return children
+	}
+	// 递归获取所有子headline的Fsrs
+	for _, child := range stats.VirtChildren {
 		children = append(children, child.Info)
 	}
 	return children
@@ -385,7 +431,7 @@ func (c *FileHeadlineCache) findNextNewDFS(stats *HeadlineStats) *HeadlineWithFs
 	}
 
 	// Recursively search children
-	for _, child := range stats.Children {
+	for _, child := range stats.FileChildren {
 		found := c.findNextNewDFS(child)
 		if found != nil {
 			return found
@@ -612,13 +658,22 @@ func GetChildrenByFileID(fileID string) ([]*HeadlineWithFsrs, error) {
 	return children, nil
 }
 
-func GetChildrenByHeadlineID(headlineID, fileid string) ([]*HeadlineWithFsrs, error) {
+// GetFirstFileHeadByID 根据id 获取实体headline
+func GetFirstFileHeadByID(id string) (*HeadlineWithFsrs, error) {
+	db, err := NewOrgHeadlineDB()
+	if err != nil {
+		return nil, err
+	}
+	head, err := db.GetFirstHeadByOrgID(id)
+	if err != nil {
+		return nil, err
+	}
 	// 从缓存管理器获取缓存
-	cache, err := GetCacheManager().GetFileCacheFromCache(fileid)
+	cache, err := GetCacheManager().GetFileCacheFromCache(*head.FileID)
 	if err != nil {
 		return nil, err
 	}
 	// 获取所有子headline的ID
-	children := cache.getChildren(headlineID)
-	return children, nil
+	state := cache.getHeadlineStats(head.ID)
+	return state.Info, nil
 }

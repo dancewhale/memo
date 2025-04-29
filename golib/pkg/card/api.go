@@ -30,9 +30,11 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("FindNote", api.FindNote, "string", "Find note with query"))
 	service.RegisterMethod(epc.MakeMethod("FindNoteList", api.FindNoteList, "string", "Find notes with query"))
 	service.RegisterMethod(epc.MakeMethod("GetFileHasNewCard", api.GetFileHasNewCard, "string", "Get file has new card"))
-	service.RegisterMethod(epc.MakeMethod("GetFileByID", api.GetFileByID, "string", "Get file has new card"))
+	service.RegisterMethod(epc.MakeMethod("GetFileByFileID", api.GetFileByFileID, "string", "Get file has new card"))
 	service.RegisterMethod(epc.MakeMethod("GetFileChildrenCard", api.GetFileChildrenCard, "string", "Get file children card"))
+	service.RegisterMethod(epc.MakeMethod("GetFirstFileHeadCard", api.GetFirstFileHeadCard, "string", "Get file head card, even by virt head id."))
 	service.RegisterMethod(epc.MakeMethod("GetHeadChildrenCard", api.GetHeadChildrenCard, "string", "Get head children card"))
+	service.RegisterMethod(epc.MakeMethod("GetHeadChildrenVirtCard", api.GetHeadChildrenVirtCard, "string", "Get head virt children note"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadContentByID", api.GetHeadContentByID, "string", "Get headline by id"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadFilePath", api.GetHeadFilePath, "string", "Get headline file path"))
 	service.RegisterMethod(epc.MakeMethod("GetNextReviewCard", api.GetNextReviewCard, "", "Get next reviewed card info"))             // Added
@@ -56,7 +58,7 @@ func (api *CardApi) GetFileHasNewCard() db.Result {
 	return db.Result{Data: fileInfos, Err: nil}
 }
 
-func (api *CardApi) GetFileByID(fileid string) db.Result {
+func (api *CardApi) GetFileByFileID(fileid string) db.Result {
 	fileInfo, err := db.GetCacheManager().GetFileFromCache(fileid)
 	if err != nil {
 		return db.Result{Data: false, Err: err}
@@ -85,12 +87,51 @@ func (api *CardApi) GetFileChildrenCard(fileid string) db.Result {
 	return db.Result{Data: childrens, Err: nil}
 }
 
-func (api *CardApi) GetHeadChildrenCard(headid, fileid string) db.Result {
-	childrens, err := db.GetChildrenByHeadlineID(headid, fileid)
+func (api *CardApi) GetHeadChildrenVirtCard(id string) db.Result {
+	file, err := db.GetFirstFileHeadByID(id)
 	if err != nil {
-		return db.Result{Data: false, Err: err}
+		return db.Result{Data: nil, Err: err}
 	}
+	cache, err := db.GetCacheManager().GetFileCacheFromCache(file.ID)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	// 获取所有子headline的ID
+	childrens := cache.GetVirtHeadChildren(id)
 	return db.Result{Data: childrens, Err: nil}
+}
+
+func (api *CardApi) GetHeadChildrenCard(headid, fileid string) db.Result {
+	cache, err := db.GetCacheManager().GetFileCacheFromCache(fileid)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	// 获取所有子headline的ID
+	childrens := cache.GetFileHeadChildren(headid)
+	return db.Result{Data: childrens, Err: nil}
+}
+
+func (api *CardApi) GetFirstFileHeadCard(headid string) db.Result {
+	head, err := db.GetFirstFileHeadByID(headid)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	// Get File Cache
+	cacheManager := db.GetCacheManager()
+	fileCache, err := cacheManager.GetFileCacheFromCache(*head.FileID)
+	if err != nil {
+		return db.Result{Data: nil, Err: logger.Errorf("Failed to get file cache for file %s: %v", *head.FileID, err)}
+	}
+
+	// Get HeadlineStats from HeadMap
+	headStats, ok := fileCache.HeadMap[head.ID]
+	if !ok || headStats == nil {
+		// If not found in cache, maybe invalidate and retry?
+		// Or the cache structure/logic needs adjustment.
+		return db.Result{Data: nil, Err: logger.Errorf("Headline %s not found in cache for file %s", head.ID, *head.FileID)}
+	}
+
+	return db.Result{Data: headStats.Info, Err: nil}
 }
 
 func (api *CardApi) FindNoteList(q []string) db.Result {
@@ -124,7 +165,11 @@ func (api *CardApi) FindNote(q []string) db.Result {
 	if len(notes) == 0 {
 		return db.Result{Data: nil, Err: nil}
 	}
-	return db.Result{Data: notes[0], Err: nil}
+	note, err := api.getHeadlineWithFsrsByID(notes[0].ID)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	return db.Result{Data: note, Err: nil}
 }
 
 func (api *CardApi) ReviewNote(orgID string, rating string) db.Result {
