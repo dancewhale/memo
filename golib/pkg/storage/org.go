@@ -20,18 +20,18 @@ const NormalFile int = 1
 const VirtualFile int = 2
 
 type File struct {
-	ID          string `gorm:"primaryKey;not null"`
+	ID          string `gorm:"primaryKey;index;not null"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
-	FilePath    string         `gorm:"primaryKey;not null"`
+	DeletedAt   gorm.DeletedAt
+	FilePath    string `gorm:"primaryKey;not null"`
 	Hash        string
 	MetaContent string
 	Headlines   []Headline
 }
 
 type Headline struct {
-	ID        string         `gorm:"primarykey;not null"`
+	ID        string         `gorm:"primarykey;index;not null"`
 	CreatedAt time.Time      `hash:"ignore"`
 	UpdatedAt time.Time      `hash:"ignore"`
 	DeletedAt gorm.DeletedAt `gorm:"index" hash:"ignore"`
@@ -65,14 +65,14 @@ type Headline struct {
 }
 
 type Property struct {
-	HeadlineID string   `gorm:"primarykey;not null"`
+	HeadlineID string   `gorm:"primarykey;index;not null"`
 	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
 	Key        string   `gorm:"primarykey;not null"`
 	Value      string   `gorm:"not null"`
 }
 
 type Clock struct {
-	ID         uint     `gorm:"primarykey;not null" hash:"ignore"`
+	ID         uint     `gorm:"primarykey;index;not null" hash:"ignore"`
 	HeadlineID string   `gorm:"not null"`
 	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
 	Start      *time.Time
@@ -80,13 +80,13 @@ type Clock struct {
 }
 
 type Tag struct {
-	HeadlineID string   `gorm:"primarykey;not null"`
+	HeadlineID string   `gorm:"primarykey;index;not null"`
 	Headline   Headline `gorm:"foreignKey:HeadlineID;references:ID" json:"headline"`
 	Name       string   `gorm:"primarykey;not null"`
 }
 
 type Annotation struct {
-	ID          uint   `gorm:"primarykey;not null" hash:"ignore"`
+	ID          uint   `gorm:"primarykey;index;not null" hash:"ignore"`
 	Start       uint   `gorm:"not null"`
 	End         uint   `gorm:"not null"`
 	HeadlineID  string `gorm:"not null"`

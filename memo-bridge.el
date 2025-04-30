@@ -147,7 +147,7 @@
 "Wait for Call response."
   (let ((it response))
      (while (eq nil (memo-bridge-deferred-object-status it))
-       (sleep-for 0.1))
+       (sleep-for 0.001))
      it))
 
 (defun memo-bridge-call-sync (method &rest args)

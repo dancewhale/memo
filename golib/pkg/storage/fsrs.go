@@ -56,10 +56,10 @@ func IntToRate(rate int8) gfsrs.Rating {
 }
 
 type FsrsInfo struct {
-	HeadlineID string `gorm:"primaryKey"`
+	HeadlineID string `gorm:"primaryKey;index"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
-	DeletedAt  gorm.DeletedAt `gorm:"index"`
+	DeletedAt  gorm.DeletedAt
 	gfsrs.Card `gorm:"embedded"`
 }
 

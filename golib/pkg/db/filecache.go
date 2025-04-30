@@ -89,7 +89,7 @@ func GetCacheManager() *FileHeadlineCacheManager {
 	cacheManagerOnce.Do(func() {
 		cacheManager = &FileHeadlineCacheManager{
 			caches: make(map[string]*FileHeadlineCache),
-			maxAge: 5 * time.Minute, // 默认缓存有效期为5分钟
+			maxAge: 600 * time.Minute, // 默认缓存有效期为5分钟
 		}
 	})
 	return cacheManager
