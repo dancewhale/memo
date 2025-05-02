@@ -360,13 +360,13 @@ Returns the first overlay found with the memo-annotation property."
             (progn
               ;; Handle Evil normal state cursor
               (when (boundp 'evil-normal-state-cursor) ; Check if variable exists
-                (setq memo-annotation-region--evil-original-cursor evil-normal-state-cursor)
+                (setq-local memo-annotation-region--evil-original-cursor evil-normal-state-cursor)
                 ;; Set cursor to hollow or another less intrusive style
-                (setq evil-normal-state-cursor '(hollow . 1))))
+                (setq-local evil-normal-state-cursor '(bar . 0))))
           (progn
             ;; Handle Emacs state cursor
             ;; Store the original buffer-local cursor type
-            (setq memo-annotation-region--cursor-type cursor-type)
+            (setq-local memo-annotation-region--cursor-type cursor-type)
             ;; Set the buffer-local cursor type to nil to hide it
             (setq-local cursor-type nil))))
     ;; When disabling the mode, call the cleanup function

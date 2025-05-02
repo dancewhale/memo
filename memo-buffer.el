@@ -219,12 +219,12 @@
 		   :poshandler 'posframe-poshandler-frame-center
 		   :height (round(* (frame-height) 0.90))
 		   :width (round(* (frame-width) 0.75))
-		   :override-parameters '((cursor-type box))
+		   :override-parameters '((cursor-type t))
 		   :respect-header-line t
 		   :accept-focus t
 		   )
       (setq-local cursor-type t)
-      (setq-local cursor-in-non-selected-windows 'box)))
+      (setq-local cursor-in-non-selected-windows 't)))
 
 (defun memo-get-content-from-posframe (&optional content)
   "Show posframe for edit."
