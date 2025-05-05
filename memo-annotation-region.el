@@ -38,7 +38,7 @@
 (defvar memo-annotation-region--highlight-face '(:background "#ffaa55" :foreground "black")
   "Face to use for highlighting during region adjustment.")
 
-(defvar memo-annotation-region--cursor-type cursor-type
+(defvar memo-annotation-region--origin-cursor-type cursor-type
   "Store original cursor type during region adjustment.")
 
 (defvar memo-annotation-region--evil-original-cursor nil
@@ -297,21 +297,6 @@ Returns the first overlay found with the memo-annotation property."
                     (plist-get props :end))
       (overlay-put overlay 'face (plist-get props :face)))))
 
-(defun memo-annotation-region--cleanup ()
-  "Clean up state after region adjustment is complete."
-  ;; Restore cursor based on which one was stored
-  (if memo-annotation-region--evil-original-cursor
-      (when (boundp 'evil-normal-state-cursor) ; Check if variable exists
-        (setq evil-normal-state-cursor memo-annotation-region--evil-original-cursor))
-    ;; Restore Emacs cursor type using the buffer-local value stored earlier
-    (setq-local cursor-type memo-annotation-region--cursor-type))
-
-  ;; Clear stored values
-  (setq memo-annotation-region--active-overlay nil)
-  (setq memo-annotation-region--original-overlay-props nil)
-  (setq memo-annotation-region--evil-original-cursor nil) ; Reset evil cursor store
-  )
-
 (defun memo-annotation-region-confirm ()
   "Confirm the change to the annotation region and update the annotation."
   (interactive)
@@ -348,6 +333,20 @@ Returns the first overlay found with the memo-annotation property."
   (memo-annotation-region-mode -1)
   (message "Annotation region adjustment cancelled"))
 
+(defun memo-annotation-region--cleanup ()
+  "Clean up state after region adjustment is complete."
+  ;; Restore cursor based on which one was stored
+  (if (memo-annotation-region--evil-normal-state-p)
+      (setq evil-normal-state-cursor memo-annotation-region--evil-original-cursor)
+    ;; Restore Emacs cursor type using the buffer-local value stored earlier
+    (setq-local cursor-type memo-annotation-region--origin-cursor-type))
+
+  ;; Clear stored values
+  (setq memo-annotation-region--active-overlay nil)
+  (setq memo-annotation-region--original-overlay-props nil)
+  (setq memo-annotation-region--evil-original-cursor nil) ; Reset evil cursor store
+  )
+
 ;;;###autoload
 (define-minor-mode memo-annotation-region-mode
   "Minor mode for adjusting memo annotation regions."
@@ -359,14 +358,13 @@ Returns the first overlay found with the memo-annotation property."
         (if (memo-annotation-region--evil-normal-state-p)
             (progn
               ;; Handle Evil normal state cursor
-              (when (boundp 'evil-normal-state-cursor) ; Check if variable exists
-                (setq-local memo-annotation-region--evil-original-cursor evil-normal-state-cursor)
-                ;; Set cursor to hollow or another less intrusive style
-                (setq-local evil-normal-state-cursor '(bar . 0))))
+	      (setq-local memo-annotation-region--evil-original-cursor evil-normal-state-cursor)
+              ;; Set cursor to hollow or another less intrusive style
+              (setq-local evil-normal-state-cursor '(bar . 0)))
           (progn
             ;; Handle Emacs state cursor
             ;; Store the original buffer-local cursor type
-            (setq-local memo-annotation-region--cursor-type cursor-type)
+            (setq-local memo-annotation-region--origin-cursor-type cursor-type)
             ;; Set the buffer-local cursor type to nil to hide it
             (setq-local cursor-type nil))))
     ;; When disabling the mode, call the cleanup function
