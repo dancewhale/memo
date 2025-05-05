@@ -67,8 +67,6 @@
 				     (buffer-substring-no-properties (point-min) (point-max)))
            (set-buffer-modified-p nil) t)))
 
-
-
 (defun memo-update-current-note-content ()
   "Skip current review note and review next note."
   (interactive)
@@ -167,7 +165,6 @@
     (org-tidy-mode 1)))
 
 
-
 ;; jump to the source of node.
 (defun memo-goto-source-direct ()
   "Jump to source of node."
@@ -207,50 +204,97 @@
         (memo-annotation-overlays-save-batch)
       nil)))
 
-(defconst memo-posframe-edit-buffer-name "*memo-content-input*")
+;;;--------------------------------------------------------------------------
+;;; posframe relative function and variable
+;;;--------------------------------------------------------------------------
 
-(defun memo-posframe-edit-window-create (buffer &optional content)
-  "Create posframe for edit, when exit need recursive-edit-exit."
+(defvar memo--posframe-toggle 0
+"When 0 mean posframe is need to exit.")
+
+(defconst memo--posframe-buffer-name "*memo-content-input*")
+
+(defvar memo--posframe-frame nil
+  "The memo posframe for edit.")
+
+(defun memo--posframe-edit-window-create (buffer &optional content)
+  "Create posframe for edit, when exit need recursive-edit-exit. Return the created frame."
   (when (posframe-workable-p)
-    (posframe-show buffer
-		   :string content
-		   :border-color "#ee7b29"
-		   :border-width 2
-		   :poshandler 'posframe-poshandler-frame-center
-		   :height (round(* (frame-height) 0.90))
-		   :width (round(* (frame-width) 0.75))
-		   :override-parameters '((cursor-type t))
-		   :respect-header-line t
-		   :accept-focus t
-		   )
-      (setq-local cursor-type t)
-      (setq-local cursor-in-non-selected-windows 't)))
+    (let ((frame (posframe-show buffer
+                                :string content
+                                :border-color "#ee7b29"
+                                :border-width 2
+                                :poshandler 'posframe-poshandler-frame-center
+                                :height (round(* (frame-height) 0.50))
+                                :width (round(* (frame-width) 0.50))
+                                :override-parameters '((cursor-type t))
+                                :respect-header-line t
+				:min-height 2
+                                :accept-focus t)))
+      (with-selected-frame frame
+        (setq-local cursor-type t)
+        (setq-local cursor-in-non-selected-windows 'nil))
+      (setq memo--posframe-frame frame)
+      (setq memo--posframe-toggle 0)
+     frame)))
+
+(defun memo--posframe-hide-window (buffer-name)
+  "Hiden memo posframe by BUFFER-NAME."
+  (when  (and (buffer-live-p (get-buffer buffer-name))
+	      (frame-live-p memo--posframe-frame))
+    (posframe-hide memo--posframe-buffer-name)))
+
+(defun memo--posframe-hidehandler-when-window-switch (window)
+  "MEMO Posframe hidehandler function with WINDOW.
+This function hide posframe and clear temp-content when user switch window."
+  (-if-let* ((posframe-buffer (get-buffer memo--posframe-buffer-name))
+	     (cubuffer (current-buffer))
+	     (cuwindow (selected-window))
+	     (cuframe (selected-frame)))
+      (if (and (buffer-live-p posframe-buffer)
+	       (frame-live-p memo--posframe-frame)
+	       (frame-visible-p memo--posframe-frame)
+	       (not (minibufferp))
+	       (not (eq memo--posframe-frame cuframe)))
+	  (progn (with-current-buffer posframe-buffer
+		   (message "Start Exit posframe:")
+		   (prin1 cuwindow)
+		   (setq memo--temp-content nil)
+		   (exit-recursive-edit))))))
+
 
 (defun memo-get-content-from-posframe (&optional content)
-  "Show posframe for edit."
+  "Show posframe for edit with optional CONTENT."
   (interactive)
-  (let ((memo--temp-content nil)
-	(temp-buffer (generate-new-buffer memo-posframe-edit-buffer-name)))
-    (with-current-buffer temp-buffer
+  (let ((posframe-buffer (get-buffer-create memo--posframe-buffer-name)))
+    (with-current-buffer posframe-buffer
       (org-mode)
+      (setq-local memo--temp-content nil)
+      (setq-local header-line-format "Use C-c C-c to commit, C-c C-k to exit.")
       (let ((map (make-sparse-keymap)))
         (define-key map (kbd "C-c C-c")
           (lambda ()
             (interactive)
             (let ((content (buffer-substring-no-properties (point-min) (point-max))))
               (setq memo--temp-content content)
-              (exit-recursive-edit))))
+	      (exit-recursive-edit))))
         (define-key map (kbd "C-c C-k")
           (lambda ()
             (interactive)
             (setq memo--temp-content nil)
-            (exit-recursive-edit)))
+	    (exit-recursive-edit)))
         (use-local-map map))
-      (setq-local header-line-format "Use C-c C-c to commit, C-c C-k to exit.")
-      (memo-posframe-edit-window-create temp-buffer content)
-      (recursive-edit)
-      (posframe-delete temp-buffer))
-   memo--temp-content))
+
+      (if (frame-live-p (memo--posframe-edit-window-create posframe-buffer))
+          (unwind-protect
+              (progn
+                ;; Add hook just before recursive-edit, make it buffer-local
+                (add-hook 'window-selection-change-functions #'memo--posframe-hidehandler-when-window-switch 0 t)
+                (recursive-edit))
+            ;; Ensure hook is removed even if recursive-edit exits abnormally, make it buffer-local
+            (remove-hook 'window-selection-change-functions #'memo--posframe-hidehandler-when-window-switch t)
+            (memo--posframe-hide-window memo--posframe-buffer-name))
+	(message "Posframe could not be created.")))
+    memo--temp-content))
 
 
 (defun memo-set-local-header-line-face ()

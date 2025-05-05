@@ -71,11 +71,12 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 
 ;; Setting note object.
 (cl-defstruct memo-note
-  id path weight source scheduledtype type title hash
-  parentid fileid level order status priority
-  stability difficulty elapseddays scheduleddays
-  reps lapses  state needreview childvirtcards totalcards
-  totalvirtcards expiredcards waitingcards reviewingcards)
+  id path weight source scheduledtype title hash
+  parentid fileid headlineid virtfilehash level order
+  status priority due stability difficulty elapseddays
+  scheduleddays reps lapses  state needreview lastreview
+  childvirtcards totalcards totalvirtcards expiredcards
+  waitingcards reviewingcards)
 
 
 (defun memo-make-note-from-alist (x)
@@ -86,11 +87,11 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 		      :weight (memo-alist-get x "Weight")
 		      :source (memo-alist-get x "Source")
 		      :scheduledtype (memo-alist-get x "ScheduledType")
-		      :type (memo-alist-get x "Type")
 		      :title (memo-alist-get x "Title")
 		      :hash (memo-alist-get x "Hash")
 		      :parentid (memo-alist-get x "ParentID")
 		      :fileid (memo-alist-get x "FileID")
+		      :headlineid (memo-alist-get x "HeadlineID")
 		      :level (memo-alist-get x "Level")
 		      :order (memo-alist-get x "Order")
 		      :status (memo-alist-get x "Status")
@@ -103,6 +104,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 		      :lapses (memo-alist-get x "Lapses")
 		      :state (memo-alist-get x "State")
 		      :needreview (memo-alist-get x "NeedReview")
+		      :lastreview (memo-alist-get x "LastReview")
 		      :childvirtcards (memo-alist-get x "ChildVirtCards")
 		      :totalcards (memo-alist-get x "TotalCards")
 		      :totalvirtcards (memo-alist-get x "TotalVirtCards")
