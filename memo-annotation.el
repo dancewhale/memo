@@ -357,7 +357,7 @@ Uses the region text as the annotation source text."
              do (let ((anno-id (overlay-get overlay 'memo-annotation-id)))
                   (let ((annotation (memo-annotation--get-by-id anno-id)))
                     (when annotation
-		      (memo-annotation--overlay-delete overlay)
+		      (memo-annotation--overlay-delete annotation)
                       (memo-annotation--delete-db annotation)
                       (message "Annotation deleted")))
                   (cl-return))
