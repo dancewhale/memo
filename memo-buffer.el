@@ -208,8 +208,8 @@
 ;;; posframe relative function and variable
 ;;;--------------------------------------------------------------------------
 
-(defvar memo--posframe-toggle 0
-"When 0 mean posframe is need to exit.")
+(defvar memo--posframe-init-phase 0
+"When 1 mean posframe is in init phase.")
 
 (defconst memo--posframe-buffer-name "*memo-content-input*")
 
@@ -217,7 +217,9 @@
   "The memo posframe for edit.")
 
 (defun memo--posframe-edit-window-create (buffer &optional content)
-  "Create posframe for edit, when exit need recursive-edit-exit. Return the created frame."
+  "Create posframe for BUFFER with default CONTENT.
+when exit need recursive-edit-exit.
+Return the created frame."
   (when (posframe-workable-p)
     (let ((frame (posframe-show buffer
                                 :string content
@@ -234,14 +236,14 @@
         (setq-local cursor-type t)
         (setq-local cursor-in-non-selected-windows 'nil))
       (setq memo--posframe-frame frame)
-      (setq memo--posframe-toggle 0)
+      (setq memo--posframe-init-phase 1)
      frame)))
 
 (defun memo--posframe-hide-window (buffer-name)
   "Hiden memo posframe by BUFFER-NAME."
   (when  (and (buffer-live-p (get-buffer buffer-name))
 	      (frame-live-p memo--posframe-frame))
-    (posframe-hide memo--posframe-buffer-name)))
+    (posframe-delete memo--posframe-buffer-name)))
 
 (defun memo--posframe-hidehandler-when-window-switch (window)
   "MEMO Posframe hidehandler function with WINDOW.
@@ -255,11 +257,12 @@ This function hide posframe and clear temp-content when user switch window."
 	       (frame-visible-p memo--posframe-frame)
 	       (not (minibufferp))
 	       (not (eq memo--posframe-frame cuframe)))
-	  (progn (with-current-buffer posframe-buffer
-		   (message "Start Exit posframe:")
-		   (prin1 cuwindow)
-		   (setq memo--temp-content nil)
-		   (exit-recursive-edit))))))
+	  (if (< memo--posframe-init-phase 1)
+	      (progn (with-current-buffer posframe-buffer
+		       (message "Start Exit posframe:")
+		       (setq memo--temp-content nil)
+		       (exit-recursive-edit)))
+	    (setq memo--posframe-init-phase (- memo--posframe-init-phase 1))))))
 
 
 (defun memo-get-content-from-posframe (&optional content)
@@ -268,7 +271,6 @@ This function hide posframe and clear temp-content when user switch window."
   (let ((posframe-buffer (get-buffer-create memo--posframe-buffer-name)))
     (with-current-buffer posframe-buffer
       (org-mode)
-      (setq-local memo--temp-content nil)
       (setq-local header-line-format "Use C-c C-c to commit, C-c C-k to exit.")
       (let ((map (make-sparse-keymap)))
         (define-key map (kbd "C-c C-c")
@@ -284,7 +286,7 @@ This function hide posframe and clear temp-content when user switch window."
 	    (exit-recursive-edit)))
         (use-local-map map))
 
-      (if (frame-live-p (memo--posframe-edit-window-create posframe-buffer))
+      (if (frame-live-p (memo--posframe-edit-window-create posframe-buffer content))
           (unwind-protect
               (progn
                 ;; Add hook just before recursive-edit, make it buffer-local

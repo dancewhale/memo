@@ -30,10 +30,11 @@ func newAnnotation(db *gorm.DB, opts ...gen.DOOption) annotation {
 	_annotation.ID = field.NewUint(tableName, "id")
 	_annotation.Start = field.NewUint(tableName, "start")
 	_annotation.End = field.NewUint(tableName, "end")
-	_annotation.HeadlineID = field.NewString(tableName, "headline_id")
-	_annotation.Face = field.NewString(tableName, "face")
+	_annotation.ParentHeadlineID = field.NewString(tableName, "parent_headline_id")
+	_annotation.ChildHeadlineID = field.NewString(tableName, "child_headline_id")
 	_annotation.CommentText = field.NewString(tableName, "comment_text")
-	_annotation.AnnoText = field.NewString(tableName, "anno_text")
+	_annotation.Face = field.NewString(tableName, "face")
+	_annotation.Type = field.NewUint(tableName, "type")
 
 	_annotation.fillFieldMap()
 
@@ -43,14 +44,15 @@ func newAnnotation(db *gorm.DB, opts ...gen.DOOption) annotation {
 type annotation struct {
 	annotationDo
 
-	ALL         field.Asterisk
-	ID          field.Uint
-	Start       field.Uint
-	End         field.Uint
-	HeadlineID  field.String
-	Face        field.String
-	CommentText field.String
-	AnnoText    field.String
+	ALL              field.Asterisk
+	ID               field.Uint
+	Start            field.Uint
+	End              field.Uint
+	ParentHeadlineID field.String
+	ChildHeadlineID  field.String
+	CommentText      field.String
+	Face             field.String
+	Type             field.Uint
 
 	fieldMap map[string]field.Expr
 }
@@ -70,10 +72,11 @@ func (a *annotation) updateTableName(table string) *annotation {
 	a.ID = field.NewUint(table, "id")
 	a.Start = field.NewUint(table, "start")
 	a.End = field.NewUint(table, "end")
-	a.HeadlineID = field.NewString(table, "headline_id")
-	a.Face = field.NewString(table, "face")
+	a.ParentHeadlineID = field.NewString(table, "parent_headline_id")
+	a.ChildHeadlineID = field.NewString(table, "child_headline_id")
 	a.CommentText = field.NewString(table, "comment_text")
-	a.AnnoText = field.NewString(table, "anno_text")
+	a.Face = field.NewString(table, "face")
+	a.Type = field.NewUint(table, "type")
 
 	a.fillFieldMap()
 
@@ -90,14 +93,15 @@ func (a *annotation) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (a *annotation) fillFieldMap() {
-	a.fieldMap = make(map[string]field.Expr, 7)
+	a.fieldMap = make(map[string]field.Expr, 8)
 	a.fieldMap["id"] = a.ID
 	a.fieldMap["start"] = a.Start
 	a.fieldMap["end"] = a.End
-	a.fieldMap["headline_id"] = a.HeadlineID
-	a.fieldMap["face"] = a.Face
+	a.fieldMap["parent_headline_id"] = a.ParentHeadlineID
+	a.fieldMap["child_headline_id"] = a.ChildHeadlineID
 	a.fieldMap["comment_text"] = a.CommentText
-	a.fieldMap["anno_text"] = a.AnnoText
+	a.fieldMap["face"] = a.Face
+	a.fieldMap["type"] = a.Type
 }
 
 func (a annotation) clone(db *gorm.DB) annotation {

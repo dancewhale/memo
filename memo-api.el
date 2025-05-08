@@ -18,7 +18,6 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'org-element)
 (require 'memo-bridge-epc)
 (require 'memo-bridge)
 
@@ -123,7 +122,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 ;;; --------------------------------------------------
 ;;;  annotation relate function
 ;;; --------------------------------------------------
-(cl-defstruct memo-annotation id start end  headid face text  srctext)
+(cl-defstruct memo-annotation id start end  parentheadid childheadid text face type)
 
 (defun memo-make-annotation-from-alist (x)
   "Generate memo annotation object from alist X."
@@ -131,10 +130,11 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
       (make-memo-annotation :id (memo-alist-get x "ID")
 		      :start (memo-alist-get x "Start")
 		      :end (memo-alist-get x "End")
-		      :headid (memo-alist-get x "HeadlineID")
-		      :face (memo-alist-get x "Face")
+		      :parentheadid (memo-alist-get x "ParentHeadlineID")
+		      :childheadid (memo-alist-get x "ChildHeadlineID")
 		      :text (memo-alist-get x "CommentText")
-		      :srctext (memo-alist-get x "AnnoText"))))
+		      :type (memo-alist-get x "Type")
+		      :face (memo-alist-get x "Face"))))
 
 (defun memo-make-annotation-from-return (y)
   "Try to parser annotation object from return value Y."
@@ -149,10 +149,11 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (list (cons "ID" (memo-annotation-id annotation))
         (cons "Start" (memo-annotation-start annotation))
         (cons "End" (memo-annotation-end annotation))
-        (cons "HeadlineID" (memo-annotation-headid annotation))
-        (cons "Face" (memo-annotation-face annotation))
+        (cons "ParentHeadlineID" (memo-annotation-parentheadid annotation))
+        (cons "ChildHeadlineID" (memo-annotation-childheadid annotation))
         (cons "CommentText" (memo-annotation-text annotation))
-        (cons "AnnoText" (memo-annotation-srctext annotation))))
+        (cons "Type" (memo-annotation-type annotation))
+        (cons "Face" (memo-annotation-face annotation))))
 
 (defun memo-make-list-from-annotations-table (hash)
   "Convert HASH table of ANNOTATIONS objects to a list of alists."
@@ -289,42 +290,62 @@ Returns the ID of the created virt head."
   (let ((result (memo-bridge-call-sync "GetHeadChildrenCard" headid fileid)))
     (memo-make-note-from-return (memo--parse-result result))))
 
-(defun memo-api--get-annotations-by-headid (headid)
+;;;; annotation api
+(defun memo-api--annotation-get-list-by-parentheadid (headid)
   "Get the annotations by HEADID."
   (let ((result (memo-bridge-call-sync "GetAnnotationsByHeadlineID" headid)))
     (memo-make-annotation-from-return (memo--parse-result result))))
 
-(defun memo-api--get-annotation-by-id (id)
+(defun memo-api--annotation-get-by-id (id)
   "Get the annotation by Annotation ID."
   (let ((result (memo-bridge-call-sync "GetAnnotationByID" id)))
     (memo-make-annotation-from-return (memo--parse-result result))))
 
-(defun memo-api--create-annotation (headid startPos endPos annoText commentText face)
-  "Create annotation in HEADID and region from STARTPOS to ENDPOS.
-with origin text ANNOTEXT and comment text COMMENTTEXT and FACE."
-  (let ((result (memo-bridge-call-sync "CreateAnnotation" headid startPos endPos annoText commentText face)))
+(defun memo-api--annotation-create (headid startPos endPos text face type)
+  "Create annotation in HEADID and region from STARTPOS to ENDPOS with TEXT FACE TYPE."
+  (let ((result (memo-bridge-call-sync "CreateAnnotation" headid startPos endPos text face type)))
     (memo-make-annotation-from-return (memo--parse-result result))))
 
-(defun memo-api--update-annotation (annotationObject)
-  "Update the annotation by ANNOTATIONOBJECT."
+(defun memo-api--annotation-update (annotation)
+  "Update the annotation by ANNOTATION object."
   (let ((result (memo-bridge-call-sync "UpdateAnnotation"
-				       (memo-annotation-id annotationObject)
-				       (memo-annotation-start annotationObject)
-				       (memo-annotation-end annotationObject)
-				       (memo-annotation-headid annotationObject)
-				       (memo-annotation-face annotationObject)
-				       (memo-annotation-text annotationObject)
-				       (memo-annotation-srctext annotationObject))))
+				       (memo-annotation-id annotation)
+				       (memo-annotation-start annotation)
+				       (memo-annotation-end annotation)
+				       (memo-annotation-text annotation)
+				       (memo-annotation-face annotation)
+				       (memo-annotation-type annotation))))
     (memo--parse-result result)))
 
-(defun memo-api--update-annotations (annotationList)
-  "Update the annotations in ANNOTATIONLIST."
-  (let ((result (memo-bridge-call-sync "UpdateAnnotations" annotationList)))
+(defun memo-api--annotation-update-region (id start end)
+  "Update the region annotation by ID START END."
+  (let ((result (memo-bridge-call-sync "UpdateAnnotationRegion" id start end)))
     (memo--parse-result result)))
 
-(defun memo-api--delete-annotation-by-id (id)
+(defun memo-api--annotation-update-region-by-list (annotationList)
+  "Update the region of annotation in ANNOTATIONLIST."
+  (let ((result (memo-bridge-call-sync "UpdateAnnotationsRegion" annotationList)))
+    (memo--parse-result result)))
+
+(defun memo-api--annotation-delete-by-id (id)
   "Delete the annotation by Annotation ID."
   (let ((result (memo-bridge-call-sync "DeleteAnnotationByID" id)))
+    (memo--parse-result result)))
+
+(defun memo-api--annotation-update-comment (id comment)
+  "Update the annotation COMMENT text by Annotation ID."
+  (let ((result (memo-bridge-call-sync "UpdateAnnotationComment" id comment)))
+    (memo--parse-result result)))
+
+(defun memo-api--annotation-get-comment (id)
+  "Get the annotation comment text by Annotation ID."
+  (let ((result (memo-bridge-call-sync "GetAnnotationComment" id)))
+    (memo--parse-result result)))
+
+
+(defun memo-api--annotation-get-original-text (id)
+  "Get the text that annotation mark in original card by ID."
+  (let ((result (memo-bridge-call-sync "GetAnnotationOriginalText" id)))
     (memo--parse-result result)))
 
 ;; sync org file under dir.

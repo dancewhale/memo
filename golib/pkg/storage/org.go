@@ -86,13 +86,14 @@ type Tag struct {
 }
 
 type Annotation struct {
-	ID          uint   `gorm:"primarykey;index;not null" hash:"ignore"`
-	Start       uint   `gorm:"not null"`
-	End         uint   `gorm:"not null"`
-	HeadlineID  string `gorm:"not null"`
-	Face        string
-	CommentText string
-	AnnoText    string
+	ID               uint   `gorm:"primarykey;index;not null" hash:"ignore"`
+	Start            uint   `gorm:"not null"`
+	End              uint   `gorm:"not null"`
+	ParentHeadlineID string `gorm:"not null"`
+	ChildHeadlineID  string
+	CommentText      string
+	Face             string
+	Type             uint
 }
 
 //--------------------------------------------------

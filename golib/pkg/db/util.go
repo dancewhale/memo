@@ -56,3 +56,11 @@ func QueryFreePort() (int64, error) {
 	tcpa, _ := s.Addr().(*net.TCPAddr)
 	return int64(tcpa.Port), nil
 }
+
+func truncateUnicodeString(s string, start, end int) string {
+	if start < 0 || end < 0 || start > end || start >= len(s) || end >= len(s) {
+		return ""
+	}
+	runes := []rune(s)
+	return string(runes[start:end])
+}

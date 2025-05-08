@@ -21,50 +21,9 @@
 ;;  
 ;;; Code:
 
-(require 'font-lock)
-(require 'rx)
 (require 'ov)
 (require 'memo-api) ; <-- Added require for memo-api
 (require 'posframe) ; <-- Added require for posframe
-
-(defun memo-face-to-string (face)
-  "Convert a face specification to a string representation.
-   The face can be a face name (symbol) or a property list."
-  (cond
-   ((null face) "nil")
-   ((symbolp face) (symbol-name face))
-   ((listp face)
-    (let ((str ""))
-      (while face
-        (let ((prop (pop face))
-              (val (pop face)))
-          (setq str (concat str
-                           (if (> (length str) 0) " ")
-                           (format ":%s %s"
-                                   (symbol-name prop)
-                                   (if (stringp val)
-                                       (format "\"%s\"" val)
-                                     val))))))
-      (concat "(" str ")")))
-   (t (format "%S" face))))
-
-(defun memo-string-to-face (str)
-  "Convert a string STR representation back to a face specification.
-The string should be in the format produced by `memo-face-to-string'."
-  (when (and str (not (string-empty-p str)))
-    (cond
-     ((string= str "nil") nil)
-     ((string-prefix-p "(" str)
-      (condition-case nil
-          (car (read-from-string str))
-        (error nil)))
-     (t (intern str)))))
-
-;;---------------------------------------------------------
-;; annotation overlay region change
-;;---------------------------------------------------------
-
-
 
 ;;---------------------------------------------------------
 ;; annotation operator function
@@ -84,29 +43,29 @@ The string should be in the format produced by `memo-face-to-string'."
 This function can be customized to return different faces based on various conditions."
   'memo-annotation-default-face)
 
-;; 使用哈希表存储 headid (string) -> annotations (list of annotation objects) 的映射
-(defvar memo-annotation--headid-map (make-hash-table :test 'equal)
+;; 使用哈希表存储 parentheadid (string) -> annotations (list of annotation objects) 的映射
+(defvar memo-annotation--parentheadid-map (make-hash-table :test 'equal)
   "Hash table mapping headline ID (string) to a list of annotation objects.")
 
-(defun memo-annotation--get-current-headid ()
+(defun memo-annotation--get-current-parentheadid ()
   "Get the headid of the current buffer or section.
 Returns nil if no headid is found."
   (when memo--buffer-local-note
     (memo-note-id memo--buffer-local-note)))
 
-(defun memo-annotation--get-by-headid (headid)
-  "Return a list of annotation objects by HEADID and initialize the hash tables."
-  (let ((annotations (gethash headid memo-annotation--headid-map)))
+(defun memo-annotation--get-by-parentheadid (parentheadid)
+  "Return a list of annotation objects by PARENTHEADID and initialize the hash tables."
+  (let ((annotations (gethash parentheadid memo-annotation--parentheadid-map)))
     (if (or (not annotations) (hash-table-empty-p annotations))
         ;; 如果缓存中没有，则从服务器获取
-        (let ((result (memo-api--get-annotations-by-headid headid))
+        (let ((result (memo-api--annotation-get-list-by-parentheadid parentheadid))
 	      (memo-annotation--map (make-hash-table :test 'equal)))
           (when result
           ;; 更新 id -> annotation 映射
             (dolist (anno result)
               (puthash (memo-annotation-id anno) anno memo-annotation--map))
-          ;; 更新 headid -> annotations hash 映射
-            (puthash headid memo-annotation--map memo-annotation--headid-map))
+          ;; 更新 parentheadid -> annotations hash 映射
+            (puthash parentheadid memo-annotation--map memo-annotation--parentheadid-map))
           memo-annotation--map)
       annotations)))
 
@@ -116,55 +75,54 @@ Updates both the cache and calls the API function."
   (when annotation-object
     ;; 更新缓存
     (-if-let* ((id (memo-annotation-id annotation-object))
-               (headid (memo-annotation-headid annotation-object)))
+               (parentheadid (memo-annotation-parentheadid annotation-object)))
       ;; 更新 id -> annotation 映射
-	(let* ((memo-annotation--map (memo-annotation--get-by-headid headid)))
+	(let* ((memo-annotation--map (memo-annotation--get-by-parentheadid parentheadid)))
 	    (puthash id annotation-object memo-annotation--map)
-	    ;; 更新 headid -> annotations hash 映射
-	    (puthash headid memo-annotation--map memo-annotation--headid-map)
+	    ;; 更新 parentheadid -> annotations hash 映射
+	    (puthash parentheadid memo-annotation--map memo-annotation--parentheadid-map)
 	    ;; 调用 API 更新服务器数据
-	    (memo-api--update-annotation annotation-object)))))
+	    (memo-api--annotation-update annotation-object)))))
 
 (defun memo-annotation--delete-db (annotation-object)
   "Delete the annotation specified by ANNOTATION-OBJECT.
 Removes from cache and calls the API function."
   (when annotation-object
     (-if-let* ((id (memo-annotation-id annotation-object))
-               (headid (memo-annotation-headid annotation-object)))
-	(let* ((memo-annotation--map (memo-annotation--get-by-headid headid)))
+               (parentheadid (memo-annotation-parentheadid annotation-object)))
+	(let* ((memo-annotation--map (memo-annotation--get-by-parentheadid parentheadid)))
 	  ;; 从 id -> annotation 映射中删除
 	  (remhash id memo-annotation--map)
-	  ;; 更新 headid -> annotations hash 映射
-	  (puthash headid memo-annotation--map memo-annotation--headid-map)
+	  ;; 更新 parentheadid -> annotations hash 映射
+	  (puthash parentheadid memo-annotation--map memo-annotation--parentheadid-map)
 	  ;; 调用 API 从服务器删除
-	  (memo-api--delete-annotation-by-id id)))))
+	  (memo-api--annotation-delete-by-id id)))))
 
-(defun memo-annotation--create-db (headid start-pos end-pos anno-text comment-text face)
-  "Create a new annotation in HEADID from START-POS to END-POS.
-With original text ANNO-TEXT and comment text COMMENT-TEXT and FACE."
+(defun memo-annotation--create-db (parentheadid start-pos end-pos comment face type)
+  "Create a new annotation in PARENTHEADID from START-POS to END-POS With COMMENT FACE TYPE."
   ;; 调用 API 创建注释并获取返回的注释对象
-  (let ((new-annotation (memo-api--create-annotation headid start-pos end-pos anno-text comment-text face)))
+  (let ((new-annotation (memo-api--annotation-create parentheadid start-pos end-pos comment face type)))
     (when new-annotation
       ;; 更新缓存
       (let ((id (memo-annotation-id new-annotation))
-	    (memo-annotation--map (memo-annotation--get-by-headid headid)))
+	    (memo-annotation--map (memo-annotation--get-by-parentheadid parentheadid)))
         ;; 更新 id -> annotation 映射
         (puthash id new-annotation memo-annotation--map)
-        ;; 更新 headid -> annotations hash 映射
-        (puthash headid memo-annotation--map memo-annotation--headid-map)))
+        ;; 更新 parentheadid -> annotations hash 映射
+        (puthash parentheadid memo-annotation--map memo-annotation--parentheadid-map)))
     new-annotation))
 
 (defun memo-annotation--clear-cache ()
   "Clear the annotation hash table which store ANNOTATION-OBJECT."
-      (clrhash memo-annotation--headid-map))
+      (clrhash memo-annotation--parentheadid-map))
 
 (defun memo-annotation--get-by-id-in-cache (annotation-id)
-  "Get the annotation in cache map: MEMO-ANNOTATION--HEADID-MAP by ANNOTATION-ID."
-  (let ((headids (hash-table-keys memo-annotation--headid-map))
+  "Get the annotation in cache map: MEMO-ANNOTATION--PARENTHEADID-MAP by ANNOTATION-ID."
+  (let ((parentheadids (hash-table-keys memo-annotation--parentheadid-map))
 	(annotation nil))
-    (when headids
-      (dolist (headid  headids)
-	(let* ((memo-annotation--map (gethash headid memo-annotation--headid-map))
+    (when parentheadids
+      (dolist (parentheadid  parentheadids)
+	(let* ((memo-annotation--map (gethash parentheadid memo-annotation--parentheadid-map))
 	       (ids (hash-table-keys memo-annotation--map)))
 	  (dolist (id ids)
 	    (if (equal id annotation-id)
@@ -175,14 +133,14 @@ With original text ANNO-TEXT and comment text COMMENT-TEXT and FACE."
   "Get annotation object by ID.
 First tries to get from cache, then from server if not found."
   (or (memo-annotation--get-by-id-in-cache id)
-      (let ((annotation (memo-api--get-annotation-by-id id)))
+      (let ((annotation (memo-api--annotation-get-by-id id)))
         (when annotation
 	  (let ((memo-annotation--map
-		 (memo-annotation--get-by-headid (memo-annotation-headid annotation))))
+		 (memo-annotation--get-by-parentheadid (memo-annotation-parentheadid annotation))))
             ;; 更新缓存
             (puthash id annotation memo-annotation--map)
-            ;; 可能还需要更新 headid -> annotations 映射
-            (puthash headid memo-annotation--map memo-annotation--headid-map)))
+            ;; 可能还需要更新 parentheadid -> annotations 映射
+            (puthash parentheadid memo-annotation--map memo-annotation--parentheadid-map)))
         annotation)))
 
 
@@ -201,38 +159,37 @@ Returns the created overlay."
     (let* ((start (memo-annotation-start annotation-object))
            (end (memo-annotation-end annotation-object))
 	   (id  (memo-annotation-id annotation-object))
-           (face (or (memo-string-to-face (memo-annotation-face annotation-object))
-                     'memo-annotation-default-face))
+	   (type (memo-annotation-type annotation-object))
+	   (db-face (memo-annotation-face annotation-object))
+	   (anno-face (memo-select-face-for-annotation-type type db-face))
            (overlay (ov-make start end)))
       ;; 设置overlay属性
       (ov-set overlay
-              'face face
+              'face (car anno-face)
               'memo-annotation-id (memo-annotation-id annotation-object)
-              'memo-annotation-headid (memo-annotation-headid annotation-object)
-	      'memo-annotation-comment (memo-annotation-text annotation-object)
+	      'memo-annotation-type (memo-annotation-type annotation-object)
+	      'memo-annotation-face (cdr anno-face)
               'memo-annotation t)
       ;; 添加到overlay列表中
       (puthash id overlay memo-annotation--overlays-map)
       overlay)))
 
-(defun memo-annotation--overlay-create-annotation (overlay)
+(defun memo-annotation--overlay-annotation-create (overlay)
   "Update a annotation for the given OVERLAY."
   (when (and  (ov-p overlay) (ov-buf overlay))
     (let ((anno (make-memo-annotation :id (ov-val overlay 'memo-annotation-id)
 				      :start (ov-beg overlay)
 				      :end (ov-end overlay)
-				      :face (memo-face-to-string (ov-val overlay 'face))
-				      :headid (ov-val overlay 'memo-annotation-headid)
-				      :text (ov-val overlay 'memo-annotation-comment)
-				      :srctext (buffer-substring-no-properties (ov-beg overlay) (ov-end overlay)))))
-     anno)))
+				      :face (ov-val overlay 'memo-annotation-face)
+				      :type (ov-val overlay 'memo-annotation-type))))
+      anno)))
 
 (defun memo-annotation--overlay-delete (annotation-object)
   "Delete an overlay for the given ANNOTATION-OBJECT.
 Remove overlay in memo-annotation--overlays-map hash-table,
 Returns t or nil."
   (when annotation-object
-    (let* ((headid (memo-annotation-headid annotation-object))
+    (let* ((parentheadid (memo-annotation-parentheadid annotation-object))
            (annotation-id (memo-annotation-id annotation-object)))
       (delete-overlay (gethash annotation-id memo-annotation--overlays-map))
       ;; 从hash table 中删除overlay
@@ -250,11 +207,11 @@ Update overlay in memo-annotation--overlays-map hash-table,
 Returns the overlay."
   (when annotation-object
     (let* ((annotation-id (memo-annotation-id annotation-object))
-	   (annotation-headid (memo-annotation-headid annotation-object))
+	   (annotation-parentheadid (memo-annotation-parentheadid annotation-object))
 	   (annotation-start (memo-annotation-start annotation-object))
 	   (annotation-end (memo-annotation-end annotation-object))
-           (face (or (memo-string-to-face (memo-annotation-face annotation-object))
-                     'memo-annotation-default-face))
+	   (db-face (memo-annotation-face annotation-object))
+	   (anno-face (memo-select-face-for-annotation-type type db-face))
            (overlay (gethash annotation-id memo-annotation--overlays-map)))
       ;; 移动overlay 位置
       (unless (and (equal annotation-start (ov-beg overlay))
@@ -262,7 +219,8 @@ Returns the overlay."
 	(ov-move overlay annotation-start annotation-end))
       ;; 设置overlay属性
       (ov-set overlay
-              'face face
+              'face (car anno-face)
+	      'memo-annotation-face (cdr anno-face)
               'memo-annotation t)
       ;; 添加到overlay列表中
       (puthash memo-annotation-id overlay memo-annotation--overlays-map)
@@ -283,10 +241,10 @@ Returns the overlay."
 
 (defun memo-annotation-overlays-init ()
   "Initialize overlays for all annotations.
-This function retrieves all annotations for the given headid
+This function retrieves all annotations for the given parentheadid
    and creates overlays for each one."
-  (-if-let* ((headid (memo-annotation--get-current-headid))
-             (anno-hash (memo-annotation--get-by-headid headid)))
+  (-if-let* ((parentheadid (memo-annotation--get-current-parentheadid))
+             (anno-hash (memo-annotation--get-by-parentheadid parentheadid)))
       (progn
 	(memo-annotation-overlays-clear)
 	(-if-let* ((anno-keys (hash-table-keys anno-hash)))
@@ -300,7 +258,7 @@ This function retrieves all annotations for the given headid
   (-if-let ((ov-keys (hash-table-keys memo-annotation--overlays-map)))
       (dolist (ov-key ov-keys)
 	(let* ((overlay (gethash ov-key memo-annotation--overlays-map))
-	       (anno (memo-annotation--overlay-create-annotation overlay)))
+	       (anno (memo-annotation--overlay-annotation-create overlay)))
 	  (memo-annotation--update-db anno)))))
 
 ;;---------------------------------------------------------
@@ -341,12 +299,16 @@ Uses the region text as the annotation source text."
     (-if-let* ((start (region-beginning))
            (end (region-end))
            (text (buffer-substring-no-properties start end))
-           (headid (memo-annotation--get-current-headid)))
+           (parentheadid (memo-annotation--get-current-parentheadid)))
 	(progn
           (memo-annotation--overlay-create
-            (memo-annotation--create-db headid start end text "" (memo-face-to-string (memo-annotation--get-face))))
+	   (let* ((type (memo-annotation-get-type))
+		  (anno-face (memo-select-face-for-annotation-type type)))
+	     (prin1 anno-face)
+	     (prin1 type)
+             (memo-annotation--create-db parentheadid start end text (cdr anno-face) type)))
           (deactivate-mark))
-        (message "No headid found in current buffer"))))
+        (message "No parentheadid found in current buffer"))))
 
 (defun memo-annotation-delete-at-point ()
   "Delete the annotation at point if one exists."
@@ -370,16 +332,16 @@ Uses the region text as the annotation source text."
     (cl-loop for overlay in overlays
              when (overlay-get overlay 'memo-annotation-id)
              do (let* ((anno-id (overlay-get overlay 'memo-annotation-id))
-                       (annotation (memo-annotation--get-by-id anno-id))
-                       (comment (memo-annotation-text annotation)))
+		       (annotation (memo-annotation--get-by-id anno-id))
+		       (comment (memo-annotation-text annotation)))
 		  (when (equal comment "")
-		    (setq comment (memo-annotation-srctext annotation)))
-                  (when annotation
-                    (let ((new-comment (memo-get-content-from-posframe comment)))
-                      (when new-comment
-                        (setf (memo-annotation-text annotation) new-comment)
-                        (memo-annotation--update-db annotation)
-                        (message "Annotation comment updated"))))
+		    (setq comment (memo-api--annotation-get-original-text anno-id)))
+		  (when annotation
+		    (let ((new-comment (memo-get-content-from-posframe comment)))
+		      (when (and new-comment (not (equal new-comment comment)))
+			(setf (memo-annotation-text annotation) new-comment)
+			(memo-annotation--update-db annotation)
+		        (message "Annotation comment updated"))))
                   (cl-return))
              finally (message "No annotation found at point"))))
 
@@ -391,9 +353,8 @@ Displays the annotation text in a posframe popup near the cursor."
     (cl-loop for overlay in overlays
              when (overlay-get overlay 'memo-annotation-id)
              do (let* ((anno-id (overlay-get overlay 'memo-annotation-id))
-                       (annotation (memo-annotation--get-by-id anno-id))
-                       (comment (memo-annotation-text annotation)))
-                  (when (and annotation comment)
+                       (comment (memo-api--annotation-get-comment anno-id)))
+                  (when comment
                     (posframe-show "*memo-annotation*"
                                   :string comment
                                   :position (point)
@@ -409,18 +370,18 @@ Displays the annotation text in a posframe popup near the cursor."
   "Save the overlay to db in the current buffer.
 Reads all overlays, updates the hash tables, and calls the API to update the server."
   (interactive)
-  (-if-let* ((headid (memo-annotation--get-current-headid))
-	     (memo-annotation--map (memo-annotation--get-by-headid headid))
+  (-if-let* ((parentheadid (memo-annotation--get-current-parentheadid))
+	     (memo-annotation--map (memo-annotation--get-by-parentheadid parentheadid))
 	     (ov-table-keys (hash-table-keys memo-annotation--overlays-map)))
       (progn
         ;; 更新id -> annotation映射
         (dolist (ov-key  ov-table-keys)
 	  (let* ((overlay (gethash ov-key memo-annotation--overlays-map))
-		(anno (memo-annotation--overlay-create-annotation overlay)))
-	    (if (equal (memo-annotation-headid anno) headid)
+		(anno (memo-annotation--overlay-annotation-create overlay)))
+	    (if (equal (memo-annotation-parentheadid anno) parentheadid)
 		(puthash (memo-annotation-id anno) anno memo-annotation--map))))
         ;; 调用API批量更新
-        (memo-api--update-annotations (memo-make-list-from-annotations-table memo-annotation--map))
+        (memo-api--annotation-update-by-list (memo-make-list-from-annotations-table memo-annotation--map))
         t)
       (message "No annotations found in current buffer")))
 

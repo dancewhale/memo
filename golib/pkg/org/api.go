@@ -53,8 +53,12 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("CreateAnnotation", o.CreateAnnotation, "string", "Create a new annotation"))
 	service.RegisterMethod(epc.MakeMethod("GetAnnotationByID", o.GetAnnotationByID, "string", "Get annotation by ID"))
 	service.RegisterMethod(epc.MakeMethod("GetAnnotationsByHeadlineID", o.GetAnnotationsByHeadlineID, "string", "Get all annotations for a headline"))
+	service.RegisterMethod(epc.MakeMethod("GetAnnotationComment", o.GetAnnotationComment, "string", "Get annotation comment by ID"))
+	service.RegisterMethod(epc.MakeMethod("UpdateAnnotationComment", o.UpdateAnnotationComment, "string", "Update annotation comment by ID"))
+	service.RegisterMethod(epc.MakeMethod("GetAnnotationOriginalText", o.GetAnnotationOriginalText, "string", "Get annotation original text by ID"))
 	service.RegisterMethod(epc.MakeMethod("UpdateAnnotation", o.UpdateAnnotation, "string", "Update an existing annotation"))
-	service.RegisterMethod(epc.MakeMethod("UpdateAnnotations", o.UpdateAnnotations, "string", "Update a lot of annotation in a list one time"))
+	service.RegisterMethod(epc.MakeMethod("UpdateAnnotationRegion", o.UpdateAnnotationRegion, "string", "Update region of an existing annotation"))
+	service.RegisterMethod(epc.MakeMethod("UpdateAnnotationsRegion", o.UpdateAnnotationsRegion, "string", "Update a lot of annotation in a list one time"))
 	service.RegisterMethod(epc.MakeMethod("DeleteAnnotationByID", o.DeleteAnnotationByID, "string", "Delete annotation by ID"))
 	return service
 }
@@ -275,14 +279,14 @@ func (o *OrgApi) GetOrgHeadProperty(orgid, key string) db.Result {
 }
 
 // CreateAnnotation creates a new annotation for a headline
-func (o *OrgApi) CreateAnnotation(headlineID string, startPos, endPos uint, annoText, commentText, face string) db.Result {
+func (o *OrgApi) CreateAnnotation(headlineID string, startPos, endPos uint, commentText, face string, ftype uint) db.Result {
 	annotation := &storage.Annotation{
-		HeadlineID:  headlineID,
-		Start:       startPos,
-		End:         endPos,
-		AnnoText:    annoText,
-		CommentText: commentText,
-		Face:        face,
+		ParentHeadlineID: headlineID,
+		Start:            startPos,
+		End:              endPos,
+		CommentText:      commentText,
+		Face:             face,
+		Type:             ftype,
 	}
 
 	anno, err := o.annotationDB.CreateAnnotation(annotation)
@@ -313,8 +317,7 @@ func (o *OrgApi) GetAnnotationsByHeadlineID(headlineID string) db.Result {
 	return db.Result{Data: annotations, Err: nil}
 }
 
-// UpdateAnnotation updates an existing annotation
-func (o *OrgApi) UpdateAnnotation(annotationID uint, startPos, endPos uint, headid, face, annoText, commentText string) db.Result {
+func (o *OrgApi) UpdateAnnotation(annotationID uint, startPos, endPos uint, commentText string, face string, ftype uint) db.Result {
 	// First get the existing annotation to ensure it exists
 	existingAnnotation, err := o.annotationDB.GetAnnotationByID(annotationID)
 	if err != nil {
@@ -324,10 +327,9 @@ func (o *OrgApi) UpdateAnnotation(annotationID uint, startPos, endPos uint, head
 	// Update the annotation fields
 	existingAnnotation.Start = startPos
 	existingAnnotation.End = endPos
-	existingAnnotation.HeadlineID = headid
-	existingAnnotation.Face = face
-	existingAnnotation.AnnoText = annoText
 	existingAnnotation.CommentText = commentText
+	existingAnnotation.Face = face
+	existingAnnotation.Type = ftype
 
 	// Save the updated annotation
 	err = o.annotationDB.UpdateAnnotation(existingAnnotation)
@@ -338,7 +340,28 @@ func (o *OrgApi) UpdateAnnotation(annotationID uint, startPos, endPos uint, head
 	return db.Result{Data: true, Err: nil}
 }
 
-func (o *OrgApi) UpdateAnnotations(annotations []map[string]interface{}) db.Result {
+// UpdateAnnotationRegion updates an existing annotation
+func (o *OrgApi) UpdateAnnotationRegion(annotationID uint, startPos, endPos uint) db.Result {
+	// First get the existing annotation to ensure it exists
+	existingAnnotation, err := o.annotationDB.GetAnnotationByID(annotationID)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+
+	// Update the annotation fields
+	existingAnnotation.Start = startPos
+	existingAnnotation.End = endPos
+
+	// Save the updated annotation
+	err = o.annotationDB.UpdateAnnotationRegion(existingAnnotation)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+
+	return db.Result{Data: true, Err: nil}
+}
+
+func (o *OrgApi) UpdateAnnotationsRegion(annotations []map[string]interface{}) db.Result {
 	for _, anno := range annotations {
 		annotationID, ok := anno["ID"]
 		if !ok || annotationID == "" {
@@ -351,22 +374,6 @@ func (o *OrgApi) UpdateAnnotations(annotations []map[string]interface{}) db.Resu
 		endPos, ok := anno["End"]
 		if !ok || endPos == "" {
 			return db.Result{Data: false, Err: errors.New("End position is required.")}
-		}
-		headid, ok := anno["HeadlineID"]
-		if !ok || headid == "" {
-			return db.Result{Data: false, Err: errors.New("Headline ID is required.")}
-		}
-		face, ok := anno["Face"]
-		if !ok || face == "" {
-			return db.Result{Data: false, Err: errors.New("Face is required.")}
-		}
-		annoText, ok := anno["AnnoText"]
-		if !ok || annoText == "" {
-			return db.Result{Data: false, Err: errors.New("Annotation text is required.")}
-		}
-		commentText, ok := anno["CommentText"]
-		if !ok || commentText == "" {
-			return db.Result{Data: false, Err: errors.New("Comment text is required.")}
 		}
 		annotationIDUint, ok := annotationID.(int)
 		if !ok {
@@ -381,15 +388,11 @@ func (o *OrgApi) UpdateAnnotations(annotations []map[string]interface{}) db.Resu
 			return db.Result{Data: false, Err: errors.New("Invalid end position type.")}
 		}
 		a := storage.Annotation{
-			ID:          uint(annotationIDUint),
-			Start:       uint(startPosUint),
-			End:         uint(endPosUint),
-			HeadlineID:  headid.(string),
-			Face:        face.(string),
-			AnnoText:    annoText.(string),
-			CommentText: commentText.(string),
+			ID:    uint(annotationIDUint),
+			Start: uint(startPosUint),
+			End:   uint(endPosUint),
 		}
-		err := o.annotationDB.UpdateAnnotation(&a)
+		err := o.annotationDB.UpdateAnnotationRegion(&a)
 		if err != nil {
 			return db.Result{Data: false, Err: err}
 		}
@@ -405,4 +408,19 @@ func (o *OrgApi) DeleteAnnotationByID(annotationID uint) db.Result {
 	}
 
 	return db.Result{Data: true, Err: nil}
+}
+
+func (o *OrgApi) GetAnnotationComment(annotationID uint) db.Result {
+	commentText, err := o.annotationDB.GetAnnotationCommentText(annotationID)
+	return db.Result{Data: commentText, Err: err}
+}
+
+func (o *OrgApi) UpdateAnnotationComment(annotationID uint, commentText string) db.Result {
+	err := o.annotationDB.UpdateAnnotationCommentText(annotationID, commentText)
+	return db.Result{Data: nil, Err: err}
+}
+
+func (o *OrgApi) GetAnnotationOriginalText(annotationID uint) db.Result {
+	originalText, err := o.annotationDB.GetAnnotationOriginalText(annotationID)
+	return db.Result{Data: originalText, Err: err}
 }
