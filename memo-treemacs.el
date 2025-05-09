@@ -26,6 +26,11 @@
 
 (defconst memo-treemacs-root-node-key "variadic-entry-node")
 
+(defun memo-treemacs--concat-path (path)
+  "Get the path by append the memo-treemacs-root-node-key to the first of PATH."
+  (when (listp path)
+    (append (list memo-treemacs-root-node-key) path)))
+
 (defconst memo-review-note-virtual-tree "VirtHeadTree")
 
 (declare-function memo-treemacs--set-mode-line-format "memo-treemacs.el")
@@ -129,7 +134,7 @@ Otherwise returns value itself."
   (interactive)
   (-if-let* ((button-node (treemacs-node-at-point))
 	     (item (button-get button-node :item)))
-      (memo-treemacs-open-note item)
+      (memo-buffer-open-note item)
     (treemacs-pulse-on-failure "No Child head Found.")))
 
 (defun memo-treemacs-file-perform-ret-action (&rest _)
@@ -142,26 +147,6 @@ Otherwise returns value itself."
 	    (treemacs-pulse-on-failure "File Path not exist."))
 	(find-file (memo-file-filepath item)))
     (treemacs-pulse-on-failure "No file Found.")))
-
-(defun memo-treemacs-open-note (note)
-  "Open NOTE in view buffer."
-  (if (not (memo-note-id note))
-      (user-error "Memo-note object is nil"))
-  (let* ((buf (get-buffer-create memo--review-buffer-name)))
-    (pop-to-buffer buf)
-    (with-current-buffer buf
-      (erase-buffer)
-      (insert (memo-api--get-content-byid (memo-note-id note)))
-      (memo-buffer-undo-refresh)
-      (set-buffer-modified-p nil)
-      (org-mode)
-      (setq-local header-line-format (memo-note-title note))
-      (memo-set-local-header-line-face)
-      (goto-char (point-min))
-      (setq memo--buffer-local-note note)
-      (memo-annotation-mode)
-      (setq write-contents-functions '(memo-save-buffer)))))
-
 
 ;;;----------------------------------
 ;;;  treemacs tree render for note
@@ -179,7 +164,9 @@ Otherwise returns value itself."
 	  (progn
 	    (setq file-note (memo-api--get-first-file-head (memo-note-id current-note)))
 	    (memo-treemacs-note-render file-note 1))
-	  (treemacs-update-async-node (bulast (memo-note-path current-note)) buffer)))))
+	  (let* ((path (butlast (memo-note-path current-note)))
+		 (path (memo-treemacs--concat-path path)))
+	    (treemacs-update-async-node path buffer))))))
 
 (treemacs-define-expandable-node-type memo-treemacs-virt-head-node
   :closed-icon treemacs-icon-tag-closed
@@ -331,7 +318,6 @@ in the top part and the '*memo-read*' buffer in the bottom part
 of a side window.
 
 Argument NOTE-OBJECT is the memo note object."
-  (interactive)
   (let* ((headid (memo-note-id note-object))
 	 (file-note-object (memo-api--get-first-file-head headid))
          (fileid (memo-note-fileid file-note-object))
@@ -346,7 +332,7 @@ Argument NOTE-OBJECT is the memo note object."
     (memo-treemacs-note-render file-note-object memo-treemacs-virtual-head-expand-depth)
     (memo-treemacs-file-render fileid 1)
     (memo-treemacs-buffer-move-button-to-note file-note-object memo-treemacs-file-buffer-name))
-  (memo-treemacs-open-note note-object))
+  (memo-buffer-open-note note-object))
 
 (provide 'memo-treemacs)
 ;;; memo-treemacs.el ends here

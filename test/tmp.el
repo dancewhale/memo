@@ -21,7 +21,7 @@
        )
   )
 
-(defun memo-get-content ()
+(defun memo-buffer-get-content ()
   (->> (org-ml-parse-this-headline)
        (org-ml-headline-get-contents (list :log-into-drawer t :clock-into-drawer t :clock-out-notes t))
        (org-ml-to-trimmed-string)))

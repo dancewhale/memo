@@ -337,7 +337,7 @@ Uses the region text as the annotation source text."
 		  (when (equal comment "")
 		    (setq comment (memo-api--annotation-get-original-text anno-id)))
 		  (when annotation
-		    (let ((new-comment (memo-get-content-from-posframe comment)))
+		    (let ((new-comment (memo-buffer-get-content-from-posframe comment)))
 		      (when (and new-comment (not (equal new-comment comment)))
 			(setf (memo-annotation-text annotation) new-comment)
 			(memo-annotation--update-db annotation)

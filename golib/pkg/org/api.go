@@ -42,6 +42,7 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("UploadFile", o.UploadFile, "string", "Upload org file to database"))
 	service.RegisterMethod(epc.MakeMethod("SyncOrgDir", o.UploadFilesUnderDir, "string", "Upload org files under dir to database"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadContent", o.UpdateOrgHeadContent, "string", "Update org head content"))
+	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadTitle", o.UpdateOrgHeadTitle, "string", "Update org head content"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadProperty", o.UpdateOrgHeadProperty, "string", "Update org head property"))
 	service.RegisterMethod(epc.MakeMethod("GetOrgHeadProperty", o.GetOrgHeadProperty, "string", "Get org head property by id."))
 	service.RegisterMethod(epc.MakeMethod("ExportOrgFileToDisk", o.ExportOrgFileToDisk, "string", "Export org file to disk"))
@@ -216,17 +217,44 @@ func (o *OrgApi) ExportOrgFileToDisk(fileid string, filePath string) error {
 
 func (o *OrgApi) exportOrgFileToDiskByOrgID(orgid string, filePath string) error {
 	headdb, err := db.NewOrgHeadlineDB()
-	fileID, err := headdb.GetFileIDByOrgID(orgid)
+	head, err := headdb.GetHeadlineByID(orgid)
 	if err != nil {
 		return err
 	}
-	if fileID != nil {
-		err = o.ExportOrgFileToDisk(*fileID, filePath)
+	if head != nil && head.FileID != nil && *head.FileID != "" {
+		err = o.ExportOrgFileToDisk(*head.FileID, filePath)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (o *OrgApi) UpdateOrgHeadTitle(orgid, title string) db.Result {
+	headdb, err := db.NewOrgHeadlineDB()
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	title = strings.ReplaceAll(title, "\\\\", "\\")
+	title = strings.ReplaceAll(title, "\\\"", "\"")
+	err = headdb.UpdateHeadlineTitle(orgid, title)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	err = db.ResetHeadlineTitleInCache(orgid, title)
+	if err != nil {
+		return db.Result{Data: false, Err: err}
+	}
+	go func() {
+		muteFile.Lock()
+		defer muteFile.Unlock()
+		o.exportOrgFileToDiskByOrgID(orgid, "")
+	}()
+
+	go func() {
+		headdb.UpdateHeadlineHash(orgid)
+	}()
+	return db.Result{Data: true, Err: nil}
 }
 
 func (o *OrgApi) UpdateOrgHeadContent(orgid, bodyContent string) db.Result {

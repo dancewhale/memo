@@ -82,6 +82,7 @@ type FileHeadlineCacheManager struct {
 // 全局缓存管理器实例
 var cacheManager *FileHeadlineCacheManager
 var cacheManagerOnce sync.Once
+var headCacheMap map[string]*HeadlineStats
 
 // GetCacheManager 获取全局缓存管理器实例
 func GetCacheManager() *FileHeadlineCacheManager {
@@ -90,6 +91,7 @@ func GetCacheManager() *FileHeadlineCacheManager {
 			caches: make(map[string]*FileHeadlineCache),
 			maxAge: 600 * time.Minute, // 默认缓存有效期为5分钟
 		}
+		headCacheMap = make(map[string]*HeadlineStats)
 	})
 	return cacheManager
 }
@@ -179,6 +181,7 @@ func (c *FileHeadlineCache) initializeCacheMaps(results []*HeadlineWithFsrs, day
 				FileChildren: make([]*HeadlineStats, 0),
 				VirtChildren: make([]*HeadlineStats, 0),
 			}
+			headCacheMap[result.ID] = c.HeadMap[result.ID]
 
 			// 记录父子关系
 			if result.ParentID != nil && *result.ParentID != "" {
@@ -581,6 +584,45 @@ func (m *FileHeadlineCacheManager) RefreshCacheByHeadlineID(headlineID string) e
 	}()
 
 	return nil
+}
+
+func getLatestHeadlineInCache(headlineID string) (*HeadlineStats, error) {
+	head, ok := headCacheMap[headlineID]
+	if ok {
+		if head.Info.FileID != nil && *head.Info.FileID != "" {
+			cache, err := GetCacheManager().GetFileCacheFromCache(*head.Info.FileID)
+			if err != nil {
+				return nil, err
+			}
+			return cache.getHeadlineStats(headlineID), nil
+		} else {
+			head, ok = headCacheMap[*head.Info.HeadlineID]
+			if ok {
+				cache, err := GetCacheManager().GetFileCacheFromCache(*head.Info.FileID)
+				if err != nil {
+					return nil, err
+				}
+				return cache.getHeadlineStats(headlineID), nil
+			} else {
+				return nil, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func ResetHeadlineTitleInCache(headlineID string, title string) error {
+	stats, err := getLatestHeadlineInCache(headlineID)
+	if err != nil {
+		return err
+	} else {
+		if stats == nil {
+			return nil
+		}
+		stats.Info.Title = title
+		headCacheMap[headlineID] = stats
+		return nil
+	}
 }
 
 // GetFileStatsByHeadlineID 获取指定headline及其所有子headline的统计信息

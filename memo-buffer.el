@@ -32,120 +32,8 @@
 (defvar-local memo--buffer-local-note nil
   "The memo note object store in current buffer.")
 
-(defun memo-skip-current-note ()
-  "Skip current review note and review next note."
-  (interactive)
-  (if memo--buffer-local-note
-    (progn (memo-api--update-property
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "postpone")
-	   (memo-treemacs-refresh))))
-
-(defun memo-suspend-current-note ()
-  "Suspend current note."
-  (interactive)
-  (if memo--buffer-local-note
-    (progn (memo-api--update-property
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend")
-	   (memo-treemacs-refresh))))
-
-(defun memo-resume-current-note ()
-  "Resume current note from suspend."
-  (interactive)
-  (if memo--buffer-local-note
-    (progn (memo-api--update-property
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal")
-	   (memo-treemacs-refresh))))
-
-(defun memo-update-current-virt-note-content ()
-  "Skip current review note and review next note."
-  (interactive)
-  (if memo--buffer-local-note
-    (progn (memo-api--update-virt-file (memo-note-id memo--buffer-local-note)
-				     (buffer-substring-no-properties (point-min) (point-max)))
-           (set-buffer-modified-p nil) t)))
-
-(defun memo-update-current-note-content ()
-  "Skip current review note and review next note."
-  (interactive)
-  (if memo--buffer-local-note
-    (progn (memo-api--update-content (memo-note-id memo--buffer-local-note)
-				     (buffer-substring-no-properties (point-min) (point-max)))
-           (set-buffer-modified-p nil) t)))
-
-(defun memo-show-review-note()
-  "Get next review note in review buffer."
-  (interactive)
-  (memo-api--get-review-note-object)
-  (if (not (memo-note-id memo--review-note))
-      (user-error "Review memo-note object is nil"))
-  (let* ((buf (get-buffer-create memo--review-buffer-name))
-	 answer-start answer-end)
-    (with-current-buffer buf
-      (memo-card-remove-overlays)
-      (erase-buffer)
-      (insert (memo-note-content memo--review-note))
-      (memo-card-hidden)
-      (memo-cloze-hidden)
-      (set-buffer-modified-p nil)
-      (org-mode))
-    (switch-to-buffer buf)
-    (setq memo--buffer-local-note memo--review-note)
-    (setq write-contents-functions '(memo-save-buffer))
-    (save-excursion  (memo-treemacs-update))))
-
-
-(defun memo-review-note (rate)
-  "Review note with score: RATE."
-  (if memo--buffer-local-note
-      (memo-api--review-note (memo-note-id memo--buffer-local-note) rate ))
-  (if (equal (buffer-name (current-buffer)) memo--review-buffer-name)
-      (progn  (memo-review-note)
-	      (memo-treemacs-refresh))))
-
-(defun memo-review-easy()
-  "Review note with score: Easy."
-  (interactive)
-  (memo-review-note "Easy"))
-
-(defun memo-review-good()
-  "Review note with score: Good."
-  (interactive)
-  (memo-review-note "Good"))
-
-(defun memo-review-hard()
-  "Review note with score: Hard."
-  (interactive)
-  (memo-review-note "Hard")
-  )
-
-(defun memo-review-again()
-  "Review note with score: Again."
-  (interactive)
-  (memo-review-note "Again")
-  )
-
-(defun memo-flip-note()
-  "Flip current review note."
-  (interactive)
-  (let* ((buf (get-buffer  memo--review-buffer-name)))
-    (if buf
-	(with-current-buffer buf
-	  (memo-remove-all-overlays)
-	  ))))
-
-(defun memo-get-current-note-id ()
-  "Get current note id."
-  (memo-note-id memo--buffer-local-note)
-)
-
-(defun memo-get-review-note ()
-  "Get Current Review note."
-  (let* ((buf (get-buffer-create memo--review-buffer-name)))
-    (with-current-buffer buf
-      memo--buffer-local-note)))
-
 ;; jump to org and enable editor.
-(defun memo-goto-org ()
+(defun memo-buffer-goto-org ()
   "Jump to source point from review buffer."
   (interactive)
   (let* ((id  (memo-note-id memo--buffer-local-note))
@@ -163,7 +51,7 @@
 
 
 ;; jump to the source of node.
-(defun memo-goto-source-direct ()
+(defun memo-buffer-goto-source-direct ()
   "Jump to source of node."
   (interactive)
   (if (not (memo-note-p memo--buffer-local-note))
@@ -175,7 +63,7 @@
 	(org-link-open-from-string source)))))
 
 ;; wait for use.
-(defun memo-goto-source ()
+(defun memo-buffer-goto-source ()
   "Open an ORG-MODE LINK in a new buffer on the right side."
   (interactive)
   (if (not (memo-note-p memo--buffer-local-note))
@@ -194,7 +82,7 @@
   (buffer-disable-undo)
   (buffer-enable-undo))
 
-(defun memo-save-buffer ()
+(defun memo-buffer-save-buffer ()
   "Save current buffer content and annotation to db."
   (let ((result (memo-update-current-note-content)))
     (if result
@@ -205,15 +93,15 @@
 ;;; posframe relative function and variable
 ;;;--------------------------------------------------------------------------
 
-(defvar memo--posframe-init-phase 0
+(defvar memo-buffer--posframe-init-phase 0
 "When 1 mean posframe is in init phase.")
 
-(defconst memo--posframe-buffer-name "*memo-content-input*")
+(defconst memo-buffer--posframe-buffer-name "*memo-content-input*")
 
-(defvar memo--posframe-frame nil
+(defvar memo-buffer--posframe-frame nil
   "The memo posframe for edit.")
 
-(defun memo--posframe-edit-window-create (buffer &optional content)
+(defun memo-buffer--posframe-edit-window-create (buffer &optional content)
   "Create posframe for BUFFER with default CONTENT.
 when exit need recursive-edit-exit.
 Return the created frame."
@@ -232,40 +120,40 @@ Return the created frame."
       (with-selected-frame frame
         (setq-local cursor-type t)
         (setq-local cursor-in-non-selected-windows 'nil))
-      (setq memo--posframe-frame frame)
-      (setq memo--posframe-init-phase 1)
+      (setq memo-buffer--posframe-frame frame)
+      (setq memo-buffer--posframe-init-phase 1)
      frame)))
 
-(defun memo--posframe-hide-window (buffer-name)
+(defun memo-buffer--posframe-hide-window (buffer-name)
   "Hiden memo posframe by BUFFER-NAME."
   (when  (and (buffer-live-p (get-buffer buffer-name))
-	      (frame-live-p memo--posframe-frame))
-    (posframe-delete memo--posframe-buffer-name)))
+	      (frame-live-p memo-buffer--posframe-frame))
+    (posframe-delete memo-buffer--posframe-buffer-name)))
 
-(defun memo--posframe-hidehandler-when-window-switch (window)
+(defun memo-buffer--posframe-hidehandler-when-window-switch (window)
   "MEMO Posframe hidehandler function with WINDOW.
 This function hide posframe and clear temp-content when user switch window."
-  (-if-let* ((posframe-buffer (get-buffer memo--posframe-buffer-name))
+  (-if-let* ((posframe-buffer (get-buffer memo-buffer--posframe-buffer-name))
 	     (cubuffer (current-buffer))
 	     (cuwindow (selected-window))
 	     (cuframe (selected-frame)))
       (if (and (buffer-live-p posframe-buffer)
-	       (frame-live-p memo--posframe-frame)
-	       (frame-visible-p memo--posframe-frame)
+	       (frame-live-p memo-buffer--posframe-frame)
+	       (frame-visible-p memo-buffer--posframe-frame)
 	       (not (minibufferp))
-	       (not (eq memo--posframe-frame cuframe)))
-	  (if (< memo--posframe-init-phase 1)
+	       (not (eq memo-buffer--posframe-frame cuframe)))
+	  (if (< memo-buffer--posframe-init-phase 1)
 	      (progn (with-current-buffer posframe-buffer
 		       (message "Start Exit posframe:")
 		       (setq memo--temp-content nil)
 		       (exit-recursive-edit)))
-	    (setq memo--posframe-init-phase (- memo--posframe-init-phase 1))))))
+	    (setq memo-buffer--posframe-init-phase (- memo-buffer--posframe-init-phase 1))))))
 
 
-(defun memo-get-content-from-posframe (&optional content)
+(defun memo-buffer-get-content-from-posframe (&optional content)
   "Show posframe for edit with optional CONTENT."
   (interactive)
-  (let ((posframe-buffer (get-buffer-create memo--posframe-buffer-name)))
+  (let ((posframe-buffer (get-buffer-create memo-buffer--posframe-buffer-name)))
     (with-current-buffer posframe-buffer
       (org-mode)
       (setq-local header-line-format "Use C-c C-c to commit, C-c C-k to exit.")
@@ -283,20 +171,20 @@ This function hide posframe and clear temp-content when user switch window."
 	    (exit-recursive-edit)))
         (use-local-map map))
 
-      (if (frame-live-p (memo--posframe-edit-window-create posframe-buffer content))
+      (if (frame-live-p (memo-buffer--posframe-edit-window-create posframe-buffer content))
           (unwind-protect
               (progn
                 ;; Add hook just before recursive-edit, make it buffer-local
-                (add-hook 'window-selection-change-functions #'memo--posframe-hidehandler-when-window-switch 0 t)
+                (add-hook 'window-selection-change-functions #'memo-buffer--posframe-hidehandler-when-window-switch 0 t)
                 (recursive-edit))
             ;; Ensure hook is removed even if recursive-edit exits abnormally, make it buffer-local
-            (remove-hook 'window-selection-change-functions #'memo--posframe-hidehandler-when-window-switch t)
-            (memo--posframe-hide-window memo--posframe-buffer-name))
+            (remove-hook 'window-selection-change-functions #'memo-buffer--posframe-hidehandler-when-window-switch t)
+            (memo-buffer--posframe-hide-window memo-buffer--posframe-buffer-name))
 	(message "Posframe could not be created.")))
     memo--temp-content))
 
 
-(defun memo-set-local-header-line-face ()
+(defun memo-buffer-set-local-header-line-face ()
   "设置当前缓冲区的 header-line face 样式。"
   (interactive)
   (setq-local face-remapping-alist
@@ -306,11 +194,30 @@ This function hide posframe and clear temp-content when user switch window."
                                      :foreground "#ddd"
                                      :box (:line-width 3 :color "#444"))))))
 
-
 ;;;------------------------------------------------------------------
 ;;; virt note operator function.
 ;;;------------------------------------------------------------------
-(defun memo-create-child-virt-note ()
+(defun memo-buffer-open-note (note)
+  "Open NOTE in view buffer."
+  (if (not (memo-note-id note))
+      (user-error "Memo-note object is nil"))
+  (let* ((buf (get-buffer-create memo--review-buffer-name)))
+    (pop-to-buffer buf)
+    (with-current-buffer buf
+      (erase-buffer)
+      (insert (memo-api--get-content-byid (memo-note-id note)))
+      (memo-buffer-undo-refresh)
+      (set-buffer-modified-p nil)
+      (org-mode)
+      (setq-local header-line-format (memo-note-title note))
+      (memo-buffer-set-local-header-line-face)
+      (goto-char (point-min))
+      (setq memo--buffer-local-note note)
+      (memo-annotation-mode)
+      (setq write-contents-functions '(memo-buffer-save-buffer)))))
+
+
+(defun memo-buffer-create-child-virt-note ()
   "Create the virt child note for current review note.
 If a region is active, its content is used as initial content."
   (interactive)
@@ -318,50 +225,24 @@ If a region is active, its content is used as initial content."
                            (buffer-substring-no-properties
                             (region-beginning) (region-end))))
         content note id title)
-    (-if-let* ((content (memo-get-content-from-posframe initial-content))
+    (-if-let* ((content (memo-buffer-get-content-from-posframe initial-content))
                (note memo--buffer-local-note)
                (id (memo-note-id memo--buffer-local-note))
                (title (memo-first-nonblank-chars content  20)))
         (memo-api--create-virt-head id title content))
     (memo-treemacs-note-buffer-update)))
 
-;;;------------------------------------------------------------------
-;;; note find relative function.
-;;;------------------------------------------------------------------
-(defvar memo-next-note-query '["filter:dueBefore:0" "order:random"]
-  "Setting the query string to deter the method get next card.
-The query is like  operator:type:field:value,
-Operator is -/+, type is order/filter,
-When type is order field can be weight/due/level/seq/random and value can be asc/desc.
-When type is filter field can be fileid/ancestorid/dueAt/dueBefore/dueAfter/parentid/type/limit/state/tag/property.
-like filter:fileid:13089182-9F1D-4583-9076-A2B94998A030, filter:dueAt:-3, filter:tag:work,
-filter:property:id:123.
-Default Operator is +/- means:")
-
-
-(defun memo-query-next-note ()
-  "Find the next note by query in MEMO-NEXT-NOTE-QUERY."
-  (memo-api--get-note memo-next-note-query))
-
-(defun memo-read-next-note ()
-  "Open note in buffer and open side window."
+(defun memo-buffer-update-note-title ()
+  "Update the title of current note which opened."
   (interactive)
-  (memo-treemacs-display-note-context (memo-query-next-note)))
-
-
-;;;--------------------------------------------------
-;;;  util function
-;;;--------------------------------------------------
-(defun memo-first-nonblank-chars (content num)
-  "Return the first nonblank  NUM chars from the first nonempty line of CONTENT."
-  (let* ((lines (split-string content "\n"))
-         (first-nonempty
-          (seq-find (lambda (line)
-                      (not (string-match-p "^\\s-*$" line)))
-                    lines)))
-    (when first-nonempty
-      (let* ((trimmed (replace-regexp-in-string "^[ \t]+" "" first-nonempty)))
-        (substring trimmed 0 (min 20 (length trimmed)))))))
+  (-if-let* ((note memo--buffer-local-note)
+	     (title (memo-note-title memo--buffer-local-note)))
+      (-if-let* ((title (memo-buffer-get-content-from-posframe title))
+	     (id (memo-note-id note)))
+	  (progn (memo-api--update-title id title)
+		 (setq-local header-line-format title)
+		 (setf (memo-note-title memo--buffer-local-note) title)
+		 (memo-treemacs-note-buffer-update)))))
 
 (provide 'memo-buffer)
 ;;; memo-buffer.el ends here

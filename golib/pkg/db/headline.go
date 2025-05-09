@@ -267,6 +267,16 @@ func (h *OrgHeadlineDB) UpdateHeadlineContent(id, body string) error {
 	return nil
 }
 
+func (h *OrgHeadlineDB) UpdateHeadlineTitle(id, title string) error {
+	headline := dal.Headline
+	_, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(id)).
+		UpdateSimple(headline.Title.Value(title))
+	if err != nil {
+		return logger.Errorf("Update headline %s title error: %v", id, err)
+	}
+	return nil
+}
+
 func (h *OrgHeadlineDB) GetVirtPropertyMap(headID, key string) map[string]string {
 	headline := dal.Headline
 	heads, err := headline.WithContext(context.Background()).Preload(headline.Properties).

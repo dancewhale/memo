@@ -84,6 +84,8 @@
 (treemacs--scope-store)
 (treemacs-get-local-buffer)
 
+(memo-api--get-first-file-head "498F1DB0-0FD3-4126-8D54-0059A408FF61")
+
 ;(progn (with-current-buffer memo-treemacs-buffer-name
 ;	 (treemacs-update-node "memo-treemacs-generic-root")
 ;	 (treemacs-with-current-button "Error not button selected." (treemacs-button-get current-btn :key))))
@@ -106,7 +108,30 @@
     (prin1 treemacs-dom)
     (treemacs-update-async-node '("/Users/whale/Dropbox/memo" showcase-buffers-async) buf)))
 
+(let ((buf (get-buffer memo-treemacs-file-buffer-name)))
+  (with-current-buffer buf
+    (treemacs-goto-extension-node '("variadic-entry-node" "1ad3025f-c304-4227-9765-ba88905380e2" "9828BCBD-6BE3-418B-A5E9-47CAA371AB98"))))
 
+(-if-let* ((readbuf (get-buffer "*memo-review*"))
+	   (treebuf (get-buffer memo-treemacs-file-buffer-name)))
+    (with-current-buffer readbuf
+      (let* ((note-object memo--buffer-local-note)
+	     (fileid (memo-note-fileid note-object))
+	     (path (append '("variadic-entry-node") (memo-note-path note-object)))
+	     (noteid (memo-note-id note-object)))
+	(with-current-buffer treebuf
+	  (prin1 (memo-note-path note-object))
+	  (prin1 (memo-note-headlineid note-object))))))
+
+ceshi
+
+(memo-treemacs--find-node-by-id "04E683D9-48D7-4F54-9DB3-065C8BCC17A6")
+
+(treemacs-goto-extension-node (append path noteid))
+
+(memo-api--get-string "jjjj")
+(memo-api--get-first-file-head "7A355DB0-65BA-4340-8588-18A3F247D2F8")
+(memo-api--get-first-file-head "04E683D9-48D7-4F54-9DB3-065C8BCC17A6")
 
 (defun get-cursor-position-in-buffer-window (buffer-name)
   "获取名字为 BUFFER-NAME 的缓冲区所在窗口中的光标位置。"
@@ -122,9 +147,60 @@
 
 (memo-api--get-read-files)
 
+(memo-api--get-property "7A355DB0-65BA-4340-8588-18A3F247D2F8" "MEMO_NOTE_TYPjE")
+(memo-api--update-property "7A355DB0-65BA-4340-8588-18A3F247D2F8" "MEMO_NOTE_COLOR" testmap)
+
+(setq jj (read "#s(hash-table size 65 test equal rehash-size 1.5 rehash-threshold 0.8125 data (\"tset\" \"jjjj\"))"))
+
+(memo-select-face-for-annotation-type 0)
+(assoc 0 memo-annotation-type-face-map)
+(puthash "jj" "jjj" jj)
+(puthash "jjj2" "jjj" jj)
+(puthash "jjj3" "jjj" jj)
+
+(cl-defstruct memo-annotation id start end  headid face text  srctext)
+(setq test  (make-memo-annotation :id "ID" :start "start"))
+(memo-struct-to-alist test)
+
+(setq test '((pine . "cones")
+	     (oak . "acorns")
+	     (maple . "seeds")))
+
+(setq testmap (make-hash-table :test 'equal))
+(puthash "jj" "jjj" testmap)
+(puthash "jjj2" "jjj" testmap)
+(puthash "jjj3" "jjj" testmap)
+(puthash "tset" "jjjj" testmap)
+
+(memo-select-face-for-annotation-type 3)
+
+(memo-annotation--clear-cache)
+
+(memo-buffer-get-content-from-posframe "jjj")
+
+
 (require 'treemacs)
 (require 'treemacs-treelib)
 
+(memo-annotation--get-by-id 4)
 
+(display-buffer (get-buffer-create memo-treemacs-file-buffer-name)
+	    `(display-buffer-in-side-window . (,@memo-treemacs-file-position-params)))
 
+(memo-query-next-note)
 
+(posframe-show (get-buffer-create "test")
+	       ;:string "测试"
+               :border-color "#ee7b29"
+               :border-width 2
+               :poshandler 'posframe-poshandler-frame-center
+               :height (round(* (frame-height) 0.50))
+               :width (round(* (frame-width) 0.50))
+               :override-parameters '((cursor-type t))
+               :respect-header-line t
+               :accept-focus t
+	       :hidehandler 'memo-buffer--posframe-hidehandler-when-buffer-switch)
+
+(message (memo-buffer-get-content-from-posframe ))
+
+(memo-api--annotation-get-comment 22)
