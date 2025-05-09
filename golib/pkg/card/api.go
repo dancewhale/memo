@@ -88,11 +88,11 @@ func (api *CardApi) GetFileChildrenCard(fileid string) db.Result {
 }
 
 func (api *CardApi) GetHeadChildrenVirtCard(id string) db.Result {
-	file, err := db.GetFirstFileHeadByID(id)
+	head, err := db.GetFirstFileHeadByID(id)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
-	cache, err := db.GetCacheManager().GetFileCacheFromCache(file.ID)
+	cache, err := db.GetCacheManager().GetFileCacheFromCache(*head.FileID)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}

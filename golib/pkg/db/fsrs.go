@@ -31,9 +31,6 @@ func (f *FsrsDB) CreateFsrs(fsrsInfo *storage.FsrsInfo) error {
 		return logger.Errorf("Create fsrs info for headline %s failed: %v", fsrsInfo.HeadlineID, err)
 	}
 
-	if cacheManager := GetCacheManager(); cacheManager != nil {
-		cacheManager.RefreshCacheByHeadlineID(fsrsInfo.HeadlineID)
-	}
 	return nil
 }
 

@@ -419,7 +419,7 @@ func (h *OrgHeadlineDB) CreateVirtHead(headID, title, content string) (string, e
 		return "", logger.Errorf("Count virtual headline by parent id %s error: %v", headID, err)
 	}
 	var headlineID *string
-	if parentHead.HeadlineID != nil || *parentHead.HeadlineID != "" {
+	if parentHead.HeadlineID != nil && *parentHead.HeadlineID != "" {
 		headlineID = parentHead.HeadlineID
 	} else {
 		headlineID = &parentHead.ID
@@ -440,5 +440,6 @@ func (h *OrgHeadlineDB) CreateVirtHead(headID, title, content string) (string, e
 	if err != nil {
 		return "", logger.Errorf("Create virtual headline by parent id failed: %v", err)
 	}
+
 	return headline.ID, err
 }

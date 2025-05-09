@@ -212,6 +212,18 @@ func UndoReviewCard(headlineID string) (bool, error) {
 	return true, nil
 }
 
+func InitCardFsrsInfo(headlineID string) error {
+	fsrsDB, err := db.NewFsrsDB()
+	fsrsinfo := &storage.FsrsInfo{}
+	fsrsinfo.Card = gfsrs.NewCard()
+	fsrsinfo.HeadlineID = headlineID
+	err = fsrsDB.CreateFsrs(fsrsinfo)
+	if err != nil {
+		return logger.Errorf("Create fsrs info for headline %s failed: %v", headlineID, err)
+	}
+	return nil
+}
+
 func ScanInitFsrs() {
 	go func() {
 		muteDB.Lock()
@@ -232,6 +244,10 @@ func ScanInitFsrs() {
 				logger.Errorf("Create fsrs info for headline %s failed: %v", head.ID, err)
 				return
 			}
+		}
+
+		if cacheManager := db.GetCacheManager(); cacheManager != nil {
+			cacheManager.InvalidateAllCache()
 		}
 	}()
 }

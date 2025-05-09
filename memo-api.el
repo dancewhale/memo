@@ -255,8 +255,8 @@ Returns the ID of the created virt head."
     (memo-make-note-from-return (memo--parse-result result))))
 
 
-(defun memo-api--get-children-virt-head (id  headlineid)
-  "Get children heads under head by ID and HEADLINEID."
+(defun memo-api--get-children-virt-head (headid)
+  "Get children heads under head by HEADID."
   (let ((result (memo-bridge-call-sync "GetHeadChildrenVirtCard" headid)))
     (memo-make-note-from-return (memo--parse-result result))))
 

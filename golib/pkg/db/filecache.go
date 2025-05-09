@@ -46,7 +46,6 @@ type HeadlineWithFsrs struct {
 	NeedReview    bool      `json:"NeedReview"`
 	LastReview    time.Time `json:"LastReview"`
 
-	ChildVirtCards int // 下级虚拟卡片数量
 	TotalCards     int // 总卡片数量
 	TotalVirtCards int // 总虚拟卡片数量
 	ExpiredCards   int // 超期未复习的卡片数量
@@ -342,6 +341,17 @@ func (c *FileHeadlineCache) aggregateStats(stats *HeadlineStats) {
 		stats.Info.WaitingCards += child.Info.WaitingCards
 		stats.Info.ReviewingCards += child.Info.ReviewingCards
 	}
+
+	for _, child := range stats.VirtChildren {
+		c.aggregateStats(child)
+
+		// 将子headline的统计信息累加到父headline
+		stats.Info.TotalCards += child.Info.TotalCards
+		stats.Info.TotalVirtCards += child.Info.TotalVirtCards
+		stats.Info.ExpiredCards += child.Info.ExpiredCards
+		stats.Info.WaitingCards += child.Info.WaitingCards
+		stats.Info.ReviewingCards += child.Info.ReviewingCards
+	}
 }
 
 // getChildrenIDs 递归获取指定headline的所有子headline ID
@@ -541,6 +551,7 @@ func (m *FileHeadlineCacheManager) RefreshCacheByFileID(fileID string) {
 
 // RefreshCacheByHeadlineID 根据HeadlineID 刷新相关缓存失效
 func (m *FileHeadlineCacheManager) RefreshCacheByHeadlineID(headlineID string) error {
+	var fileid string
 	// 查询headline所属的文件ID
 	headline := dal.Headline
 	heads, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(headlineID)).Find()
@@ -549,13 +560,24 @@ func (m *FileHeadlineCacheManager) RefreshCacheByHeadlineID(headlineID string) e
 	}
 
 	// 使相关文件的缓存失效
-	if heads[0].FileID != nil {
+	if heads[0].FileID != nil && *heads[0].FileID != "" {
+		fileid = *heads[0].FileID
 		m.InvalidateCache(*heads[0].FileID)
+	} else {
+		head, err := headline.WithContext(context.Background()).Where(headline.ID.Eq(*heads[0].HeadlineID)).First()
+		if err != nil {
+			return logger.Errorf("Find headline %s failed: %v", headlineID, err)
+		}
+		fileid = *head.FileID
+		m.InvalidateCache(fileid)
+	}
+	if fileid == "" {
+		return logger.Errorf("FileID not found for headline %s cache refresh", headlineID)
 	}
 
 	go func() {
-		_, err = m.GetFileCacheFromCache(*heads[0].FileID)
-		logger.Errorf("Refresh cache for file %s failed: %v", *heads[0].FileID, err)
+		_, err = m.GetFileCacheFromCache(fileid)
+		logger.Infof("Refresh cache for file %s.", fileid)
 	}()
 
 	return nil

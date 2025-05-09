@@ -24,6 +24,8 @@
 (defvar-local memo-treemacs--right-click-actions nil)
 (defvar-local memo-treemacs-generic-filter nil)
 
+(defconst memo-treemacs-root-node-key "variadic-entry-node")
+
 (defconst memo-review-note-virtual-tree "VirtHeadTree")
 
 (declare-function memo-treemacs--set-mode-line-format "memo-treemacs.el")
@@ -64,13 +66,6 @@ depending on if a custom mode line is detected."
   `display-buffer-in-side-window' in
   `memo-treemacs-virtual-note")
 
-(defconst memo-treemacs-file-buffer-name "*MemoTreeFile"
-  "Memo Buffer name store the tree.")
-
-(defconst memo-treemacs-note-buffer-name "*MemoTreeNote"
-  "Memo Buffer name store the tree.")
-
-
 (defun memo-resolve-value (value)
   "Resolve VALUE's value.
 If it is function - call it.
@@ -88,23 +83,12 @@ Otherwise returns value itself."
      (with-current-buffer ,buffer
        ,@body)))
 
-(defun memo-treemacs-refresh ()
-  "Update note node under Treemacs."
-  (condition-case _err
-      (-if-let* ((inhibit-read-only t)
-	    (path   memo--buffer-local-note-path)
-	    (buffer memo--buffer-local-note-buffer))
-	(with-current-buffer buffer
-	  (treemacs-update-async-node path buffer)
-	  (display-buffer-in-side-window buf memo-treemacs-head-position-params)))
-    (error)))
-
 (defun memo-treemacs-goto ()
   "Goto note node under Treemacs."
   (interactive)
   (condition-case _err
       (-if-let* ((inhibit-read-only t)
-	    (path   memo--buffer-local-note-path)
+		 (path   (memo-note-path memo--buffer-local-note))
 	    (id  (memo-note-id memo--buffer-local-note))
 	    (buffer memo--buffer-local-note-buffer))
 	(with-current-buffer buffer
@@ -178,32 +162,48 @@ Otherwise returns value itself."
       (memo-annotation-mode)
       (setq write-contents-functions '(memo-save-buffer)))))
 
+
 ;;;----------------------------------
 ;;;  treemacs tree render for note
 ;;;----------------------------------
+(defconst memo-treemacs-note-buffer-name "*MemoTreeNote"
+  "Memo Buffer name store the tree.")
+
+(defun memo-treemacs-note-buffer-update ()
+  "Update note node."
+  (-if-let* ((inhibit-read-only t)
+	     (buffer (get-buffer memo-treemacs-note-buffer-name))
+	     (current-note memo--buffer-local-note))
+      (with-current-buffer buffer
+	(if (not (memo-note-headlineid current-note))
+	  (progn
+	    (setq file-note (memo-api--get-first-file-head (memo-note-id current-note)))
+	    (memo-treemacs-note-render file-note 1))
+	  (treemacs-update-async-node (bulast (memo-note-path current-note)) buffer)))))
+
 (treemacs-define-expandable-node-type memo-treemacs-virt-head-node
   :closed-icon treemacs-icon-tag-closed
   :open-icon   treemacs-icon-tag-open
   :label
-  (if (> (memo-note-childvirtcards item) 0)
+  (if (> (memo-note-totalvirtcards item) 0)
       (propertize (memo-note-title item) 'face 'font-lock-string-face)
     (propertize (memo-note-title item) 'face 'font-lock-variable-name-face))
   :key (memo-note-id item)
   :ret-action #'memo-treemacs-card-perform-ret-action
   :children
-  (when (> (memo-note-childvirtcards item) 0)
+  (when (> (memo-note-totalvirtcards item) 0)
     (let ((items (memo-api--get-children-virt-head (memo-note-id item))))
       (funcall callback items)))
   :child-type
   'memo-treemacs-virt-head-node
   :more-properties
-  (if (= (memo-note-childvirtcards item) 0)
+  (if (= (memo-note-totalvirtcards item) 0)
       `(:note ,item :leaf t :no-tab? t)
     `(:note ,item))
   :async? t)
 
 (treemacs-define-variadic-entry-node-type memo-treemacs-virt-node
-  :key  "variadic-entry-node"
+  :key  memo-treemacs-root-node-key
   :children `(,memo-local-note)
   :child-type 'memo-treemacs-virt-head-node)
 
@@ -231,6 +231,10 @@ Otherwise returns value itself."
 ;;;----------------------------------
 ;;;  treemacs tree render for file
 ;;;----------------------------------
+(defconst memo-treemacs-file-buffer-name "*MemoTreeFile"
+  "Memo Buffer name store the tree.")
+
+
 (treemacs-define-expandable-node-type memo-treemacs-read-head-node
   :closed-icon
   (if (= (memo-note-totalcards item) 1)
@@ -283,7 +287,7 @@ Otherwise returns value itself."
   :async? t)
 
 (treemacs-define-variadic-entry-node-type memo-treemacs-file-node
-  :key  "variadic-entry-node"
+  :key  memo-treemacs-root-node-key
   :children `(,(memo-api--get-file-by-filid memo-local-file-id))
   :child-type 'memo-treemacs-read-node)
 

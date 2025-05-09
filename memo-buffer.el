@@ -32,9 +32,6 @@
 (defvar-local memo--buffer-local-note nil
   "The memo note object store in current buffer.")
 
-(defvar-local memo--buffer-local-note-path nil
-  "The memo note path store in current buffer, use to locate node in treemacs.")
-
 (defun memo-skip-current-note ()
   "Skip current review note and review next note."
   (interactive)
@@ -309,6 +306,24 @@ This function hide posframe and clear temp-content when user switch window."
                                      :foreground "#ddd"
                                      :box (:line-width 3 :color "#444"))))))
 
+
+;;;------------------------------------------------------------------
+;;; virt note operator function.
+;;;------------------------------------------------------------------
+(defun memo-create-child-virt-note ()
+  "Create the virt child note for current review note.
+If a region is active, its content is used as initial content."
+  (interactive)
+  (let ((initial-content (when (use-region-p)
+                           (buffer-substring-no-properties
+                            (region-beginning) (region-end))))
+        content note id title)
+    (-if-let* ((content (memo-get-content-from-posframe initial-content))
+               (note memo--buffer-local-note)
+               (id (memo-note-id memo--buffer-local-note))
+               (title (substring content 0 (min 38 (length content)))))
+        (memo-api--create-virt-head id title content))
+    (memo-treemacs-note-buffer-update)))
 
 ;;;------------------------------------------------------------------
 ;;; note find relative function.

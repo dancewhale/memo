@@ -72,7 +72,7 @@ func (o *OrgApi) GetChildrenVirtPropertyMap(headid, key string) db.Result {
 	return db.Result{Data: data, Err: nil}
 }
 
-func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
+func (o *OrgApi) CreateVirtHead(parentID, title, content string) db.Result {
 	headdb, err := db.NewOrgHeadlineDB()
 	if err != nil {
 		return db.Result{Data: "", Err: err}
@@ -80,11 +80,15 @@ func (o *OrgApi) CreateVirtHead(headid, title, content string) db.Result {
 	content = strings.ReplaceAll(content, "\\\\", "\\")
 	content = strings.ReplaceAll(content, "\\\"", "\"")
 	content += "\n"
-	id, err := headdb.CreateVirtHead(headid, title, content)
+	id, err := headdb.CreateVirtHead(parentID, title, content)
 	if err != nil {
 		return db.Result{Data: "", Err: err}
 	}
-	card.ScanInitFsrs()
+	card.InitCardFsrsInfo(id)
+
+	if cacheManager := db.GetCacheManager(); cacheManager != nil {
+		cacheManager.RefreshCacheByHeadlineID(id)
+	}
 	return db.Result{Data: id, Err: nil}
 }
 
