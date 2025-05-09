@@ -321,7 +321,7 @@ If a region is active, its content is used as initial content."
     (-if-let* ((content (memo-get-content-from-posframe initial-content))
                (note memo--buffer-local-note)
                (id (memo-note-id memo--buffer-local-note))
-               (title (substring content 0 (min 38 (length content)))))
+               (title (memo-first-nonblank-chars content  20)))
         (memo-api--create-virt-head id title content))
     (memo-treemacs-note-buffer-update)))
 
@@ -347,6 +347,21 @@ Default Operator is +/- means:")
   "Open note in buffer and open side window."
   (interactive)
   (memo-treemacs-display-note-context (memo-query-next-note)))
+
+
+;;;--------------------------------------------------
+;;;  util function
+;;;--------------------------------------------------
+(defun memo-first-nonblank-chars (content num)
+  "Return the first nonblank  NUM chars from the first nonempty line of CONTENT."
+  (let* ((lines (split-string content "\n"))
+         (first-nonempty
+          (seq-find (lambda (line)
+                      (not (string-match-p "^\\s-*$" line)))
+                    lines)))
+    (when first-nonempty
+      (let* ((trimmed (replace-regexp-in-string "^[ \t]+" "" first-nonempty)))
+        (substring trimmed 0 (min 20 (length trimmed)))))))
 
 (provide 'memo-buffer)
 ;;; memo-buffer.el ends here
