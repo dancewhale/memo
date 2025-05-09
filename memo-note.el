@@ -42,27 +42,6 @@
 	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal")
 	   (memo-treemacs-refresh))))
 
-(defun memo-note-show-review-note()
-  "Get next review note in review buffer."
-  (interactive)
-  (memo-api--get-review-note-object)
-  (if (not (memo-note-id memo--review-note))
-      (user-error "Review memo-note object is nil"))
-  (let* ((buf (get-buffer-create memo--review-buffer-name))
-	 answer-start answer-end)
-    (with-current-buffer buf
-      (memo-card-remove-overlays)
-      (erase-buffer)
-      (insert (memo-note-content memo--review-note))
-      (memo-card-hidden)
-      (memo-cloze-hidden)
-      (set-buffer-modified-p nil)
-      (org-mode))
-    (switch-to-buffer buf)
-    (setq memo--buffer-local-note memo--review-note)
-    (setq write-contents-functions '(memo-buffer-save-buffer))
-    (save-excursion  (memo-treemacs-update))))
-
 
 (defun memo-note-review (rate)
   "Review note with score: RATE."
@@ -103,23 +82,11 @@
 	  (memo-remove-all-overlays)
 	  ))))
 
-(defun memo-note-get-current-note-id ()
-  "Get current note id."
-  (memo-note-id memo--buffer-local-note)
-)
-
-(defun memo-note-get-review-note ()
-  "Get Current Review note."
-  (let* ((buf (get-buffer-create memo--review-buffer-name)))
-    (with-current-buffer buf
-      memo--buffer-local-note)))
-
-
 
 ;;;------------------------------------------------------------------
 ;;; note find relative function.
 ;;;------------------------------------------------------------------
-(defvar memo-note-query-next '["filter:dueBefore:0" "order:random"]
+(defvar memo-note-query-next '("filter:dueBefore:0" "order:random")
   "Setting the query string to deter the method get next card.
 The query is like  operator:type:field:value,
 Operator is -/+, type is order/filter,
