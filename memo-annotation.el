@@ -28,21 +28,6 @@
 ;;---------------------------------------------------------
 ;; annotation operator function
 ;;---------------------------------------------------------
-;; 定义默认颜色字符串 (例如，使用 face 的背景色)
-;; 这里我们用 face symbol, 但也可以用具体颜色字符串 "#ecf7ed"
-;; 注意: 默认颜色主要在 memo-annotation-get-color 逻辑中使用
-(defface memo-annotation-default-face
-  '((((class color) (min-colors 88) (background light))
-     :underline "#aecf90" :background "#ecf7ed")
-    (t
-     :background "#1d3c25"))
-  "Default annotation face string to use when no specific face is set.")
-
-(defun memo-annotation--get-face ()
-  "Get face for new annotation.
-This function can be customized to return different faces based on various conditions."
-  'memo-annotation-default-face)
-
 ;; 使用哈希表存储 parentheadid (string) -> annotations (list of annotation objects) 的映射
 (defvar memo-annotation--parentheadid-map (make-hash-table :test 'equal)
   "Hash table mapping headline ID (string) to a list of annotation objects.")
@@ -161,7 +146,7 @@ Returns the created overlay."
 	   (id  (memo-annotation-id annotation-object))
 	   (type (memo-annotation-type annotation-object))
 	   (db-face (memo-annotation-face annotation-object))
-	   (anno-face (memo-select-face-for-annotation-type type db-face))
+	   (anno-face (memo-annotation-select-face-for-type type db-face))
            (overlay (ov-make start end)))
       ;; 设置overlay属性
       (ov-set overlay
@@ -176,7 +161,7 @@ Returns the created overlay."
 
 (defun memo-annotation--overlay-annotation-create (overlay)
   "Update a annotation for the given OVERLAY."
-  (when (and  (ov-p overlay) (ov-buf overlay))
+  (when (and q (ov-p overlay) (ov-buf overlay))
     (let ((anno (make-memo-annotation :id (ov-val overlay 'memo-annotation-id)
 				      :start (ov-beg overlay)
 				      :end (ov-end overlay)
@@ -211,7 +196,7 @@ Returns the overlay."
 	   (annotation-start (memo-annotation-start annotation-object))
 	   (annotation-end (memo-annotation-end annotation-object))
 	   (db-face (memo-annotation-face annotation-object))
-	   (anno-face (memo-select-face-for-annotation-type type db-face))
+	   (anno-face (memo-annotation-select-face-for-type type db-face))
            (overlay (gethash annotation-id memo-annotation--overlays-map)))
       ;; 移动overlay 位置
       (unless (and (equal annotation-start (ov-beg overlay))
@@ -229,6 +214,17 @@ Returns the overlay."
 ;;---------------------------------------------------------
 ;; overlay and annotation operator function
 ;;---------------------------------------------------------
+(defun memo-annotation-overlay--get-original-text (overlay)
+  "Get the original text of the OVERLAY from the buffer."
+  (when (overlayp overlay)
+    (buffer-substring-no-properties (overlay-start overlay) (overlay-end overlay))))
+
+(defun memo-annotation-overlay--get-comment (overlay)
+  "Get the comment from annotation by id from OVERLAY."
+  (let* ((id (ov-val overlay 'memo-annotation-id))
+	 (anno (memo-annotation--get-by-id-in-cache id)))
+    (memo-annotation-text anno)))
+
 (defun memo-annotation-overlays-clear ()
   "Clear all annotation overlays created by memo-annotation-mode."
   (let ((ov-keys (hash-table-keys memo-annotation--overlays-map)))
@@ -303,7 +299,7 @@ Uses the region text as the annotation source text."
 	(progn
           (memo-annotation--overlay-create
 	   (let* ((type (memo-annotation-get-type))
-		  (anno-face (memo-select-face-for-annotation-type type)))
+		  (anno-face (memo-annotation-select-face-for-type type)))
 	     (prin1 anno-face)
 	     (prin1 type)
              (memo-annotation--create-db parentheadid start end text (cdr anno-face) type)))

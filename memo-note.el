@@ -73,14 +73,14 @@
   (memo-review-note "Again")
   )
 
-(defun memo-note-flip ()
-  "Flip current review note."
+(defun memo-note-cloze-toggle ()
+  "Toggle the all cloze overlay in current review note."
   (interactive)
-  (let* ((buf (get-buffer  memo--review-buffer-name)))
-    (if buf
-	(with-current-buffer buf
-	  (memo-remove-all-overlays)
-	  ))))
+  (dolist (ov (overlays-in (point-min) (point-max)))
+    (when (eq (overlay-get ov 'memo-annotation-type) memo-annotation-type-cloze)
+      (if (overlay-get ov 'memo-cloze-is-hidden)
+          (memo-annotation-cloze-unhide ov)
+        (memo-annotation-cloze-hide ov)))))
 
 
 ;;;------------------------------------------------------------------
