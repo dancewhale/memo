@@ -39,15 +39,13 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("GetHeadFilePath", api.GetHeadFilePath, "string", "Get headline file path"))
 	service.RegisterMethod(epc.MakeMethod("GetNextReviewCard", api.GetNextReviewCard, "", "Get next reviewed card info"))             // Added
 	service.RegisterMethod(epc.MakeMethod("GetPreviousReviewCard", api.GetPreviousReviewCard, "", "Get previous reviewed card info")) // Added
+	service.RegisterMethod(epc.MakeMethod("GetNextNewCard", api.GetNextNewCard, "string", "Get headlines in reading order for a file"))
+	service.RegisterMethod(epc.MakeMethod("GetPreviousNewCard", api.GetPreviousNewCard, "string", "Get headlines in reading order for a file"))
 	return service
 }
 
 func (api *CardApi) GetFileHasNewCard() db.Result {
-	cardDB, err := query.NewCardDB()
-	if err != nil {
-		return db.Result{Data: false, Err: err}
-	}
-	fileids, err := cardDB.GetFileHasNewCard()
+	fileids, err := db.GetFileHasNewCard()
 	if err != nil {
 		return db.Result{Data: false, Err: err}
 	}
@@ -195,6 +193,39 @@ func (api *CardApi) UndoReviewNote(headlineID string) db.Result {
 	}
 }
 
+func (api *CardApi) GetPreviousNewCard() db.Result {
+	queue := db.GetReadingQueue()
+	headID, err := queue.PreviousNewCard()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	} else if headID == "" {
+		return db.Result{Data: nil, Err: nil}
+	}
+	cacheManager := db.GetCacheManager()
+	head := cacheManager.GetHeadFromCache(headID)
+	if head == nil {
+		return db.Result{Data: nil, Err: logger.Errorf("Failed to get head %s in cache.", headID)}
+	}
+	return db.Result{Data: head.Info, Err: nil}
+}
+
+func (api *CardApi) GetNextNewCard() db.Result {
+	queue := db.GetReadingQueue()
+	headID, err := queue.NextNewCard()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	} else if headID == "" {
+		return db.Result{Data: nil, Err: nil}
+	}
+	cacheManager := db.GetCacheManager()
+	head := cacheManager.GetHeadFromCache(headID)
+	if head == nil {
+		return db.Result{Data: nil, Err: logger.Errorf("Failed to get head %s in cache.", headID)}
+	}
+
+	return db.Result{Data: head.Info, Err: nil}
+}
+
 func (api *CardApi) GetHeadFilePath(headid string) db.Result {
 	headDB, err := db.NewOrgHeadlineDB()
 	if err != nil {
@@ -245,35 +276,14 @@ func (api *CardApi) GetPreviousReviewCard() db.Result {
 
 // Helper function to get HeadlineWithFsrs by ID using the cache
 func (api *CardApi) getHeadlineWithFsrsByID(headID string) (*db.HeadlineWithFsrs, error) {
-	// 1. Get FileID from HeadID
-	headDB, err := db.NewOrgHeadlineDB()
-	if err != nil {
-		return nil, logger.Errorf("Failed to get OrgHeadlineDB: %v", err)
-	}
-	fileID, err := headDB.GetFileIDByOrgID(headID)
-	if err != nil {
-		return nil, logger.Errorf("Failed to get FileID for head %s: %v", headID, err)
-	}
-	if fileID == nil {
-		// It might be a virtual card, need to handle this case if necessary.
-		// For now, assume it must belong to a file.
-		return nil, logger.Errorf("FileID not found for head %s", headID)
-	}
-
-	// 2. Get File Cache
 	cacheManager := db.GetCacheManager()
-	fileCache, err := cacheManager.GetFileCacheFromCache(*fileID)
-	if err != nil {
-		return nil, logger.Errorf("Failed to get file cache for file %s: %v", *fileID, err)
-	}
+	head := cacheManager.GetHeadFromCache(headID)
 
 	// 3. Get HeadlineStats from HeadMap
-	headStats, ok := fileCache.HeadMap[headID]
-	if !ok || headStats == nil {
+	if head == nil {
 		// If not found in cache, maybe invalidate and retry?
 		// Or the cache structure/logic needs adjustment.
-		return nil, logger.Errorf("Headline %s not found in cache for file %s", headID, *fileID)
+		return nil, logger.Errorf("Headline %s not found in cache", headID)
 	}
-
-	return headStats.Info, nil
+	return head.Info, nil
 }

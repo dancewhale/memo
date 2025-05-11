@@ -275,23 +275,3 @@ func (c *CardDB) count() (int64, error) {
 	}
 	return count, nil
 }
-
-// Use in other module to get card list
-func (c *CardDB) GetFileHasNewCard() ([]string, error) {
-	head := dal.Headline
-	fsrs := dal.FsrsInfo
-
-	heads, err := head.WithContext(context.Background()).
-		Join(fsrs, head.ID.EqCol(fsrs.HeadlineID)).
-		Select(head.FileID).Distinct().
-		Where(fsrs.State.Eq(0)).Where(head.FileID.IsNotNull()).Where(head.FileID.Neq("")).
-		Find()
-	if err != nil {
-		return nil, logger.Errorf("Get file has new card error: %v", err)
-	}
-	fileIDList := lo.Map(heads, func(item *storage.Headline, index int) string {
-		return *item.FileID
-	})
-
-	return fileIDList, nil
-}

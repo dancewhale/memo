@@ -82,7 +82,7 @@ type FileHeadlineCacheManager struct {
 // 全局缓存管理器实例
 var cacheManager *FileHeadlineCacheManager
 var cacheManagerOnce sync.Once
-var headCacheMap map[string]*HeadlineStats
+var headCacheMap map[string]*HeadlineStats // 全局缓存映射，用于快速查找headline到fileid的映射
 
 // GetCacheManager 获取全局缓存管理器实例
 func GetCacheManager() *FileHeadlineCacheManager {
@@ -290,6 +290,9 @@ func (c *FileHeadlineCache) buildHeadlineTree(parentChildrenMap map[string][]str
 			})
 		}
 	}
+	sort.Slice(c.RootHeads, func(i, j int) bool {
+		return c.RootHeads[i].Info.Order < c.RootHeads[j].Info.Order
+	})
 }
 
 // buildCache 构建headline缓存树并计算统计信息
@@ -423,38 +426,6 @@ func (c *FileHeadlineCache) getFileStats() (totalCards, totalVirtCards, expiredC
 	return
 }
 
-// FindNextNew performs a depth-first search to find the first HeadlineWithFsrs with State = 0.
-// It returns the found HeadlineWithFsrs or nil if none is found.
-func (c *FileHeadlineCache) FindNextNew() *HeadlineWithFsrs {
-	var result *HeadlineWithFsrs
-	for _, rootHead := range c.RootHeads {
-		result = c.findNextNewDFS(rootHead)
-		if result != nil {
-			return result
-		}
-	}
-	return nil
-}
-
-// findNextNewDFS is a helper function for depth-first search.
-func (c *FileHeadlineCache) findNextNewDFS(stats *HeadlineStats) *HeadlineWithFsrs {
-	// Check the current headline
-	if stats.Info != nil && stats.Info.State == 0 {
-		return stats.Info
-	}
-
-	// Recursively search children
-	for _, child := range stats.FileChildren {
-		found := c.findNextNewDFS(child)
-		if found != nil {
-			return found
-		}
-	}
-
-	// Not found in this subtree
-	return nil
-}
-
 // GetFileFromCache 从缓存管理器获取指定文件的缓存，如果不存在或已过期则创建新缓存
 func (m *FileHeadlineCacheManager) GetFileCacheFromCache(fileID string) (*FileHeadlineCache, error) {
 	// 先尝试读取缓存
@@ -498,6 +469,15 @@ func (m *FileHeadlineCacheManager) GetFileFromCache(fileID string) (*FileInfo, e
 		return &cache.Info, err
 	} else {
 		return nil, err
+	}
+}
+
+func (m *FileHeadlineCacheManager) GetHeadFromCache(headid string) *HeadlineStats {
+	head, ok := headCacheMap[headid]
+	if ok {
+		return head
+	} else {
+		return nil
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 	"memo/pkg/card"
 	"memo/pkg/client"
 	"memo/pkg/db"
-	"memo/pkg/db/query"
 	"memo/pkg/logger"
 	"memo/pkg/org"
 	"memo/pkg/storage"
@@ -149,14 +148,13 @@ func test(ctx context.Context, cmd *cli.Command) error {
 		fmt.Println(vara)
 	}
 
-	cardDB, _ := query.NewCardDB()
 	//heads, err := cardDB.GetFileHasNewCard()
 	//if err != nil {
 	//	fmt.Println(err)
 	//	fmt.Println(heads[0])
 	//	return err
 	//}
-	cards, err := cardDB.GetFileHasNewCard()
+	cards, err := db.GetFileHasNewCard()
 	if err != nil {
 		fmt.Println(err)
 	}
