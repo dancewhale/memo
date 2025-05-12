@@ -113,11 +113,14 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 
 (defun memo-make-note-from-return (y)
   "Try to parser note object from return value Y."
-  (if (memo-alist-get y "ID")
-      (memo-make-note-from-alist y)
-    (if (memo-alist-get (car y) "ID")
-        (-map #'memo-make-note-from-alist y)
-      nil)))
+  (catch 'value
+    (if (equal 'null y)
+	(throw 'value nil))
+    (if (memo-alist-get y "ID")
+	(throw 'value (memo-make-note-from-alist y))
+      (if (memo-alist-get (car y) "ID")
+          (throw 'value (-map #'memo-make-note-from-alist y))
+	(throw 'value  nil)))))
 
 ;;; --------------------------------------------------
 ;;;  annotation relate function
@@ -199,16 +202,6 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 ;;; --------------------------------------------------
 ;;;  memo api function
 ;;; --------------------------------------------------
-(defun memo-api--get-note (querylist)
-  "Get note by query string list QUERYLIST."
-  (let ((result (memo-bridge-call-sync "FindNote" querylist)))
-    (memo-make-note-from-return (memo--parse-result result))))
-
-(defun memo-api--get-note-list (querylist)
-  "Get note list by query string list QUERYLIST."
-  (let ((result (memo-bridge-call-sync "FindNoteList" querylist)))
-    (memo-make-note-from-return (memo--parse-result result))))
-
 (defun memo-api--get-note-path (id)
   "Get current note with ID."
   (let ((result (memo-bridge-call-sync "GetHeadFilePath" id)))
@@ -248,7 +241,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (let ((result (memo-bridge-call-sync "GetOrgHeadProperty" headid key)))
     (memo--parse-result result)))
 
-;; virt head relative code.
+;; api used by treemacs and head relative code.
 (defun memo-api--create-virt-head (id title content)
   "Create virt head with TITLE and CONTENT under head with ID.
 Returns the ID of the created virt head."
@@ -353,6 +346,53 @@ Returns the ID of the created virt head."
   "Get the text that annotation mark in original card by ID."
   (let ((result (memo-bridge-call-sync "GetAnnotationOriginalText" id)))
     (memo--parse-result result)))
+
+
+;; get card api
+;; custom card get api
+(defun memo-api--get-note (querylist)
+  "Get note by query string list QUERYLIST."
+  (let ((result (memo-bridge-call-sync "FindNote" querylist)))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-note-list (querylist)
+  "Get note list by query string list QUERYLIST."
+  (let ((result (memo-bridge-call-sync "FindNoteList" querylist)))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+;; get review card api
+(defun memo-api--get-next-review-card ()
+  "Get next review note."
+  (let ((result (memo-bridge-call-sync "GetNextReviewCard")))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-previous-review-card ()
+  "Get previous review note."
+  (let ((result (memo-bridge-call-sync "GetPreviousReviewCard")))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+;; get read new card api
+(defun memo-api--get-next-new-card ()
+  "Get next new note."
+  (let ((result (memo-bridge-call-sync "GetNextNewCard")))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-previous-new-card ()
+  "Get previous new note."
+  (let ((result (memo-bridge-call-sync "GetPreviousNewCard")))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+;; select file for new card.
+(defun memo-api--get-next-file-for-read ()
+  "Get next file for new note."
+  (let ((result (memo-bridge-call-sync "GetNextFileNewCard")))
+    (memo-make-note-from-return (memo--parse-result result))))
+
+(defun memo-api--get-previous-file-for-read ()
+  "Get previous file for new note."
+  (let ((result (memo-bridge-call-sync "GetPreviousFileNewCard")))
+    (memo-make-note-from-return (memo--parse-result result))))
+
 
 ;; sync org file under dir.
 (defun memo-sync-db ()

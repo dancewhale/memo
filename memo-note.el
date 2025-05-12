@@ -96,15 +96,41 @@ like filter:fileid:13089182-9F1D-4583-9076-A2B94998A030, filter:dueAt:-3, filter
 filter:property:id:123.
 Default Operator is +/- means:")
 
-
 (defun memo-query-next-note ()
   "Find the next note by query in MEMO-NEXT-NOTE-QUERY."
   (memo-api--get-note memo-note-query-next))
 
 (defun memo-read-next-note ()
-  "Open note in buffer and open side window."
+  "Open next new note in buffer and open side window."
   (interactive)
-  (memo-treemacs-display-note-context (memo-query-next-note)))
+  (let* ((note (memo-api--get-next-new-card)))
+    (if note
+	(memo-treemacs-display-note-context note)
+      (let* ((note (memo-api--get-next-file-for-read)))
+	(memo-treemacs-display-note-context note)))))
+
+(defun memo-read-previous-note ()
+  "Open previous note in buffer and open side window."
+  (interactive)
+  (let* ((note (memo-api--get-previous-new-card)))
+    (if note
+	(memo-treemacs-display-note-context note)
+      (let* ((note (memo-api--get-previous-file-for-read)))
+	(memo-treemacs-display-note-context note)))))
+
+(defun memo-read-next-file ()
+  "Open the next file has new card and return the note visited before."
+  (interactive)
+  (let* ((note (memo-api--get-next-file-for-read)))
+    (if note
+	(memo-treemacs-display-note-context note))))
+
+(defun memo-read-previous-file ()
+  "Open the previous file has new card and return the note visited before."
+  (interactive)
+  (let* ((note (memo-api--get-previous-file-for-read)))
+    (if note
+	(memo-treemacs-display-note-context note))))
 
 
 ;;;--------------------------------------------------

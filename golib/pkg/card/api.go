@@ -41,6 +41,8 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("GetPreviousReviewCard", api.GetPreviousReviewCard, "", "Get previous reviewed card info")) // Added
 	service.RegisterMethod(epc.MakeMethod("GetNextNewCard", api.GetNextNewCard, "string", "Get headlines in reading order for a file"))
 	service.RegisterMethod(epc.MakeMethod("GetPreviousNewCard", api.GetPreviousNewCard, "string", "Get headlines in reading order for a file"))
+	service.RegisterMethod(epc.MakeMethod("GetNextFileNewCard", api.GetNextFileNewCard, "string", "Get headlines in reading order for a file"))
+	service.RegisterMethod(epc.MakeMethod("GetPreviousFileNewCard", api.GetPreviousFileNewCard, "string", "Get headlines in reading order for a file"))
 	return service
 }
 
@@ -209,6 +211,44 @@ func (api *CardApi) GetPreviousNewCard() db.Result {
 	return db.Result{Data: head.Info, Err: nil}
 }
 
+func (api *CardApi) GetPreviousFileNewCard() db.Result {
+	queue := db.GetReadingQueue()
+	currentFileID, err := queue.GetCurrentFileID()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+
+	for {
+		id, err := queue.PreviousFileID()
+		if err != nil {
+			return db.Result{Data: nil, Err: err}
+		}
+		finished, err := queue.IfCurrentFileReadFinished()
+		if err != nil {
+			return db.Result{Data: nil, Err: err}
+		}
+		if finished {
+			continue
+		} else {
+			break
+		}
+		if id == currentFileID {
+			return db.Result{Data: nil, Err: errors.New("No next file has new card to read.")}
+		}
+	}
+	headID, err := queue.GetCurrentHeadID()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	cacheManager := db.GetCacheManager()
+	head := cacheManager.GetHeadFromCache(headID)
+	if head == nil {
+		return db.Result{Data: nil, Err: logger.Errorf("Failed to get head %s in cache.", headID)}
+	}
+
+	return db.Result{Data: head.Info, Err: nil}
+}
+
 func (api *CardApi) GetNextNewCard() db.Result {
 	queue := db.GetReadingQueue()
 	headID, err := queue.NextNewCard()
@@ -216,6 +256,44 @@ func (api *CardApi) GetNextNewCard() db.Result {
 		return db.Result{Data: nil, Err: err}
 	} else if headID == "" {
 		return db.Result{Data: nil, Err: nil}
+	}
+	cacheManager := db.GetCacheManager()
+	head := cacheManager.GetHeadFromCache(headID)
+	if head == nil {
+		return db.Result{Data: nil, Err: logger.Errorf("Failed to get head %s in cache.", headID)}
+	}
+
+	return db.Result{Data: head.Info, Err: nil}
+}
+
+func (api *CardApi) GetNextFileNewCard() db.Result {
+	queue := db.GetReadingQueue()
+	currentFileID, err := queue.GetCurrentFileID()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+
+	for {
+		id, err := queue.NextFileID()
+		if err != nil {
+			return db.Result{Data: nil, Err: err}
+		}
+		finished, err := queue.IfCurrentFileReadFinished()
+		if err != nil {
+			return db.Result{Data: nil, Err: err}
+		}
+		if finished {
+			continue
+		} else {
+			break
+		}
+		if id == currentFileID {
+			return db.Result{Data: nil, Err: errors.New("No next file has new card to read.")}
+		}
+	}
+	headID, err := queue.GetCurrentHeadID()
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
 	}
 	cacheManager := db.GetCacheManager()
 	head := cacheManager.GetHeadFromCache(headID)

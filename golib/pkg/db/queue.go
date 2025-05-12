@@ -23,6 +23,7 @@ type FileCardList struct {
 	HeadList         *doublylinkedlist.List // 存储 headID (string)
 	CurrentHeadIndex int
 	ExpirationTime   time.Time
+	ReadFinished     bool // 是否已完成阅读
 }
 
 // ReadingQueue 管理多个文件的阅读列表队列
@@ -129,6 +130,7 @@ func (rq *ReadingQueue) initializeFileCardList(fileID string, oldHeadIDIfRefresh
 		HeadList:         headList,
 		CurrentHeadIndex: 0,
 		ExpirationTime:   time.Now().Add(rq.cacheDuration),
+		ReadFinished:     false,
 	}
 
 	if len(oldHeadIDIfRefreshing) > 0 && oldHeadIDIfRefreshing[0] != "" {
@@ -172,6 +174,36 @@ func (rq *ReadingQueue) ensureFileCardListValid(fileIndex int) (*FileCardList, e
 	return fcl, nil
 }
 
+func (rq *ReadingQueue) IfCurrentFileReadFinished() (bool, error) {
+	rq.mutex.RLock()
+	defer rq.mutex.RUnlock()
+
+	if rq.CurrentFileIndex < 0 || rq.CurrentFileIndex >= len(rq.FileLists) {
+		return false, errors.New("no file selected or queue empty")
+	}
+	fcl, err := rq.ensureFileCardListValid(rq.CurrentFileIndex)
+	if err != nil {
+		return false, err
+	}
+	for i := 0; i < fcl.HeadList.Size(); i++ {
+		val, found := fcl.HeadList.Get(i)
+		if !found {
+			return false, errors.New("failed to get head ID at current index")
+		}
+		headID := val.(string)
+		isNew, errIsNew := rq.isCardNew(headID)
+		if errIsNew != nil {
+			logger.Warnf("Error checking if card %s is new: %v. Skipping.", headID, errIsNew)
+			continue
+		}
+		if isNew {
+			return false, nil
+		}
+	}
+	rq.FileLists[rq.CurrentFileIndex].ReadFinished = true
+	return true, nil
+}
+
 // GetCurrentFileID 获取当前正在阅读的文件ID
 func (rq *ReadingQueue) GetCurrentFileID() (string, error) {
 	rq.mutex.RLock()
@@ -192,10 +224,17 @@ func (rq *ReadingQueue) NextFileID() (string, error) {
 		return "", errors.New("reading queue is empty")
 	}
 
-	// 如果到达末尾则循环到开头。
+	// 如果到达末尾则循环到开头,如果只有一个文件则不切换
 	rq.CurrentFileIndex = (rq.CurrentFileIndex + 1) % len(rq.FileLists)
+	if len(rq.FileLists) == 1 && rq.CurrentFileIndex == 0 {
+		return "", errors.New("only one file in the queue, no switch needed")
+	}
 	// 确保新选中的文件列表有效
 	_, err := rq.ensureFileCardListValid(rq.CurrentFileIndex)
+	if err != nil {
+		return "", err
+	}
+	_, err = rq.IfCurrentFileReadFinished()
 	if err != nil {
 		return "", err
 	}
@@ -211,6 +250,10 @@ func (rq *ReadingQueue) PreviousFileID() (string, error) {
 		return "", errors.New("reading queue is empty")
 	}
 
+	// 如果只有一个文件则不切换
+	if len(rq.FileLists) == 1 && rq.CurrentFileIndex == 0 {
+		return "", errors.New("only one file in the queue, no switch needed")
+	}
 	// 如果到达开头则循环到末尾。
 	rq.CurrentFileIndex--
 	if rq.CurrentFileIndex < 0 {
@@ -218,6 +261,11 @@ func (rq *ReadingQueue) PreviousFileID() (string, error) {
 	}
 	// 确保新选中的文件列表有效
 	_, err := rq.ensureFileCardListValid(rq.CurrentFileIndex)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = rq.IfCurrentFileReadFinished()
 	if err != nil {
 		return "", err
 	}
