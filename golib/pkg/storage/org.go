@@ -11,7 +11,6 @@ import (
 
 const DefaultWeight = 50
 
-const POSTPONE string = "postpone"
 const SUSPEND string = "suspend"
 const NORMAL string = "normal"
 const DELTED string = "deleted"
@@ -40,7 +39,6 @@ type Headline struct {
 	// Scheduled Type
 	// Suspend: hang up card, not review until set to normal.
 	// Normal: normal schedule.
-	// Postphone: move card to the end of the queue in today and reset to 0 after review.
 	ScheduledType string     `json:"scheduled_type"`
 	Title         string     `json:"title"`
 	Hash          string     `json:"hash" hash:"ignore"`

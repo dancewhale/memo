@@ -118,8 +118,6 @@ func getScheduleFromPropertyDrawer(pd *PropertyDrawer) string {
 			return storage.NORMAL
 		case storage.SUSPEND:
 			return storage.SUSPEND
-		case storage.POSTPONE:
-			return storage.POSTPONE
 		default:
 			return storage.NORMAL
 		}

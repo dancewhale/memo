@@ -18,14 +18,6 @@
 ;;; Code:
 
 
-(defun memo-note-skip-current-note ()
-  "Skip current review note and review next note."
-  (interactive)
-  (if memo--buffer-local-note
-    (progn (memo-api--update-property
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "postpone")
-	   (memo-treemacs-refresh))))
-
 (defun memo-note-suspend-current-note ()
   "Suspend current note."
   (interactive)
