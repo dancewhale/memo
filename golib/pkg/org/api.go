@@ -2,12 +2,13 @@ package org
 
 import (
 	"errors"
-	"memo/pkg/db"
 	"strings"
 	"sync"
 
 	"memo/pkg/card"
 	"memo/pkg/client"
+	"memo/pkg/converter"
+	"memo/pkg/db"
 	"memo/pkg/logger"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
@@ -40,6 +41,7 @@ func NewOrgApi() (*OrgApi, error) {
 
 func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerService {
 	service.RegisterMethod(epc.MakeMethod("UploadFile", o.UploadFile, "string", "Upload org file to database"))
+	service.RegisterMethod(epc.MakeMethod("ImportFile", o.ImportFile, "string", "Import epub markdown html file to org-mode file."))
 	service.RegisterMethod(epc.MakeMethod("SyncOrgDir", o.UploadFilesUnderDir, "string", "Upload org files under dir to database"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadContent", o.UpdateOrgHeadContent, "string", "Update org head content"))
 	service.RegisterMethod(epc.MakeMethod("UpdateOrgHeadTitle", o.UpdateOrgHeadTitle, "string", "Update org head content"))
@@ -62,6 +64,18 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	service.RegisterMethod(epc.MakeMethod("UpdateAnnotationsRegion", o.UpdateAnnotationsRegion, "string", "Update a lot of annotation in a list one time"))
 	service.RegisterMethod(epc.MakeMethod("DeleteAnnotationByID", o.DeleteAnnotationByID, "string", "Delete annotation by ID"))
 	return service
+}
+
+func (o *OrgApi) ImportFile(srcFilePath, destDir string) db.Result {
+	path, err := converter.ConvertFileToOrgMode(srcFilePath, destDir)
+	if err != nil {
+		return db.Result{Data: "", Err: err}
+	} else {
+		return db.Result{
+			Data: path,
+			Err:  nil,
+		}
+	}
 }
 
 func (o *OrgApi) GetChildrenVirtPropertyMap(headid, key string) db.Result {
