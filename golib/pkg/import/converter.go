@@ -1,4 +1,4 @@
-package converter
+package _import
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ func SanitizeFilename(filename string) string {
 	// Replace Windows/Unix unsupported characters
 	// Invalid characters regex: r'[<>:"/\\|?*\[\]]'
 	// Go's regex doesn't need to escape backslashes as much in raw strings, but for general strings, they are needed.
-	re := regexp.MustCompile(`[<>:"/\|?*\[\]]`) // Adjusted for Go: removed unnecessary Go escapes for \, added for "
+	re := regexp.MustCompile(`[<>:"/\\|?*\[\]]`) // Adjusted for Go: removed unnecessary Go escapes for \, added for "
 	filename = re.ReplaceAllString(filename, "_")
 	// Handle consecutive underscores
 	re = regexp.MustCompile(`_+`)
@@ -26,30 +26,21 @@ func SanitizeFilename(filename string) string {
 
 // ConvertFileToOrgMode converts the input file to Org mode format.
 // It automatically detects the file type based on its extension.
-func ConvertFileToOrgMode(inputPath string, outputDir string) (string, error) {
+func ConvertFileToOrgMode(fileid, inputPath string, outputFilePath string, mediaOutPutPath string) (string, error) {
 	// Check for pandoc dependency
 	if _, err := exec.LookPath("pandoc"); err != nil {
 		return "", logger.Errorf("pandoc command not found, please ensure it's installed and in PATH: %v", err)
 	}
 
 	fileExt := strings.ToLower(filepath.Ext(inputPath))
-	baseName := strings.TrimSuffix(filepath.Base(inputPath), fileExt)
-	safeBaseName := SanitizeFilename(baseName)
-	outputFileName := fmt.Sprintf("%s.org", safeBaseName)
-	outputFilePath := filepath.Join(outputDir, outputFileName)
-
-	err := os.MkdirAll(outputDir, 0755)
-	if err != nil {
-		return "", logger.Errorf("failed to create output directory: %s, %v", outputDir, err)
-	}
 
 	switch fileExt {
 	case ".epub":
-		return outputFilePath, convertWithPandoc(inputPath, outputFilePath, "epub", outputDir)
+		return outputFilePath, convertWithPandoc(fileid, inputPath, outputFilePath, "epub", mediaOutPutPath)
 	case ".md", ".markdown":
-		return outputFilePath, convertWithPandoc(inputPath, outputFilePath, "markdown", outputDir)
+		return outputFilePath, convertWithPandoc(fileid, inputPath, outputFilePath, "markdown", mediaOutPutPath)
 	case ".html", ".htm":
-		return outputFilePath, convertWithPandoc(inputPath, outputFilePath, "html", outputDir)
+		return outputFilePath, convertWithPandoc(fileid, inputPath, outputFilePath, "html", mediaOutPutPath)
 	case ".pdf":
 		// Check for pdftotext dependency before calling convertPDFToOrg
 		if _, err := exec.LookPath("pdftotext"); err != nil {
@@ -61,19 +52,14 @@ func ConvertFileToOrgMode(inputPath string, outputDir string) (string, error) {
 	}
 }
 
-func convertWithPandoc(inputFile, outputFile, fromFormat, outputDir string) error {
-	// Ensure outputDir is absolute for consistent imageDir path construction
-	absOutputDir, err := filepath.Abs(outputDir)
+func convertWithPandoc(fileid, inputFile, outputFile, fromFormat, mediaOutPutDir string) error {
+	// Ensure mediaOutPutDir is absolute for consistent imageDir path construction
+	absOutputDir, err := filepath.Abs(mediaOutPutDir)
 	if err != nil {
-		return logger.Errorf("failed to get absolute path for output directory: %s,  %v", outputDir, err)
-	}
-	absOutputFile, err := filepath.Abs(outputFile)
-	if err != nil {
-		return logger.Errorf("failed to get absolute path for output file: %s, %v", outputFile, err)
+		return logger.Errorf("failed to get absolute path for media output directory: %s,  %v", mediaOutPutDir, err)
 	}
 
-	imageDirName := fmt.Sprintf("%s_images", strings.TrimSuffix(filepath.Base(absOutputFile), filepath.Ext(absOutputFile)))
-	imageDir := filepath.Join(absOutputDir, imageDirName) // This will be an absolute path
+	imageDir := filepath.Join(absOutputDir, fileid) // This will be an absolute path
 
 	err = os.MkdirAll(imageDir, 0755)
 	if err != nil {
@@ -101,28 +87,32 @@ func convertWithPandoc(inputFile, outputFile, fromFormat, outputDir string) erro
 		return logger.Errorf("failed to read converted file: %s, %v", outputFile, err)
 	}
 
-	// Regex to find [[file:ANYTHING]] links
-	// The Python script's regex: r'\[\[file:(.*?)\]\]'
-	// Go equivalent: `\[\[file:(.*?)\]\]`
-	linkRegex := regexp.MustCompile(`(\[\[file:)(.*?)(]])`)
+	// Go equivalent: `\[\[file(.*?)\]\]`
+	// Construct the regex pattern string based on mediaOutPutDir
+	// regexp.QuoteMeta escapes any special regex characters in mediaOutPutDir
+	patternString := fmt.Sprintf(`(\[\[%s)(.*?)(]])`, regexp.QuoteMeta(mediaOutPutDir))
+	linkRegex := regexp.MustCompile(patternString)
 
 	newContent := linkRegex.ReplaceAllStringFunc(string(content), func(match string) string {
 		submatches := linkRegex.FindStringSubmatch(match)
 		if len(submatches) < 4 { // 0: full, 1: prefix, 2: path, 3: suffix
 			return match // Should not happen with this regex
 		}
-		originalImagePathInLink := submatches[2]
 		// We want the link to be relative to the .org file, pointing into the _images directory
-		// e.g., [[file:mybook_images/image.png]]
-		newImagePath := filepath.Join(imageDirName, filepath.Base(originalImagePathInLink))
-		// Ensure forward slashes for org mode links, even on Windows
-		newImagePath = filepath.ToSlash(newImagePath)
-		return fmt.Sprintf("%s%s%s", submatches[1], newImagePath, submatches[3])
+		// e.g., [[file:../index/image.png]]
+		newImagePath := "[[file:../media" + submatches[2] + submatches[3]
+		return newImagePath
 	})
 
 	err = os.WriteFile(outputFile, []byte(newContent), 0644)
 	if err != nil {
 		return logger.Errorf("failed to write updated content to file: %s, %v", outputFile, err)
+	}
+
+	// Check if the imageDir is empty and remove it if so.
+	// Log errors from this operation but don't let them fail the overall conversion.
+	if cleanupErr := removeDirIfEmpty(imageDir); cleanupErr != nil {
+		return logger.Errorf("Failed to cleanup media directory %s: %v. Continuing as main conversion was successful.", imageDir, cleanupErr)
 	}
 
 	return nil

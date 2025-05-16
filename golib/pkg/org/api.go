@@ -7,8 +7,8 @@ import (
 
 	"memo/pkg/card"
 	"memo/pkg/client"
-	"memo/pkg/converter"
 	"memo/pkg/db"
+	"memo/pkg/import"
 	"memo/pkg/logger"
 	"memo/pkg/org/parser"
 	"memo/pkg/storage"
@@ -66,16 +66,9 @@ func (o *OrgApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerServic
 	return service
 }
 
-func (o *OrgApi) ImportFile(srcFilePath, destDir string) db.Result {
-	path, err := converter.ConvertFileToOrgMode(srcFilePath, destDir)
-	if err != nil {
-		return db.Result{Data: "", Err: err}
-	} else {
-		return db.Result{
-			Data: path,
-			Err:  nil,
-		}
-	}
+func (o *OrgApi) ImportFile(srcFilePath string) db.Result {
+	dstFilePath, err := _import.Import(srcFilePath)
+	return db.Result{Data: dstFilePath, Err: err}
 }
 
 func (o *OrgApi) GetChildrenVirtPropertyMap(headid, key string) db.Result {

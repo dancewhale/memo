@@ -2,9 +2,12 @@ package storage
 
 import (
 	"fmt"
-	"memo/cmd/options"
+	"os"
 	"strings"
 	"time"
+
+	"memo/cmd/options"
+	"memo/pkg/logger"
 
 	"gorm.io/gorm"
 )
@@ -121,6 +124,21 @@ func (f *File) String() string {
 		h.Write(file)
 	}
 	return file.String()
+}
+
+func (f *File) Write() error {
+	file, err := os.OpenFile(f.FilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return logger.Errorf("Failed to open file when save file: %w", err)
+	}
+	defer file.Close()
+
+	// Write the content to the file
+	_, err = file.WriteString(f.String())
+	if err != nil {
+		return logger.Errorf("failed to write to file %s: %v", f.FilePath, err)
+	}
+	return nil
 }
 
 func (h *Headline) taskTimeString() string {

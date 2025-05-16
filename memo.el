@@ -50,9 +50,11 @@ if nil will default use user home dir.")
 (defvar memo-org-directory nil
 "Setting memo dir to scan org file.")
 
+(defconst memo-media-path "media"
+"Setting memo media resource dir name under memo-org-directory.")
+
 
 ;;; Core primitives
-
 (defvar memo--root (if load-file-name (file-name-directory load-file-name)
 		     default-directory)
 "The path to the root of memo package.")
@@ -61,9 +63,6 @@ if nil will default use user home dir.")
   "The path to the root of memo go src file.")
 
 (defconst memo-server-path (concat memo--root "server"))
-
-(defvar  memo-epc nil
-  "Store memo server session information.")
 
 (defun memo-compile-server ()
   "Compile dynamic module."

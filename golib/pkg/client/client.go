@@ -18,7 +18,7 @@ type EmacsEpcClient struct {
 }
 
 func NewEmacsEpcClient(emacsPort int) error {
-	if EClient == nil || EClient.epcClient == nil {
+	if EClient == nil || EClient.epcClient == nil || EClient.emacsPort != emacsPort {
 		// Added error logging context
 		logger.Infof("Attempting to start EPC client for Emacs on port %d", emacsPort)
 		cs, err := elrpc.StartClient(emacsPort, nil)
@@ -94,12 +94,12 @@ func (c *EmacsEpcClient) EvalInEmacs(methodName string, args ...interface{}) (in
 	return result, nil
 }
 
-func (c *EmacsEpcClient) GetEmacsVars(varName string) (interface{}, error) {
+func (c *EmacsEpcClient) GetEmacsVar(varName string) (interface{}, error) {
 	if c.epcClient == nil {
 		return nil, logger.Errorf("EPC client is not initialized")
 	}
 	// Call the 'get-emacs-var' elisp function with the variable name
-	result, err := c.epcClient.Call("get-emacs-vars", varName)
+	result, err := c.epcClient.Call("get-emacs-var", varName)
 	if err != nil {
 		logger.Errorf("Error calling get-emacs-var with varName '%s': %v", varName, err)
 		return nil, err

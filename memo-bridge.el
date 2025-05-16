@@ -96,6 +96,7 @@
 	     (let ((mngr mngr))
 	       (memo-bridge-epc-define-method mngr "eval-in-emacs"  'memo-bridge--eval-in-emacs-func)
 	       (memo-bridge-epc-define-method mngr "get-emacs-vars" 'memo-bridge--get-emacs-vars-func)
+	       (memo-bridge-epc-define-method mngr "get-emacs-var" 'memo-bridge--get-emacs-var-func)
 	    ))  memo-bridge-server-port ))
     (if memo-bridge-server
         (setq memo-bridge-server-port (process-contact memo-bridge-server :service))

@@ -394,9 +394,9 @@ Returns the ID of the created virt head."
     (memo-make-note-from-return (memo--parse-result result))))
 
 ;; import epub/markdown/html file to org-mode file.
-(defun memo-api--import-file (filepath destDir)
-  "Import epub/markdown/html file by FILEPATH and DESTDIR."
-  (let ((result (memo-bridge-call-sync "ImportFile" filepath destDir)))
+(defun memo-api--import-file (filepath)
+  "Import epub/markdown/html file by FILEPATH."
+  (let ((result (memo-bridge-call-sync "ImportFile" filepath)))
     (memo--parse-result result)))
 
 ;; sync org file under dir.
