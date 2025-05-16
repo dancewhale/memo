@@ -30,6 +30,7 @@ func (s *OrgParserSql) ParseOrgFile(nodes *arraylist.List) *storage.File {
 		n := it.Value()
 		switch n := n.(type) {
 		case Headline:
+			n.ifRoot = true
 			s.parseHeadline(n)
 		default:
 			s.ParseFileMeta(n.(Node))
@@ -68,7 +69,7 @@ func (s *OrgParserSql) ParseFileMeta(node Node) {
 
 // WriteHeadline 构建headline 结构体用于后续数据库存储。
 func (s *OrgParserSql) parseHeadline(h Headline) {
-	if h.Children != nil {
+	if h.Children.Size() != 0 {
 		it := h.Children.Iterator()
 		for it.Next() {
 			n := it.Value()
@@ -120,14 +121,14 @@ func (s *OrgParserSql) parseHeadline(h Headline) {
 		}
 	}
 
-	if h.Lvl == 1 {
+	if h.ifRoot {
 		head.Order = len(s.Headlines) + 1
 	} else {
 		head.Order = getHeadOrder(s.stack, head)
 	}
 
 	s.stack.Push(head)
-	if h.Lvl == 1 {
+	if h.ifRoot {
 		s.stack.Pop()
 		s.Headlines = append(s.Headlines, head)
 	}

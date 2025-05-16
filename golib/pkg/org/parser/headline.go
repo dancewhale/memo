@@ -32,6 +32,7 @@ type Headline struct {
 	Title       string
 	MeteContent string
 	BodyContent string
+	ifRoot      bool
 }
 
 var headlineRegexp = regexp.MustCompile(`^([*]+\s)(\s*.*)`)
