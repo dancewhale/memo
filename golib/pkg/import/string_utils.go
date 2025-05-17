@@ -1,7 +1,10 @@
 package _import
 
 import (
+	"memo/cmd/options"
+	"memo/pkg/client"
 	"os"
+	"path/filepath"
 
 	"memo/pkg/logger"
 )
@@ -64,4 +67,72 @@ func removeDirIfEmpty(dirPath string) error {
 		}
 	}
 	return nil
+}
+
+// checkFileValid checks if a File exists and is not empty.
+func checkFileValid(srcFilePath string) error {
+	fileInfo, err := os.Stat(srcFilePath)
+	if os.IsNotExist(err) {
+		return logger.Errorf("File %s does not exist", srcFilePath)
+	}
+	if err != nil {
+		return logger.Errorf("error checking File %s: %w", srcFilePath, err)
+	}
+
+	if fileInfo.IsDir() {
+		return logger.Errorf("%s is a directory, not a File", srcFilePath)
+	}
+
+	if fileInfo.Size() == 0 {
+		return logger.Errorf("File %s is empty", srcFilePath)
+	}
+
+	return nil
+}
+
+func ensureRootDirExist() (string, error) {
+	con := options.ConfigInit()
+	client.NewEmacsEpcClient(int(con.EmacsPort))
+	rootDir, err := client.EClient.GetEmacsVar("memo-org-directory")
+	if err != nil {
+		logger.Errorf("Failed to get Memo org directory var: %v", err)
+	}
+	dirPaths := rootDir.([]interface{})
+	dirPath := dirPaths[0].(string)
+	// Check if the main directory exists, create if not.
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(dirPath, 0755); err != nil {
+			return "", logger.Errorf("failed to create directory %s: %w", dirPath, err)
+		}
+		logger.Infof("Directory %s created.", dirPath)
+	} else if err != nil {
+		return "", logger.Errorf("error checking directory %s: %w", dirPath, err)
+	}
+
+	subDirs := []string{MediaDir, BookDir, ArticleDir, InboxDir}
+	for _, subDir := range subDirs {
+		subDirPath := filepath.Join(dirPath, subDir)
+		if _, err := os.Stat(subDirPath); os.IsNotExist(err) {
+			if err := os.MkdirAll(subDirPath, 0755); err != nil {
+				return "", logger.Errorf("failed to create subdirectory %s: %w", subDirPath, err)
+			}
+			logger.Infof("Subdirectory %s created.", subDirPath)
+		} else if err != nil {
+			return "", logger.Errorf("error checking subdirectory %s: %w", subDirPath, err)
+		}
+	}
+	return dirPath, nil
+}
+
+func ensureTempDirExist() (string, error) {
+	tmpDirPath := filepath.Join("/tmp/", "memo")
+	if _, err := os.Stat(tmpDirPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(tmpDirPath, 0755); err != nil {
+			return "", logger.Errorf("failed to create directory %s: %v", tmpDirPath, err)
+		}
+		logger.Infof("Directory %s created.", tmpDirPath)
+	} else if err != nil {
+		return "", logger.Errorf("error checking directory %s: %v", tmpDirPath, err)
+	}
+	return tmpDirPath, nil
 }

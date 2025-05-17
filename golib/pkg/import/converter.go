@@ -6,132 +6,162 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"memo/pkg/logger"
 )
 
-// SanitizeFilename cleans up unsafe characters in filenames.
-func SanitizeFilename(filename string) string {
-	// Replace Windows/Unix unsupported characters
-	// Invalid characters regex: r'[<>:"/\\|?*\[\]]'
-	// Go's regex doesn't need to escape backslashes as much in raw strings, but for general strings, they are needed.
-	re := regexp.MustCompile(`[<>:"/\\|?*\[\]]`) // Adjusted for Go: removed unnecessary Go escapes for \, added for "
-	filename = re.ReplaceAllString(filename, "_")
-	// Handle consecutive underscores
-	re = regexp.MustCompile(`_+`)
-	filename = re.ReplaceAllString(filename, "_")
-	return strings.Trim(filename, "_")
-}
-
 // ConvertFileToOrgMode converts the input file to Org mode format.
 // It automatically detects the file type based on its extension.
-func ConvertFileToOrgMode(fileid, inputPath string, outputFilePath string, mediaOutPutPath string) (string, error) {
+func (f *File) ConvertFileToOrgMode() (string, error) {
 	// Check for pandoc dependency
 	if _, err := exec.LookPath("pandoc"); err != nil {
 		return "", logger.Errorf("pandoc command not found, please ensure it's installed and in PATH: %v", err)
 	}
 
-	fileExt := strings.ToLower(filepath.Ext(inputPath))
-
-	switch fileExt {
+	switch f.fileExt {
 	case ".epub":
-		return outputFilePath, convertWithPandoc(fileid, inputPath, outputFilePath, "epub", mediaOutPutPath)
+		return f.tempFilePath, f.convertWithPandoc("epub")
+	case ".mobi":
+		return f.tempFilePath, f.convertWithPandoc("mobi")
 	case ".md", ".markdown":
-		return outputFilePath, convertWithPandoc(fileid, inputPath, outputFilePath, "markdown", mediaOutPutPath)
+		return f.tempFilePath, f.convertWithPandoc("markdown")
 	case ".html", ".htm":
-		return outputFilePath, convertWithPandoc(fileid, inputPath, outputFilePath, "html", mediaOutPutPath)
+		return f.tempFilePath, f.convertWithPandoc("html")
 	case ".pdf":
 		// Check for pdftotext dependency before calling convertPDFToOrg
 		if _, err := exec.LookPath("pdftotext"); err != nil {
 			return "", logger.Errorf("pdftotext command not found, please ensure it's installed and in PATH (usually part of poppler-utils), %v", err)
 		}
-		return outputFilePath, convertPDFToOrg(inputPath, outputFilePath)
+		return f.tempFilePath, f.convertPDFToOrg()
 	default:
-		return "", fmt.Errorf("unsupported file type: %s", fileExt)
+		return "", fmt.Errorf("unsupported file type: %s", f.fileExt)
 	}
 }
 
-func convertWithPandoc(fileid, inputFile, outputFile, fromFormat, mediaOutPutDir string) error {
-	// Ensure mediaOutPutDir is absolute for consistent imageDir path construction
-	absOutputDir, err := filepath.Abs(mediaOutPutDir)
+// ensureMediaDirectory creates the media directory for a given file and returns its absolute path.
+func (f *File) ensureMediaDirectory() (string, error) {
+	// f.getTempMediaDir() returns a path like /path/to/temp/media (it's based on f.temp which is a root dir)
+	absMediaRoot, err := filepath.Abs(f.getTempMediaDir())
 	if err != nil {
-		return logger.Errorf("failed to get absolute path for media output directory: %s,  %v", mediaOutPutDir, err)
+		return "", logger.Errorf("failed to get absolute path for media root directory: %s, %v", f.getTempMediaDir(), err)
 	}
 
-	imageDir := filepath.Join(absOutputDir, fileid) // This will be an absolute path
-
+	imageDir := filepath.Join(absMediaRoot, f.ID) // e.g., /path/to/temp/media/generatedID
 	err = os.MkdirAll(imageDir, 0755)
 	if err != nil {
-		return logger.Errorf("failed to create image directory: %s, %v", imageDir, err)
+		return "", logger.Errorf("failed to create image directory: %s, %v", imageDir, err)
 	}
+	return imageDir, nil
+}
 
+// executePandocCommand runs the pandoc command to convert the source file.
+func (f *File) executePandocCommand(fromFormat string, imageDir string) error {
 	cmd := exec.Command("pandoc",
 		"--wrap=none",
 		"--standalone",
 		"-t", "org",
 		"--no-highlight",
-		fmt.Sprintf("--extract-media=%s", imageDir), // Pandoc receives an absolute path here
+		fmt.Sprintf("--extract-media=%s", imageDir), // imageDir is absolute path like /path/to/temp/media/generatedID
 		"-f", fromFormat,
-		inputFile,
-		"-o", outputFile)
+		f.srcFilePath,
+		"-o", f.tempFilePath)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return logger.Errorf("pandoc conversion failed for %s: %s, %v", inputFile, string(output), err)
+		return logger.Errorf("pandoc conversion failed for %s: %s, %v", f.srcFilePath, string(output), err)
 	}
+	return nil
+}
 
-	// Post-process to update image links to be relative to the org file, within the imageDirName subdirectory
-	content, err := os.ReadFile(outputFile)
+// postProcessOrgFileLinks updates image links in the converted org file to be relative.
+// Pandoc generates links like [[file:/path/to/media/ID/image.png]].
+// These need to be converted to [[file:../media/ID/image.png]] relative to the org file.
+func (f *File) postProcessOrgFileLinks() error {
+	content, err := os.ReadFile(f.tempFilePath)
 	if err != nil {
-		return logger.Errorf("failed to read converted file: %s, %v", outputFile, err)
+		return logger.Errorf("failed to read converted file: %s, %v", f.tempFilePath, err)
 	}
 
-	// Go equivalent: `\[\[file(.*?)\]\]`
-	// Construct the regex pattern string based on mediaOutPutDir
-	// regexp.QuoteMeta escapes any special regex characters in mediaOutPutDir
-	patternString := fmt.Sprintf(`(\[\[%s)(.*?)(]])`, regexp.QuoteMeta(mediaOutPutDir))
+	// absMediaRoot is the absolute path to the general media directory (e.g., /tmp/orgmemo/media)
+	absMediaRoot, err := filepath.Abs(f.getTempMediaDir())
+	if err != nil {
+		return logger.Errorf("failed to get absolute path for media root directory in postProcess: %s, %v", f.getTempMediaDir(), err)
+	}
+	// pandocLinkedImageDir is the specific directory pandoc used for this file's media (e.g., /tmp/orgmemo/media/FILE_ID)
+	pandocLinkedImageDir := filepath.Join(absMediaRoot, f.ID)
+
+	// Pattern matches [[file:/path/to/media/FILE_ID/image.png]]
+	// Group 1: [[file:
+	// Group 2: /path/to/media/FILE_ID (path to specific image dir)
+	// Group 3: /image.png (actual image path relative to image dir)
+	// Group 4: ]]
+	patternString := fmt.Sprintf(`(\[\[file:)(%s)(/.*?)(]])`, regexp.QuoteMeta(pandocLinkedImageDir))
 	linkRegex := regexp.MustCompile(patternString)
 
 	newContent := linkRegex.ReplaceAllStringFunc(string(content), func(match string) string {
 		submatches := linkRegex.FindStringSubmatch(match)
-		if len(submatches) < 4 { // 0: full, 1: prefix, 2: path, 3: suffix
-			return match // Should not happen with this regex
+		if len(submatches) < 5 { // 0:full, 1:prefix, 2:pandocLinkedDir, 3:imgPath, 4:suffix
+			logger.Warnf("Unexpected link format, not modifying: %s", match) // Log if format is unexpected
+			return match
 		}
-		// We want the link to be relative to the .org file, pointing into the _images directory
-		// e.g., [[file:../index/image.png]]
-		newImagePath := "[[file:../media" + submatches[2] + submatches[3]
+		// Desired: [[file:../media/FILE_ID/image.png]]
+		// submatches[1] = "[[file:"
+		// MediaDir = "media" (constant)
+		// f.ID = "FILE_ID"
+		// submatches[3] = "/image.png"
+		// submatches[4] = "]]"
+		newImagePath := fmt.Sprintf("%s../%s/%s%s%s", submatches[1], MediaDir, f.ID, submatches[3], submatches[4])
 		return newImagePath
 	})
 
-	err = os.WriteFile(outputFile, []byte(newContent), 0644)
+	err = os.WriteFile(f.tempFilePath, []byte(newContent), 0644)
 	if err != nil {
-		return logger.Errorf("failed to write updated content to file: %s, %v", outputFile, err)
+		return logger.Errorf("failed to write updated content to file: %s, %v", f.tempFilePath, err)
 	}
-
-	// Check if the imageDir is empty and remove it if so.
-	// Log errors from this operation but don't let them fail the overall conversion.
-	if cleanupErr := removeDirIfEmpty(imageDir); cleanupErr != nil {
-		return logger.Errorf("Failed to cleanup media directory %s: %v. Continuing as main conversion was successful.", imageDir, cleanupErr)
-	}
-
 	return nil
 }
 
-func convertPDFToOrg(inputFile, outputFile string) error {
-	// PDF conversion using pdftotext.
-	// First attempt: pdftotext inputFile -
-	cmd := exec.Command("pdftotext", inputFile, "-") // "-" outputs to stdout
-	pdfContentBytes, err := cmd.Output()             // Use Output to get stdout, CombinedOutput for stdout+stderr
+// cleanupMediaDirectory removes the specific media directory for the file if it's empty.
+// imageDir is the absolute path to the directory like /tmp/orgmemo/media/generatedID
+func (f *File) cleanupMediaDirectory(imageDir string) {
+	if cleanupErr := removeDirIfEmpty(imageDir); cleanupErr != nil {
+		logger.Warnf("Failed to cleanup media directory %s: %v. Conversion itself was successful.", imageDir, cleanupErr)
+	}
+}
+
+func (f *File) convertWithPandoc(fromFormat string) error {
+	imageDir, err := f.ensureMediaDirectory()
+	if err != nil {
+		return err // Error already logged by ensureMediaDirectory
+	}
+
+	err = f.executePandocCommand(fromFormat, imageDir)
+	if err != nil {
+		f.cleanupMediaDirectory(imageDir) // Attempt cleanup even if pandoc fails
+		return err                        // Error already logged by executePandocCommand
+	}
+
+	err = f.postProcessOrgFileLinks()
+	if err != nil {
+		f.cleanupMediaDirectory(imageDir) // Attempt cleanup if post-processing fails
+		return err                        // Error already logged by postProcessOrgFileLinks
+	}
+
+	f.cleanupMediaDirectory(imageDir) // Final cleanup attempt
+	return nil
+}
+
+// executePdfToTextCommand runs pdftotext command and returns its output.
+// It tries with -layout option if the initial attempt fails.
+func executePdfToTextCommand(filePath string) ([]byte, error) {
+	cmd := exec.Command("pdftotext", filePath, "-") // "-" outputs to stdout
+	pdfContentBytes, err := cmd.Output()
 
 	if err != nil {
 		// If first attempt fails, try with -layout option
-		// Log the first error, or include it in the final error message
-		// originalErr := err // Keep original error for context if needed
-		cmdLayout := exec.Command("pdftotext", "-layout", inputFile, "-")
+		cmdLayout := exec.Command("pdftotext", "-layout", filePath, "-")
 		pdfContentBytesLayout, errLayout := cmdLayout.Output()
 		if errLayout != nil {
-			// Capture stderr for better error reporting
 			var stderrLayout []byte
 			if ee, ok := errLayout.(*exec.ExitError); ok {
 				stderrLayout = ee.Stderr
@@ -140,14 +170,22 @@ func convertPDFToOrg(inputFile, outputFile string) error {
 			if ee, ok := err.(*exec.ExitError); ok {
 				stderrOriginal = ee.Stderr
 			}
-			return logger.Errorf("pdftotext conversion failed for %s (with -layout option, stderr: %s). Original pdftotext error (stderr: %s)", inputFile, string(stderrLayout), string(stderrOriginal))
+			return nil, fmt.Errorf("pdftotext conversion failed (with -layout option, stderr: %s). Original pdftotext error (stderr: %s)", string(stderrLayout), string(stderrOriginal))
 		}
-		pdfContentBytes = pdfContentBytesLayout // Use layout output if successful
+		return pdfContentBytesLayout, nil // Use layout output if successful
+	}
+	return pdfContentBytes, nil
+}
+
+func (f *File) convertPDFToOrg() error {
+	pdfContentBytes, err := executePdfToTextCommand(f.srcFilePath)
+	if err != nil {
+		return logger.Errorf("Failed to extract text from PDF %s: %v", f.srcFilePath, err)
 	}
 
-	err = os.WriteFile(outputFile, pdfContentBytes, 0644)
+	err = os.WriteFile(f.tempFilePath, pdfContentBytes, 0644)
 	if err != nil {
-		return logger.Errorf("failed to write pdftotext output to file: %s, %v", outputFile, err)
+		return logger.Errorf("failed to write pdftotext output to file: %s, %v", f.tempFilePath, err)
 	}
 
 	return nil
