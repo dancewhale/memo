@@ -175,9 +175,6 @@ func (rq *ReadingQueue) ensureFileCardListValid(fileIndex int) (*FileCardList, e
 }
 
 func (rq *ReadingQueue) IfCurrentFileReadFinished() (bool, error) {
-	rq.mutex.RLock()
-	defer rq.mutex.RUnlock()
-
 	if rq.CurrentFileIndex < 0 || rq.CurrentFileIndex >= len(rq.FileLists) {
 		return false, errors.New("no file selected or queue empty")
 	}

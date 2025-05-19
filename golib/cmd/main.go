@@ -142,7 +142,7 @@ func test(ctx context.Context, cmd *cli.Command) error {
 	logger.Init()
 	con := options.ConfigInit()
 	client.NewEmacsEpcClient(int(con.EmacsPort))
-	vara, err := client.EClient.GetEmacsVars("pis")
+	vara, err := client.EClient.GetEmacsVar("pis")
 	if err != nil {
 		fmt.Printf(err.Error())
 		fmt.Println(vara)

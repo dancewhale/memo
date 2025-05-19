@@ -223,6 +223,9 @@ func (api *CardApi) GetPreviousFileNewCard() db.Result {
 		if err != nil {
 			return db.Result{Data: nil, Err: err}
 		}
+		if id == currentFileID {
+			return db.Result{Data: nil, Err: errors.New("No next file has new card to read")}
+		}
 		finished, err := queue.IfCurrentFileReadFinished()
 		if err != nil {
 			return db.Result{Data: nil, Err: err}
@@ -231,9 +234,6 @@ func (api *CardApi) GetPreviousFileNewCard() db.Result {
 			continue
 		} else {
 			break
-		}
-		if id == currentFileID {
-			return db.Result{Data: nil, Err: errors.New("No next file has new card to read.")}
 		}
 	}
 	headID, err := queue.GetCurrentHeadID()
@@ -278,6 +278,9 @@ func (api *CardApi) GetNextFileNewCard() db.Result {
 		if err != nil {
 			return db.Result{Data: nil, Err: err}
 		}
+		if id == currentFileID {
+			return db.Result{Data: nil, Err: errors.New("No next file has new card to read")}
+		}
 		finished, err := queue.IfCurrentFileReadFinished()
 		if err != nil {
 			return db.Result{Data: nil, Err: err}
@@ -286,9 +289,6 @@ func (api *CardApi) GetNextFileNewCard() db.Result {
 			continue
 		} else {
 			break
-		}
-		if id == currentFileID {
-			return db.Result{Data: nil, Err: errors.New("No next file has new card to read.")}
 		}
 	}
 	headID, err := queue.GetCurrentHeadID()
