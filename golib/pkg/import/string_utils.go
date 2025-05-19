@@ -1,10 +1,13 @@
 package _import
 
 import (
+	"crypto/md5"
+	"fmt"
 	"memo/cmd/options"
 	"memo/pkg/client"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"memo/pkg/logger"
 )
@@ -109,7 +112,7 @@ func ensureRootDirExist() (string, error) {
 		return "", logger.Errorf("error checking directory %s: %w", dirPath, err)
 	}
 
-	subDirs := []string{MediaDir, BookDir, ArticleDir, InboxDir}
+	subDirs := []string{MediaDir, BookDir, ArticleDir}
 	for _, subDir := range subDirs {
 		subDirPath := filepath.Join(dirPath, subDir)
 		if _, err := os.Stat(subDirPath); os.IsNotExist(err) {
@@ -135,4 +138,75 @@ func ensureTempDirExist() (string, error) {
 		return "", logger.Errorf("error checking directory %s: %v", tmpDirPath, err)
 	}
 	return tmpDirPath, nil
+}
+
+// generateUUIDFromContent calculates MD5 of content and formats it as a UUID string.
+// The UUID format is uppercase with hyphens (e.g., XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX).
+func generateUUIDFromContent(content []byte) (string, error) {
+	hasher := md5.New()
+	if _, err := hasher.Write(content); err != nil {
+		return "", fmt.Errorf("failed to write content to hasher: %w", err)
+	}
+	hashBytes := hasher.Sum(nil)
+
+	uuidStr := fmt.Sprintf("%X-%X-%X-%X-%X",
+		hashBytes[0:4],
+		hashBytes[4:6],
+		hashBytes[6:8],
+		hashBytes[8:10],
+		hashBytes[10:16])
+
+	return strings.ToUpper(uuidStr), nil
+}
+
+func insertToFileStart(filePath string, contents ...string) error {
+	// 读取原文件内容
+	oldData, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	// 打开原文件用于写入（会清空原内容）
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// 先写入新内容
+	for _, content := range contents {
+		if _, err := file.WriteString(content); err != nil {
+			return err
+		}
+	}
+	// 再写入原内容
+	if _, err := file.Write(oldData); err != nil {
+		return err
+	}
+	return nil
+}
+
+func insertToFileEnd(filePath, content string) error {
+	// 读取原文件内容
+	oldData, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	// 打开原文件用于写入（会清空原内容）
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// 先写入原内容
+	if _, err := file.Write(oldData); err != nil {
+		return err
+	}
+	// 再写入新内容
+	if _, err := file.WriteString(content); err != nil {
+		return err
+	}
+	return nil
 }

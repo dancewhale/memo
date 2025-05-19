@@ -141,6 +141,24 @@ func (f *File) Write() error {
 	return nil
 }
 
+func (f *File) EnsureOnlyOneRootHead() {
+	if len(f.Headlines) == 0 {
+		return
+	} else if len(f.Headlines) == 1 {
+		f.Headlines[0].AdjustLevel(1)
+		return
+	} else {
+		rootHead := Headline{Title: f.Headlines[0].Title, Level: 1}
+		Headlines := []Headline{rootHead}
+		for _, h := range f.Headlines {
+			h.AdjustLevel(2)
+			Headlines = append(Headlines, h)
+		}
+		f.Headlines = Headlines
+		return
+	}
+}
+
 func (h *Headline) taskTimeString() string {
 	var content string
 	if h.Closed != nil {
@@ -226,5 +244,19 @@ func (h *Headline) Write(content *Content) {
 
 	for _, c := range h.Children {
 		c.Write(content)
+	}
+}
+
+func (h *Headline) AdjustLevel(newLevel int) {
+	if newLevel < 1 {
+		// Or handle error appropriately, e.g., return an error
+		// For now, let's assume newLevel is always valid as per requirement (>=1)
+		// If not, we might default to 1 or log an error.
+		logger.Warnf("AdjustLevel called with invalid level %d, defaulting to 1", newLevel)
+		newLevel = 1
+	}
+	h.Level = newLevel
+	for i := range h.Children {
+		h.Children[i].AdjustLevel(newLevel + 1)
 	}
 }

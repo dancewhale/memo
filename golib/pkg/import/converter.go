@@ -12,46 +12,41 @@ import (
 
 // ConvertFileToOrgMode converts the input file to Org mode format.
 // It automatically detects the file type based on its extension.
-func (f *File) ConvertFileToOrgMode() (string, error) {
+func (f *File) ConvertFileToTempOrgMode() error {
 	// Check for pandoc dependency
 	if _, err := exec.LookPath("pandoc"); err != nil {
-		return "", logger.Errorf("pandoc command not found, please ensure it's installed and in PATH: %v", err)
+		return logger.Errorf("pandoc command not found, please ensure it's installed and in PATH: %v", err)
 	}
 
 	switch f.fileExt {
 	case ".epub":
-		return f.tempFilePath, f.convertWithPandoc("epub")
+		return f.convertWithPandoc("epub")
 	case ".mobi":
-		return f.tempFilePath, f.convertWithPandoc("mobi")
+		return f.convertWithPandoc("mobi")
 	case ".md", ".markdown":
-		return f.tempFilePath, f.convertWithPandoc("markdown")
+		return f.convertWithPandoc("markdown")
 	case ".html", ".htm":
-		return f.tempFilePath, f.convertWithPandoc("html")
+		return f.convertWithPandoc("html")
 	case ".pdf":
 		// Check for pdftotext dependency before calling convertPDFToOrg
 		if _, err := exec.LookPath("pdftotext"); err != nil {
-			return "", logger.Errorf("pdftotext command not found, please ensure it's installed and in PATH (usually part of poppler-utils), %v", err)
+			return logger.Errorf("pdftotext command not found, please ensure it's installed and in PATH (usually part of poppler-utils), %v", err)
 		}
-		return f.tempFilePath, f.convertPDFToOrg()
+		return f.convertPDFToOrg()
 	default:
-		return "", fmt.Errorf("unsupported file type: %s", f.fileExt)
+		return fmt.Errorf("unsupported file type: %s", f.fileExt)
 	}
 }
 
 // ensureMediaDirectory creates the media directory for a given file and returns its absolute path.
-func (f *File) ensureMediaDirectory() (string, error) {
-	// f.getTempMediaDir() returns a path like /path/to/temp/media (it's based on f.temp which is a root dir)
-	absMediaRoot, err := filepath.Abs(f.getTempMediaDir())
+func (f *File) ensureMediaTempDirectory() (string, error) {
+	// f.getTempMediaRootDir() returns a path like /path/to/temp/media (it's based on f.temp which is a root dir)
+	absMediaRoot, err := filepath.Abs(f.getTempMediaRootDir())
 	if err != nil {
-		return "", logger.Errorf("failed to get absolute path for media root directory: %s, %v", f.getTempMediaDir(), err)
+		return "", logger.Errorf("failed to get absolute path for media root directory: %s, %v", f.getTempMediaRootDir(), err)
 	}
 
-	imageDir := filepath.Join(absMediaRoot, f.ID) // e.g., /path/to/temp/media/generatedID
-	err = os.MkdirAll(imageDir, 0755)
-	if err != nil {
-		return "", logger.Errorf("failed to create image directory: %s, %v", imageDir, err)
-	}
-	return imageDir, nil
+	return filepath.Join(absMediaRoot, "media"), nil // If ID is empty, return the media root path
 }
 
 // executePandocCommand runs the pandoc command to convert the source file.
@@ -83,9 +78,9 @@ func (f *File) postProcessOrgFileLinks() error {
 	}
 
 	// absMediaRoot is the absolute path to the general media directory (e.g., /tmp/orgmemo/media)
-	absMediaRoot, err := filepath.Abs(f.getTempMediaDir())
+	absMediaRoot, err := filepath.Abs(f.getTempMediaRootDir())
 	if err != nil {
-		return logger.Errorf("failed to get absolute path for media root directory in postProcess: %s, %v", f.getTempMediaDir(), err)
+		return logger.Errorf("failed to get absolute path for media root directory in postProcess: %s, %v", f.getTempMediaRootDir(), err)
 	}
 	// pandocLinkedImageDir is the specific directory pandoc used for this file's media (e.g., /tmp/orgmemo/media/FILE_ID)
 	pandocLinkedImageDir := filepath.Join(absMediaRoot, f.ID)
@@ -130,9 +125,9 @@ func (f *File) cleanupMediaDirectory(imageDir string) {
 }
 
 func (f *File) convertWithPandoc(fromFormat string) error {
-	imageDir, err := f.ensureMediaDirectory()
+	imageDir, err := f.ensureMediaTempDirectory()
 	if err != nil {
-		return err // Error already logged by ensureMediaDirectory
+		return err // Error already logged by ensureMediaTempDirectory
 	}
 
 	err = f.executePandocCommand(fromFormat, imageDir)

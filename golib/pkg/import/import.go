@@ -2,7 +2,6 @@ package _import
 
 import (
 	"memo/pkg/logger"
-	"memo/pkg/org/parser"
 	"path/filepath"
 	"strings"
 	"time"
@@ -11,7 +10,6 @@ import (
 const MediaDir = "media"
 const BookDir = "book"
 const ArticleDir = "article"
-const InboxDir = "inbox"
 
 type File struct {
 	ID            string
@@ -37,15 +35,13 @@ func NewFile(srcFilePath string) (*File, error) {
 		return nil, logger.Errorf("Ensure rootDirectory directory exist error: %v", err)
 	}
 
-	id := parser.GenerateID()
 	file := &File{
-		ID:            id,
 		srcFilePath:   srcFilePath,
 		rootDirectory: rootDir,
 		tempDirectory: tempDir,
 		fileExt:       strings.ToLower(filepath.Ext(srcFilePath)),
 	}
-	file.getExportPath()
+	file.getExportFilePath()
 	file.getTempExportPath()
 	return file, nil
 }
@@ -58,27 +54,28 @@ func (f *File) ifBook() bool {
 	return false
 }
 
-func (f *File) getTempMediaDir() string {
+func (f *File) getTempMediaRootDir() string {
 	mediaOutputDir := filepath.Join(f.tempDirectory, MediaDir)
 	return mediaOutputDir
 }
 
-func (f *File) getMediaDir() string {
+func (f *File) getMediaRootDir() string {
 	mediaOutputDir := filepath.Join(f.rootDirectory, MediaDir)
 	return mediaOutputDir
 }
 
-func (f *File) getExportPath() string {
+func (f *File) getExportFilePath() string {
 	if f.dstFilePath == "" {
-		f.dstFilePath = filepath.Join(f.rootDirectory, InboxDir)
 		filename := filepath.Base(f.srcFilePath)
 		//change ext of filename to .org
 		ext := filepath.Ext(filename)
 		if f.ifBook() {
+			f.dstFilePath = filepath.Join(f.rootDirectory, BookDir)
 			filename = filename[0 : len(filename)-len(ext)]
 			filename = filename + ".org"
 			f.dstFilePath = filepath.Join(f.dstFilePath, filename)
 		} else if !f.ifBook() {
+			f.dstFilePath = filepath.Join(f.rootDirectory, ArticleDir)
 			// filename = today + "_" + filename
 			todayString := time.Now().Format("2006-01-02")
 			filename = todayString + "_" + "article" + ".org"
@@ -89,12 +86,15 @@ func (f *File) getExportPath() string {
 }
 
 func (f *File) getTempExportPath() string {
-	filename := filepath.Base(f.srcFilePath)
-	//change ext of filename to .org
-	ext := filepath.Ext(filename)
-	filename = filename[0 : len(filename)-len(ext)]
-	filename = filename + ".org"
-	return filepath.Join(f.tempDirectory, filename)
+	if f.tempFilePath == "" {
+		filename := filepath.Base(f.srcFilePath)
+		//change ext of filename to .org
+		ext := filepath.Ext(filename)
+		filename = filename[0 : len(filename)-len(ext)]
+		filename = filename + ".org"
+		f.tempFilePath = filepath.Join(f.tempDirectory, filename)
+	}
+	return f.tempFilePath
 }
 
 func Import(filePath string) (string, error) {
@@ -103,11 +103,11 @@ func Import(filePath string) (string, error) {
 		return "", logger.Errorf("New file error: %v", err)
 	}
 
-	exportFilePath, err := file.ConvertFileToOrgMode()
+	err = file.ConvertFileToTempOrgMode()
 	if err != nil {
 		return "", logger.Errorf("Convert file to org mode error: %v", err)
 	}
-	err = processOrgFile(exportFilePath, file.ID)
+	err = file.processTempOrgFile()
 	if err != nil {
 		return "", logger.Errorf("Convert file to org mode error: %v", err)
 	}
