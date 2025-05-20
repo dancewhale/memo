@@ -245,7 +245,8 @@
     (let* ((memo-bridge-args (append
                                (list "daemon")
 			       (list "--emacs-port" (number-to-string memo-bridge-server-port))
-			       (list "--log-level" memo-log-level))))
+			       (list "--log-level" memo-log-level)
+			       (list "--dbpath" memo-db-directory))))
       
       ;; Set process arguments.
       (setq memo-bridge-internal-process-prog memo-bridge-golang-file)
