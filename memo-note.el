@@ -24,7 +24,7 @@
   (if memo--buffer-local-note
     (progn (memo-api--update-property
 	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend")
-	   (memo-treemacs-refresh))))
+	   (memo-treemacs-buffer-update))))
 
 (defun memo-note-resume-current-note ()
   "Resume current note from suspend."
@@ -32,7 +32,7 @@
   (if memo--buffer-local-note
     (progn (memo-api--update-property
 	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal")
-	   (memo-treemacs-refresh))))
+	   (memo-treemacs-buffer-update))))
 
 
 (defun memo-note-review (rate)
@@ -41,7 +41,7 @@
       (memo-api--review-note (memo-note-id memo--buffer-local-note) rate ))
   (if (equal (buffer-name (current-buffer)) memo--review-buffer-name)
       (progn  (memo-review-note)
-	      (memo-treemacs-refresh))))
+	      (memo-treemacs-buffer-update))))
 
 (defun memo-note-review-easy ()
   "Review note with score: Easy."

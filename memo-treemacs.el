@@ -151,22 +151,28 @@ Otherwise returns value itself."
 ;;;----------------------------------
 ;;;  treemacs tree render for note
 ;;;----------------------------------
-(defconst memo-treemacs-note-buffer-name "*MemoTreeNote"
+(defconst memo-treemacs-note-buffer-name "*MemoTreeNote*"
   "Memo Buffer name store the tree.")
 
+(defun memo-treemacs-buffer-update ()
+ "Update treemacs note and file buffer."
+ (memo-treemacs-file-buffer-update)
+ (memo-treemacs-note-buffer-update))
+
 (defun memo-treemacs-note-buffer-update ()
-  "Update note node."
-  (-if-let* ((inhibit-read-only t)
-	     (buffer (get-buffer memo-treemacs-note-buffer-name))
-	     (current-note memo--buffer-local-note))
-      (with-current-buffer buffer
-	(if (not (memo-note-headlineid current-note))
-	  (progn
-	    (setq file-note (memo-api--get-first-file-head (memo-note-id current-note)))
-	    (memo-treemacs-note-render file-note 1))
-	  (let* ((path (butlast (memo-note-path current-note)))
-		 (path (memo-treemacs--concat-path path)))
-	    (treemacs-update-async-node path buffer))))))
+  "Update treemacs note buffer node."
+  (with-current-buffer (get-buffer memo-treemacs-note-buffer-name)
+    (-if-let* ((inhibit-read-only t)
+	       (path (append `(,memo-treemacs-root-node-key) current-treemacs-note-path)))
+	(treemacs-update-async-node path (current-buffer)))))
+
+(defun memo-treemacs-file-buffer-update ()
+  "Update treemacs file buffer node."
+  (with-current-buffer (get-buffer memo-treemacs-file-buffer-name)
+    (-if-let* ((inhibit-read-only t)
+	       (buffer (get-buffer memo-treemacs-file-buffer-name))
+	       (path (append `(,memo-treemacs-root-node-key) current-treemacs-note-path)))
+	(treemacs-update-async-node path (current-buffer)))))
 
 (treemacs-define-expandable-node-type memo-treemacs-virt-head-node
   :closed-icon treemacs-icon-tag-closed
@@ -321,7 +327,6 @@ Argument NOTE-OBJECT is the memo note object."
   (let* ((headid (memo-note-id note-object))
 	 (file-note-object (memo-api--get-first-file-head headid))
          (fileid (memo-note-fileid file-note-object))
-	 (file-note-path (memo-note-path file-note-object))
 	 (window-sides-slots '(2 nil nil nil))
          (treemacs-file-buffer  (get-buffer-create memo-treemacs-file-buffer-name))
          (treemacs-note-buffer  (get-buffer-create memo-treemacs-note-buffer-name)))
@@ -331,7 +336,13 @@ Argument NOTE-OBJECT is the memo note object."
 		    `(display-buffer-in-side-window . (,@memo-treemacs-note-position-params)))
     (memo-treemacs-note-render file-note-object memo-treemacs-virtual-head-expand-depth)
     (memo-treemacs-file-render fileid 1)
-    (memo-treemacs-buffer-move-button-to-note file-note-object memo-treemacs-file-buffer-name))
+    (memo-treemacs-buffer-move-button-to-note file-note-object memo-treemacs-file-buffer-name)
+    (with-current-buffer treemacs-note-buffer
+      (if (not (memo-note-fileid note-object))
+	  (setq-local current-treemacs-note-path (butlast (memo-note-path note-object)))
+	(setq-local current-treemacs-note-path (list (memo-note-id file-note-object)))))
+    (with-current-buffer treemacs-file-buffer
+      (setq-local current-treemacs-note-path (butlast (memo-note-path file-note-object)))))
   (memo-buffer-open-note note-object))
 
 (provide 'memo-treemacs)
