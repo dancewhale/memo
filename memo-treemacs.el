@@ -148,6 +148,29 @@ Otherwise returns value itself."
 	(find-file (memo-file-filepath item)))
     (treemacs-pulse-on-failure "No file Found.")))
 
+
+;;;----------------------------------
+;;;  treemacs node render function
+;;;----------------------------------
+(defun memo-treemacs--closed-icon-render (memo-note)
+  "Return closed icon by totalCards of MEMO-NOTE."
+  (if (= (memo-note-totalcards memo-note) 1)
+      treemacs-icon-tag-leaf
+    treemacs-icon-tag-closed))
+
+(defun memo-treemacs--label-render (memo-note)
+  "Return label by MEMO-NOTE."
+  (cond
+   ((equal (memo-note-scheduledtype memo-note) "suspend")
+    (propertize (f-base (memo-note-title memo-note)) 'face 'font-lock-warning-face))
+   ((= (memo-note-state memo-note) 0)
+    (propertize (f-base (memo-note-title memo-note)) 'face 'font-lock-string-face))
+   ((memo-note-needreview memo-note)
+    (propertize (f-base (memo-note-title memo-note)) 'face 'red))
+   ((not (memo-note-needreview memo-note))
+    (propertize (f-base (memo-note-title memo-note)) 'face 'shadow))))
+
+
 ;;;----------------------------------
 ;;;  treemacs tree render for note
 ;;;----------------------------------
@@ -159,12 +182,20 @@ Otherwise returns value itself."
  (memo-treemacs-file-buffer-update)
  (memo-treemacs-note-buffer-update))
 
+;; if note is file-note, the path is "id".
+;; if note is virt-head, the path is list of id.
 (defun memo-treemacs-note-buffer-update ()
   "Update treemacs note buffer node."
   (with-current-buffer (get-buffer memo-treemacs-note-buffer-name)
-    (-if-let* ((inhibit-read-only t)
-	       (path (append `(,memo-treemacs-root-node-key) current-treemacs-note-path)))
-	(treemacs-update-async-node path (current-buffer)))))
+    (if (not (stringp current-treemacs-note-path))
+	(-if-let* ((inhibit-read-only t)
+		   (path (append `(,memo-treemacs-root-node-key) current-treemacs-note-path)))
+	    (treemacs-update-async-node path (current-buffer)))
+      (let* ((headid current-treemacs-note-path)
+	     (file-note-object (memo-api--get-first-file-head headid)))
+	(memo-treemacs-note-render file-note-object memo-treemacs-virtual-head-expand-depth)
+	(setq-local current-treemacs-note-path headid)))))
+
 
 (defun memo-treemacs-file-buffer-update ()
   "Update treemacs file buffer node."
@@ -175,12 +206,10 @@ Otherwise returns value itself."
 	(treemacs-update-async-node path (current-buffer)))))
 
 (treemacs-define-expandable-node-type memo-treemacs-virt-head-node
-  :closed-icon treemacs-icon-tag-closed
+  :closed-icon
+  (memo-treemacs--closed-icon-render item)
   :open-icon   treemacs-icon-tag-open
-  :label
-  (if (> (memo-note-totalvirtcards item) 0)
-      (propertize (memo-note-title item) 'face 'font-lock-string-face)
-    (propertize (memo-note-title item) 'face 'font-lock-variable-name-face))
+  :label (memo-treemacs--label-render item)
   :key (memo-note-id item)
   :ret-action #'memo-treemacs-card-perform-ret-action
   :children
@@ -221,6 +250,8 @@ Otherwise returns value itself."
                   (memo-treemacs-generic-mode t)))
       (current-buffer))))
 
+
+
 ;;;----------------------------------
 ;;;  treemacs tree render for file
 ;;;----------------------------------
@@ -230,19 +261,10 @@ Otherwise returns value itself."
 
 (treemacs-define-expandable-node-type memo-treemacs-read-head-node
   :closed-icon
-  (if (= (memo-note-totalcards item) 1)
-      treemacs-icon-tag-leaf  treemacs-icon-tag-closed)
+  (memo-treemacs--closed-icon-render item)
   :open-icon   treemacs-icon-tag-open
   :label
-  (cond
-   ((equal (memo-note-scheduledtype item) "suspend")
-    (propertize (f-base (memo-note-title item)) 'face 'font-lock-warning-face))
-   ((= (memo-note-state item) 0)
-    (propertize (f-base (memo-note-title item)) 'face 'font-lock-string-face))
-   ((memo-note-needreview item)
-    (propertize (f-base (memo-note-title item)) 'face 'red))
-   ((not (memo-note-needreview item))
-    (propertize (f-base (memo-note-title item)) 'face 'shadow)))
+  (memo-treemacs--label-render item)
   :key (memo-note-id item)
   :ret-action #'memo-treemacs-card-perform-ret-action
   :children
@@ -258,7 +280,7 @@ Otherwise returns value itself."
     `(:note ,item))
   :async? t)
 
-(treemacs-define-expandable-node-type memo-treemacs-read-node
+(treemacs-define-expandable-node-type memo-treemacs-read-file-node
   :closed-icon treemacs-icon-tag-closed
   :open-icon   treemacs-icon-tag-open
   :label
@@ -282,7 +304,7 @@ Otherwise returns value itself."
 (treemacs-define-variadic-entry-node-type memo-treemacs-file-node
   :key  memo-treemacs-root-node-key
   :children `(,(memo-api--get-file-by-filid memo-local-file-id))
-  :child-type 'memo-treemacs-read-node)
+  :child-type 'memo-treemacs-read-file-node)
 
 
 (defun memo-treemacs-file-render (fileid expand-depth
@@ -340,7 +362,7 @@ Argument NOTE-OBJECT is the memo note object."
     (with-current-buffer treemacs-note-buffer
       (if (not (memo-note-fileid note-object))
 	  (setq-local current-treemacs-note-path (butlast (memo-note-path note-object)))
-	(setq-local current-treemacs-note-path (list (memo-note-id file-note-object)))))
+	(setq-local current-treemacs-note-path (memo-note-id file-note-object))))
     (with-current-buffer treemacs-file-buffer
       (setq-local current-treemacs-note-path (butlast (memo-note-path file-note-object)))))
   (memo-buffer-open-note note-object))
