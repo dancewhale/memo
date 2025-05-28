@@ -79,10 +79,27 @@ type FileHeadlineCacheManager struct {
 	maxAge time.Duration                 // 缓存最大有效期
 }
 
+type HeadlineCacheMap struct {
+	caches map[string]*HeadlineStats
+	mutex  sync.RWMutex
+}
+
+func (h *HeadlineCacheMap) Put(file string, headline *HeadlineStats) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	h.caches[file] = headline
+}
+
+func (h *HeadlineCacheMap) Get(file string) *HeadlineStats {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
+	return h.caches[file]
+}
+
 // 全局缓存管理器实例
 var cacheManager *FileHeadlineCacheManager
 var cacheManagerOnce sync.Once
-var headCacheMap map[string]*HeadlineStats // 全局缓存映射，用于快速查找headline到fileid的映射
+var headCacheMap *HeadlineCacheMap // 全局缓存映射，用于快速查找headline到fileid的映射
 
 // GetCacheManager 获取全局缓存管理器实例
 func GetCacheManager() *FileHeadlineCacheManager {
@@ -91,7 +108,9 @@ func GetCacheManager() *FileHeadlineCacheManager {
 			caches: make(map[string]*FileHeadlineCache),
 			maxAge: 600 * time.Minute, // 默认缓存有效期为5分钟
 		}
-		headCacheMap = make(map[string]*HeadlineStats)
+		headCacheMap = &HeadlineCacheMap{
+			caches: make(map[string]*HeadlineStats),
+		}
 	})
 	return cacheManager
 }
@@ -181,7 +200,7 @@ func (c *FileHeadlineCache) initializeCacheMaps(results []*HeadlineWithFsrs, day
 				FileChildren: make([]*HeadlineStats, 0),
 				VirtChildren: make([]*HeadlineStats, 0),
 			}
-			headCacheMap[result.ID] = c.HeadMap[result.ID]
+			headCacheMap.Put(result.ID, c.HeadMap[result.ID])
 
 			// 记录父子关系
 			if result.ParentID != nil && *result.ParentID != "" {
@@ -473,12 +492,7 @@ func (m *FileHeadlineCacheManager) GetFileFromCache(fileID string) (*FileInfo, e
 }
 
 func (m *FileHeadlineCacheManager) GetHeadFromCache(headid string) *HeadlineStats {
-	head, ok := headCacheMap[headid]
-	if ok {
-		return head
-	} else {
-		return nil
-	}
+	return headCacheMap.Get(headid)
 }
 
 // GetFilesFromCache 从缓存管理器获取多个指定文件的缓存，如果不存在或已过期则创建新缓存
@@ -567,8 +581,8 @@ func (m *FileHeadlineCacheManager) RefreshCacheByHeadlineID(headlineID string) e
 }
 
 func getLatestHeadlineInCache(headlineID string) (*HeadlineStats, error) {
-	head, ok := headCacheMap[headlineID]
-	if ok {
+	head := headCacheMap.Get(headlineID)
+	if head != nil {
 		if head.Info.FileID != nil && *head.Info.FileID != "" {
 			cache, err := GetCacheManager().GetFileCacheFromCache(*head.Info.FileID)
 			if err != nil {
@@ -576,8 +590,8 @@ func getLatestHeadlineInCache(headlineID string) (*HeadlineStats, error) {
 			}
 			return cache.getHeadlineStats(headlineID), nil
 		} else {
-			head, ok = headCacheMap[*head.Info.HeadlineID]
-			if ok {
+			head = headCacheMap.Get(*head.Info.HeadlineID)
+			if head != nil {
 				cache, err := GetCacheManager().GetFileCacheFromCache(*head.Info.FileID)
 				if err != nil {
 					return nil, err
@@ -600,7 +614,7 @@ func ResetHeadlineTitleInCache(headlineID string, title string) error {
 			return nil
 		}
 		stats.Info.Title = title
-		headCacheMap[headlineID] = stats
+		headCacheMap.Put(headlineID, stats)
 		return nil
 	}
 }

@@ -451,8 +451,8 @@ func (rq *ReadingQueue) initQueueIfNeeded() error {
 }
 
 func (rq *ReadingQueue) isCardNew(headID string) (bool, error) {
-	head, ok := headCacheMap[headID]
-	if ok {
+	head := headCacheMap.Get(headID)
+	if head != nil {
 		if head.Info.State == 0 && head.Info.ScheduledType == storage.NORMAL {
 			return true, nil
 		} else {
