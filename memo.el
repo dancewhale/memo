@@ -79,7 +79,14 @@ if nil will default use user home dir.")
   (let ((server-path (concat memo--root "server")))
     (unless (file-exists-p server-path)
       (memo-compile-server))
-    (memo-bridge-start-process)))
+    (memo-bridge-start-process)
+    (add-hook 'after-save-hook 'memo-sync-file)))
+
+(defun memo-stop ()
+  "Stop memo Server."
+  (interactive)
+  (memo-bridge-stop-process)
+  (remove-hook 'after-save-hook 'memo-sync-file))
 
 ;;;###autoload
 (defun memo-activate ()
