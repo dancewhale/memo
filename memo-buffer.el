@@ -84,10 +84,10 @@
 
 (defun memo-buffer-save-buffer ()
   "Save current buffer content and annotation to db."
-  (let ((result (memo-update-current-note-content)))
-    (if result
-        (memo-annotation-overlays-save-batch)
-      nil)))
+  (-if-let* ((result (memo-buffer-update-note-content)))
+      (progn (set-buffer-modified-p nil)
+	     (memo-annotation-overlays-save-batch))
+      nil))
 
 ;;;--------------------------------------------------------------------------
 ;;; posframe relative function and variable
@@ -243,6 +243,15 @@ If a region is active, its content is used as initial content."
 		 (setq-local header-line-format title)
 		 (setf (memo-note-title memo--buffer-local-note) title)
 		 (memo-treemacs-note-buffer-update)))))
+
+(defun memo-buffer-update-note-content ()
+  "Update the content of current note which opened."
+  (interactive)
+  (-if-let* ((note memo--buffer-local-note)
+	     (id (memo-note-id note))
+	     (content (buffer-substring-no-properties
+			(point-min) (point-max))))
+      (progn (memo-api--update-content id content))))
 
 (provide 'memo-buffer)
 ;;; memo-buffer.el ends here

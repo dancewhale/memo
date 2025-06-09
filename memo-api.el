@@ -125,7 +125,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
 ;;; --------------------------------------------------
 ;;;  annotation relate function
 ;;; --------------------------------------------------
-(cl-defstruct memo-annotation id start end  parentheadid childheadid text face type)
+(cl-defstruct memo-annotation id start end  noteid childheadid text face type)
 
 (defun memo-make-annotation-from-alist (x)
   "Generate memo annotation object from alist X."
@@ -133,7 +133,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
       (make-memo-annotation :id (memo-alist-get x "ID")
 		      :start (memo-alist-get x "Start")
 		      :end (memo-alist-get x "End")
-		      :parentheadid (memo-alist-get x "ParentHeadlineID")
+		      :noteid (memo-alist-get x "ParentHeadlineID")
 		      :childheadid (memo-alist-get x "ChildHeadlineID")
 		      :text (memo-alist-get x "CommentText")
 		      :type (memo-alist-get x "Type")
@@ -152,7 +152,7 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (list (cons "ID" (memo-annotation-id annotation))
         (cons "Start" (memo-annotation-start annotation))
         (cons "End" (memo-annotation-end annotation))
-        (cons "ParentHeadlineID" (memo-annotation-parentheadid annotation))
+        (cons "ParentHeadlineID" (memo-annotation-noteid annotation))
         (cons "ChildHeadlineID" (memo-annotation-childheadid annotation))
         (cons "CommentText" (memo-annotation-text annotation))
         (cons "Type" (memo-annotation-type annotation))
@@ -290,7 +290,7 @@ Returns the ID of the created virt head."
     (memo-make-note-from-return (memo--parse-result result))))
 
 ;;;; annotation api
-(defun memo-api--annotation-get-list-by-parentheadid (headid)
+(defun memo-api--annotation-get-list-by-noteid (headid)
   "Get the annotations by HEADID."
   (let ((result (memo-bridge-call-sync "GetAnnotationsByHeadlineID" headid)))
     (memo-make-annotation-from-return (memo--parse-result result))))
