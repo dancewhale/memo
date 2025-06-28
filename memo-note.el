@@ -40,29 +40,28 @@
   (if memo--buffer-local-note
       (memo-api--review-note (memo-note-id memo--buffer-local-note) rate ))
   (if (equal (buffer-name (current-buffer)) memo--review-buffer-name)
-      (progn  (memo-review-note)
-	      (memo-treemacs-buffer-update))))
+    (memo-treemacs-buffer-update)))
 
 (defun memo-note-review-easy ()
   "Review note with score: Easy."
   (interactive)
-  (memo-review-note "Easy"))
+  (memo-note-review "Easy"))
 
 (defun memo-note-review-good ()
   "Review note with score: Good."
   (interactive)
-  (memo-review-note "Good"))
+  (memo-note-review "Good"))
 
 (defun memo-note-review-hard ()
   "Review note with score: Hard."
   (interactive)
-  (memo-review-note "Hard")
+  (memo-note-review "Hard")
   )
 
 (defun memo-note-review-again ()
   "Review note with score: Again."
   (interactive)
-  (memo-review-note "Again")
+  (memo-note-review "Again")
   )
 
 (defun memo-note-cloze-toggle ()

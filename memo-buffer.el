@@ -20,6 +20,7 @@
 (require 'cl-lib)
 (require 'org-tidy)
 (require 'org-element)
+(require 'olivetti)
 (require 'f)
 
 ;; review releat var and function
@@ -213,6 +214,7 @@ This function hide posframe and clear temp-content when user switch window."
       (memo-buffer-set-local-header-line-face)
       (goto-char (point-min))
       (setq memo--buffer-local-note note)
+      (olivetti-mode)
       (memo-annotation-mode)
       (setq write-contents-functions '(memo-buffer-save-buffer)))))
 
