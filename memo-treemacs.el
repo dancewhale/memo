@@ -162,13 +162,21 @@ Otherwise returns value itself."
   "Return label by MEMO-NOTE."
   (cond
    ((equal (memo-note-scheduledtype memo-note) "suspend")
-    (propertize (f-base (memo-note-title memo-note)) 'face 'font-lock-warning-face))
+    (concat (propertize "S" 'face  '(:background "gold" :foreground "white" :weight bold))
+	    " "
+	    (propertize (f-base (memo-note-title memo-note)) 'face 'font-lock-warning-face)))
    ((= (memo-note-state memo-note) 0)
-    (propertize (f-base (memo-note-title memo-note)) 'face 'font-lock-string-face))
+    (concat (propertize "N" 'face '(:background "green" :foreground "white" :weight bold))
+	    " "
+	    (propertize (f-base (memo-note-title memo-note)) 'face 'font-lock-string-face)))
    ((memo-note-needreview memo-note)
-    (propertize (f-base (memo-note-title memo-note)) 'face 'red))
+    (concat (propertize "R" 'face '(:background "blue" :foreground "white" :weight bold))
+	    " "
+	    (propertize (f-base (memo-note-title memo-note)) 'face 'red)))
    ((not (memo-note-needreview memo-note))
-    (propertize (f-base (memo-note-title memo-note)) 'face 'shadow))))
+    (concat (propertize "W" 'face '(:background "gray" :foreground "white" :weight bold))
+	    " "
+	    (propertize (f-base (memo-note-title memo-note)) 'face 'shadow)))))
 
 
 ;;;----------------------------------
