@@ -9,7 +9,11 @@ CLOSED: [2025-03-08 Sat 15:25]
 CLOSED: [2025-03-08 Sat 15:25]
 ** DONE [#B] 增加撤销当前reveiw 的接口
 CLOSED: [2025-04-24 Thu 22:32]
-** TODO 采用hash 会导致, level 或者order 调整后,head 不会修改.
-** TODO 如果没有head lv1, 也就是如果不是1,2,3, 而是2,4 5 跳级的层级会导致顺序的收敛出现问题,严重会直接出现s.Headlines 为nil
+** DONE 采用hash 会导致, level 或者order 调整后,head 不会修改.
+CLOSED: [2025-06-30 Mon 15:00]
+- State "DONE"       from "TODO"       [2025-06-30 Mon 15:00]
+** DONE 如果没有head lv1, 也就是如果不是1,2,3, 而是2,4 5 跳级的层级会导致顺序的收敛出现问题,严重会直接出现s.Headlines 为nil
+CLOSED: [2025-06-30 Mon 15:00]
+- State "DONE"       from "TODO"       [2025-06-30 Mon 15:00]
 ** DONE 自动update
 CLOSED: [2025-05-02 Fri 16:43]

@@ -123,6 +123,7 @@ Return the created frame."
         (setq-local cursor-in-non-selected-windows 'nil))
       (setq memo-buffer--posframe-frame frame)
       (setq memo-buffer--posframe-init-phase 1)
+      (select-frame-set-input-focus memo-buffer--posframe-frame)
      frame)))
 
 (defun memo-buffer--posframe-hide-window (buffer-name)
@@ -180,7 +181,8 @@ This function hide posframe and clear temp-content when user switch window."
                 (recursive-edit))
             ;; Ensure hook is removed even if recursive-edit exits abnormally, make it buffer-local
             (remove-hook 'window-selection-change-functions #'memo-buffer--posframe-hidehandler-when-window-switch t)
-            (memo-buffer--posframe-hide-window memo-buffer--posframe-buffer-name))
+            (memo-buffer--posframe-hide-window memo-buffer--posframe-buffer-name)
+	    (select-frame-set-input-focus memo-buffer--review-frame))
 	(message "Posframe could not be created.")))
     memo--temp-content))
 
