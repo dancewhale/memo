@@ -21,24 +21,24 @@
 (defun memo-note-suspend-current-note ()
   "Suspend current note."
   (interactive)
-  (if memo--buffer-local-note
+  (if memo-buffer--local-note
     (progn (memo-api--update-property
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "suspend")
+	    (memo-note-id memo-buffer--local-note) "MEMO_NOTE_SCHEDULE" "suspend")
 	   (memo-treemacs-buffer-update))))
 
 (defun memo-note-resume-current-note ()
   "Resume current note from suspend."
   (interactive)
-  (if memo--buffer-local-note
+  (if memo-buffer--local-note
     (progn (memo-api--update-property
-	    (memo-note-id memo--buffer-local-note) "MEMO_NOTE_SCHEDULE" "normal")
+	    (memo-note-id memo-buffer--local-note) "MEMO_NOTE_SCHEDULE" "normal")
 	   (memo-treemacs-buffer-update))))
 
 
 (defun memo-note-review (rate)
   "Review note with score: RATE."
-  (if memo--buffer-local-note
-      (memo-api--review-note (memo-note-id memo--buffer-local-note) rate ))
+  (if memo-buffer--local-note
+      (memo-api--review-note (memo-note-id memo-buffer--local-note) rate ))
   (if (equal (buffer-name (current-buffer)) memo--review-buffer-name)
     (memo-treemacs-buffer-update)))
 

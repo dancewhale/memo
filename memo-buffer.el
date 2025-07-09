@@ -30,14 +30,17 @@
 (defconst memo--source-buffer-name "*memo-source*"
   "The memo buffer for review note show and flip.")
 
-(defvar-local memo--buffer-local-note nil
+(defvar-local memo-buffer--local-note nil
   "The memo note object store in current buffer.")
+
+(defvar memo-buffer--review-frame nil
+  "The var store memo review frame.")
 
 ;; jump to org and enable editor.
 (defun memo-buffer-goto-org ()
   "Jump to source point from review buffer."
   (interactive)
-  (let* ((id  (memo-note-id memo--buffer-local-note))
+  (let* ((id  (memo-note-id memo-buffer--local-note))
 	 (file (memo-api--get-note-path id))
 	 (position (org-id-find-id-in-file id file 'markerp)))
     (if (not position)
@@ -55,9 +58,9 @@
 (defun memo-buffer-goto-source-direct ()
   "Jump to source of node."
   (interactive)
-  (if (not (memo-note-p memo--buffer-local-note))
+  (if (not (memo-note-p memo-buffer--local-note))
       (user-error "Review memo-note object is nil"))
-  (let* ((source (memo-note-source memo--buffer-local-note))
+  (let* ((source (memo-note-source memo-buffer--local-note))
 	 (buf (get-buffer-create memo--source-buffer-name)))
     (save-excursion
       (with-current-buffer buf
@@ -67,9 +70,9 @@
 (defun memo-buffer-goto-source ()
   "Open an ORG-MODE LINK in a new buffer on the right side."
   (interactive)
-  (if (not (memo-note-p memo--buffer-local-note))
+  (if (not (memo-note-p memo-buffer--local-note))
       (user-error "Local buffer memo-note object is nil"))
-  (let ((source (memo-note-source memo--buffer-local-note))
+  (let ((source (memo-note-source memo-buffer--local-note))
 	(buffer (get-buffer-create memo--source-buffer-name)))
     (display-buffer-in-side-window buffer '((side . right) (window-width . 0.5)))
     (set-window-dedicated-p (get-buffer-window buffer) t)
@@ -156,6 +159,7 @@ This function hide posframe and clear temp-content when user switch window."
   "Show posframe for edit with optional CONTENT."
   (interactive)
   (let ((posframe-buffer (get-buffer-create memo-buffer--posframe-buffer-name)))
+    (setq memo-buffer--review-frame (selected-frame))
     (with-current-buffer posframe-buffer
       (org-mode)
       (setq-local header-line-format "Use C-c C-c to commit, C-c C-k to exit.")
@@ -215,7 +219,7 @@ This function hide posframe and clear temp-content when user switch window."
       (setq-local header-line-format (memo-note-title note))
       (memo-buffer-set-local-header-line-face)
       (goto-char (point-min))
-      (setq memo--buffer-local-note note)
+      (setq memo-buffer--local-note note)
       (olivetti-mode)
       (memo-annotation-mode)
       (setq write-contents-functions '(memo-buffer-save-buffer)))))
@@ -230,8 +234,8 @@ If a region is active, its content is used as initial content."
                             (region-beginning) (region-end))))
         content note id title)
     (-if-let* ((content (memo-buffer-get-content-from-posframe initial-content))
-               (note memo--buffer-local-note)
-               (id (memo-note-id memo--buffer-local-note))
+               (note memo-buffer--local-note)
+               (id (memo-note-id memo-buffer--local-note))
                (title (memo-first-nonblank-chars content  20)))
         (memo-api--create-virt-head id title content))
     (memo-treemacs-note-buffer-update)))
@@ -239,19 +243,19 @@ If a region is active, its content is used as initial content."
 (defun memo-buffer-update-note-title ()
   "Update the title of current note which opened."
   (interactive)
-  (-if-let* ((note memo--buffer-local-note)
-	     (title (memo-note-title memo--buffer-local-note)))
+  (-if-let* ((note memo-buffer--local-note)
+	     (title (memo-note-title memo-buffer--local-note)))
       (-if-let* ((title (memo-buffer-get-content-from-posframe title))
 	     (id (memo-note-id note)))
 	  (progn (memo-api--update-title id title)
 		 (setq-local header-line-format title)
-		 (setf (memo-note-title memo--buffer-local-note) title)
+		 (setf (memo-note-title memo-buffer--local-note) title)
 		 (memo-treemacs-note-buffer-update)))))
 
 (defun memo-buffer-update-note-content ()
   "Update the content of current note which opened."
   (interactive)
-  (-if-let* ((note memo--buffer-local-note)
+  (-if-let* ((note memo-buffer--local-note)
 	     (id (memo-note-id note))
 	     (content (buffer-substring-no-properties
 			(point-min) (point-max))))

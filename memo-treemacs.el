@@ -93,9 +93,9 @@ Otherwise returns value itself."
   (interactive)
   (condition-case _err
       (-if-let* ((inhibit-read-only t)
-		 (path   (memo-note-path memo--buffer-local-note))
-	    (id  (memo-note-id memo--buffer-local-note))
-	    (buffer memo--buffer-local-note-buffer))
+		 (path   (memo-note-path memo-buffer--local-note))
+	    (id  (memo-note-id memo-buffer--local-note))
+	    (buffer memo-buffer--local-note-buffer))
 	(with-current-buffer buffer
 	  (treemacs-goto-extension-node (append path `(,id)))))
     (error)))
