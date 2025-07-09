@@ -19,7 +19,7 @@ require (
 	gorm.io/plugin/dbresolver v1.5.1
 )
 
-replace github.com/dancewhale/go-elrpc v0.0.0-20170427044253-github => ./elrpc
+replace github.com/dancewhale/go-elrpc v0.0.0-20170427044253-ec829274c742 => ./elrpc
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -41,14 +41,10 @@ require (
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/k0kubun/pp v3.0.1+incompatible // indirect
-	github.com/kiwanami/go-elrpc v0.0.0-20170427044253-ec829274c742 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-sqlite3 v1.14.17 // indirect
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/philhofer/fwd v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/steveyen/gtreap v0.1.0 // indirect
 	github.com/tinylib/msgp v1.1.0 // indirect
 	github.com/willf/bitset v1.1.10 // indirect
