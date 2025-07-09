@@ -35,8 +35,8 @@
 (defun memo-annotation--get-buffer-noteid ()
   "Get the headid of the current buffer or section.
 Returns nil if no headid is found."
-  (when memo--buffer-local-note
-    (memo-note-id memo--buffer-local-note)))
+  (when memo-buffer--local-note
+    (memo-note-id memo-buffer--local-note)))
 
 (defun memo-annotation--get-by-noteid (noteid)
   "Return a list of annotation objects by NOTEID and initialize the hash tables."
@@ -161,7 +161,7 @@ Returns the created overlay."
 
 (defun memo-annotation--overlay-annotation-create (overlay)
   "Update a annotation for the given OVERLAY."
-  (when (and q (ov-p overlay) (ov-buf overlay))
+  (when (and (ov-p overlay) (ov-buf overlay))
     (let ((anno (make-memo-annotation :id (ov-val overlay 'memo-annotation-id)
 				      :start (ov-beg overlay)
 				      :end (ov-end overlay)
@@ -377,7 +377,7 @@ Reads all overlays, updates the hash tables, and calls the API to update the ser
 	    (if (equal (memo-annotation-noteid anno) noteid)
 		(puthash (memo-annotation-id anno) anno memo-annotation--map))))
         ;; 调用API批量更新
-        (memo-api--annotation-update-by-list (memo-make-list-from-annotations-table memo-annotation--map))
+        (memo-api--annotation-update-region-by-list (memo-make-list-from-annotations-table memo-annotation--map))
         t) 
     t))
 
