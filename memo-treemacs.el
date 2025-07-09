@@ -198,7 +198,8 @@ Otherwise returns value itself."
     (if (not (stringp current-treemacs-note-path))
 	(-if-let* ((inhibit-read-only t)
 		   (path (append `(,memo-treemacs-root-node-key) current-treemacs-note-path)))
-	    (treemacs-update-async-node path (current-buffer)))
+	    (progn (setq-local current-treemacs-note-path path)
+		   (treemacs-update-async-node path (current-buffer))))
       (let* ((headid current-treemacs-note-path)
 	     (file-note-object (memo-api--get-first-file-head headid)))
 	(memo-treemacs-note-render file-note-object memo-treemacs-virtual-head-expand-depth)
@@ -340,11 +341,27 @@ Otherwise returns value itself."
 ;;;----------------------------------
 ;;;  treemacs tree operator
 ;;;----------------------------------
-(defun memo-treemacs-buffer-move-button-to-note (note buffer)
-  "Move the bottom to the note in treemacs file buffer by NOTE and BUFFER."
+(defun memo-treemacs-buffer-move-button-to-path (path buffer)
+  "Move the bottom in treemacs buffer by PATH and BUFFER."
   (-if-let* ((buf (get-buffer buffer)))
       (with-current-buffer buf
-	(treemacs-goto-extension-node (append '("variadic-entry-node") (memo-note-path note))))))
+	(treemacs-goto-extension-node (append `(,memo-treemacs-root-node-key) path)))))
+
+(defun memo-treemacs-file-buffer-goto-node (note-object)
+  "Move the bottom in file buffer to the note by NOTE-OBJECT."
+  (-if-let* ((file-id (memo-note-fileid note-object))
+	      (path (memo-note-path note-object))
+	      (treemacs-file-buffer (get-buffer memo-treemacs-file-buffer-name)))
+	     (memo-treemacs-buffer-move-button-to-path path treemacs-file-buffer)))
+
+(defun memo-treemacs-note-buffer-goto-node (note-object)
+  "Move the bottom in note buffer to the note by NOTE-OBJECT."
+  (-if-let* ((id (memo-note-id note-object))
+	      (path (memo-note-path note-object))
+	      (treemacs-note-buffer (get-buffer memo-treemacs-note-buffer-name)))
+      (if (not (memo-note-fileid note-object))
+	  (memo-treemacs-buffer-move-button-to-path path treemacs-note-buffer)
+	(memo-treemacs-buffer-move-button-to-path `(,id) treemacs-note-buffer))))
 
 (defun memo-treemacs-display-note-context (note-object)
   "Display note context (file or virtual head) in a split side window.
@@ -366,13 +383,8 @@ Argument NOTE-OBJECT is the memo note object."
 		    `(display-buffer-in-side-window . (,@memo-treemacs-note-position-params)))
     (memo-treemacs-note-render file-note-object memo-treemacs-virtual-head-expand-depth)
     (memo-treemacs-file-render fileid 1)
-    (memo-treemacs-buffer-move-button-to-note file-note-object memo-treemacs-file-buffer-name)
-    (with-current-buffer treemacs-note-buffer
-      (if (not (memo-note-fileid note-object))
-	  (setq-local current-treemacs-note-path (butlast (memo-note-path note-object)))
-	(setq-local current-treemacs-note-path (memo-note-id file-note-object))))
-    (with-current-buffer treemacs-file-buffer
-      (setq-local current-treemacs-note-path (butlast (memo-note-path file-note-object)))))
+    (memo-treemacs-file-buffer-goto-node file-note-object)
+    (memo-treemacs-note-buffer-goto-node note-object))
   (memo-buffer-open-note note-object))
 
 (provide 'memo-treemacs)
