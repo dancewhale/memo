@@ -238,19 +238,21 @@ If a region is active, its content is used as initial content."
                (id (memo-note-id memo-buffer--local-note))
                (title (memo-first-nonblank-chars content  20)))
         (memo-api--create-virt-head id title content))
-    (memo-treemacs-note-buffer-update)))
+    (memo-treemacs-note-buffer-update-node (memo-note-path memo-buffer--local-note))))
 
 (defun memo-buffer-update-note-title ()
   "Update the title of current note which opened."
   (interactive)
   (-if-let* ((note memo-buffer--local-note)
-	     (title (memo-note-title memo-buffer--local-note)))
-      (-if-let* ((title (memo-buffer-get-content-from-posframe title))
+	     (title (memo-note-title note))
+	     (path (memo-note-path note))
 	     (id (memo-note-id note)))
+      (-if-let* ((title (memo-buffer-get-content-from-posframe title)))
 	  (progn (memo-api--update-title id title)
 		 (setq-local header-line-format title)
 		 (setf (memo-note-title memo-buffer--local-note) title)
-		 (memo-treemacs-note-buffer-update)))))
+		 (memo-treemacs-note-buffer-update-node path)
+		 (memo-treemacs-note-buffer-goto-node note)))))
 
 (defun memo-buffer-update-note-content ()
   "Update the content of current note which opened."

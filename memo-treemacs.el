@@ -185,35 +185,6 @@ Otherwise returns value itself."
 (defconst memo-treemacs-note-buffer-name "*MemoTreeNote*"
   "Memo Buffer name store the tree.")
 
-(defun memo-treemacs-buffer-update ()
- "Update treemacs note and file buffer."
- (memo-treemacs-file-buffer-update)
- (memo-treemacs-note-buffer-update))
-
-;; if note is file-note, the path is "id".
-;; if note is virt-head, the path is list of id.
-(defun memo-treemacs-note-buffer-update ()
-  "Update treemacs note buffer node."
-  (with-current-buffer (get-buffer memo-treemacs-note-buffer-name)
-    (if (not (stringp current-treemacs-note-path))
-	(-if-let* ((inhibit-read-only t)
-		   (path (append `(,memo-treemacs-root-node-key) current-treemacs-note-path)))
-	    (progn (setq-local current-treemacs-note-path path)
-		   (treemacs-update-async-node path (current-buffer))))
-      (let* ((headid current-treemacs-note-path)
-	     (file-note-object (memo-api--get-first-file-head headid)))
-	(memo-treemacs-note-render file-note-object memo-treemacs-virtual-head-expand-depth)
-	(setq-local current-treemacs-note-path headid)))))
-
-
-(defun memo-treemacs-file-buffer-update ()
-  "Update treemacs file buffer node."
-  (with-current-buffer (get-buffer memo-treemacs-file-buffer-name)
-    (-if-let* ((inhibit-read-only t)
-	       (buffer (get-buffer memo-treemacs-file-buffer-name))
-	       (path (append `(,memo-treemacs-root-node-key) current-treemacs-note-path)))
-	(treemacs-update-async-node path (current-buffer)))))
-
 (treemacs-define-expandable-node-type memo-treemacs-virt-head-node
   :closed-icon
   (memo-treemacs--closed-icon-render item)
@@ -341,6 +312,28 @@ Otherwise returns value itself."
 ;;;----------------------------------
 ;;;  treemacs tree operator
 ;;;----------------------------------
+(defun memo-treemacs-buffer-update (note-object)
+ "Update treemacs note and file buffer by NOTE-OBJECT."
+ (if (memo-note-fileid note-object)
+     (memo-treemacs-file-buffer-update-node (memo-note-path note-object)))
+ (if (memo-note-headlineid note-object)
+     (memo-treemacs-note-buffer-update-node (memo-note-path note-object))))
+
+(defun memo-treemacs-note-buffer-update-node (path)
+  "Update treemacs note buffer node by PATH."
+  (with-current-buffer (get-buffer memo-treemacs-note-buffer-name)
+    (-if-let* ((inhibit-read-only t)
+	       (path (append `(,memo-treemacs-root-node-key) path)))
+	(treemacs-update-async-node (butlast path) (current-buffer)))))
+
+(defun memo-treemacs-file-buffer-update-node (path)
+  "Update treemacs file buffer node by PATH."
+  (with-current-buffer (get-buffer memo-treemacs-file-buffer-name)
+    (-if-let* ((inhibit-read-only t)
+	       (buffer (get-buffer memo-treemacs-file-buffer-name))
+	       (path (append `(,memo-treemacs-root-node-key) path)))
+	(treemacs-update-async-node (butlast path) (current-buffer)))))
+
 (defun memo-treemacs-buffer-move-button-to-path (path buffer)
   "Move the bottom in treemacs buffer by PATH and BUFFER."
   (-if-let* ((buf (get-buffer buffer)))

@@ -115,15 +115,13 @@
 (-if-let* ((readbuf (get-buffer "*memo-review*"))
 	   (treebuf (get-buffer memo-treemacs-file-buffer-name)))
     (with-current-buffer readbuf
-      (let* ((note-object memo--buffer-local-note)
+      (let* ((note-object memo-buffer--local-note)
 	     (fileid (memo-note-fileid note-object))
-	     (path (append '("variadic-entry-node") (memo-note-path note-object)))
+	     (path (append `(,memo-treemacs-root-node-key) (memo-note-path note-object)))
 	     (noteid (memo-note-id note-object)))
 	(with-current-buffer treebuf
 	  (prin1 (memo-note-path note-object))
 	  (prin1 (memo-note-headlineid note-object))))))
-
-ceshi
 
 (memo-treemacs--find-node-by-id "04E683D9-48D7-4F54-9DB3-065C8BCC17A6")
 
