@@ -141,7 +141,6 @@ func (f *FsrsDB) Review(rlog *storage.ReviewLog, fsrsinfo *storage.FsrsInfo) err
 
 func (f *FsrsDB) UndoReview(rlog *storage.ReviewLog) error {
 	r := dal.Q
-	reviewLog := dal.ReviewLog
 	// 使用事务确保操作的原子性
 	db := r.Begin()
 	defer func() {
@@ -151,15 +150,28 @@ func (f *FsrsDB) UndoReview(rlog *storage.ReviewLog) error {
 	}()
 
 	// 更新Fsrs记录
-	fsrs := dal.FsrsInfo
-	_, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(rlog.HeadlineID)).Updates(rlog.GetPreCard())
+	preCard := rlog.GetPreCard()
+	reviewLog := db.ReviewLog
+	fsrs := db.FsrsInfo
+
+	_, err := fsrs.WithContext(context.Background()).Where(fsrs.HeadlineID.Eq(rlog.HeadlineID)).
+		UpdateSimple(fsrs.Due.Value(preCard.Due),
+			fsrs.Stability.Value(preCard.Stability),
+			fsrs.Difficulty.Value(preCard.Difficulty),
+			fsrs.ElapsedDays.Value(preCard.ElapsedDays),
+			fsrs.ScheduledDays.Value(preCard.ScheduledDays),
+			fsrs.Reps.Value(preCard.Reps),
+			fsrs.Lapses.Value(preCard.Lapses),
+			fsrs.State.Value(int8(preCard.State)),
+			fsrs.LastReview.Value(preCard.LastReview))
+
 	if err != nil {
 		db.Rollback()
 		return logger.Errorf("Update Fsrs info failed: %v", err)
 	}
 
 	// 删除ReviewLog记录
-	_, err = reviewLog.WithContext(context.Background()).Where(reviewLog.ID.Eq(rlog.ID)).Delete()
+	_, err = reviewLog.WithContext(context.Background()).Unscoped().Where(reviewLog.ID.Eq(rlog.ID)).Delete()
 	if err != nil {
 		db.Rollback()
 		return logger.Errorf("Delete review log failed: %v", err)

@@ -34,6 +34,13 @@
 	    (memo-note-id memo-buffer--local-note) "MEMO_NOTE_SCHEDULE" "normal")
 	   (memo-treemacs-buffer-update))))
 
+(defun memo-note-undo-review ()
+  "Review note with score: RATE."
+  (interactive)
+  (if memo-buffer--local-note
+      (memo-api--undo-review-note (memo-note-id memo-buffer--local-note)))
+  (if (equal (buffer-name (current-buffer)) memo--review-buffer-name)
+    (memo-treemacs-buffer-update memo-buffer--local-note)))
 
 (defun memo-note-review (rate)
   "Review note with score: RATE."

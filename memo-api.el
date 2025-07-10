@@ -230,6 +230,12 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
     (memo--parse-result result)
     t))
 
+(defun memo-api--undo-review-note (id)
+  "WithDraw current review-note with last rate by ID."
+  (let ((result (memo-bridge-call-sync "UndoReviewNote" id)))
+    (memo--parse-result result)
+    t))
+
 (defun memo-api--update-property (headid key value)
   "Update the property of head by HEADID KEY VALUE."
   (let ((result (memo-bridge-call-sync "UpdateOrgHeadProperty" headid key value)))
