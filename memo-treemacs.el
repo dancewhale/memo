@@ -148,6 +148,42 @@ Otherwise returns value itself."
 	(find-file (memo-file-filepath item)))
     (treemacs-pulse-on-failure "No file Found.")))
 
+(defun memo-treemacs--make-bookmark-record ()
+  "Make a bookmark record for the current Treemacs button.
+
+This function is installed as the `bookmark-make-record-function'."
+  (treemacs-unless-let (current-btn (treemacs-current-button))
+      (progn
+        ;; Don't rely on treemacs-pulse-on-failure to display the error, since the
+        ;; error must be handled in bookmark.el.
+        (treemacs-pulse-on-failure)
+        (user-error "Nothing to bookmark here"))
+    (let* ((path (treemacs-button-get current-btn :path))
+	   (buffer-name))
+      (unless path
+        (treemacs-pulse-on-failure)
+        (user-error "Could not find the path of the current button"))
+      `((defaults . (,(treemacs--format-bookmark-title current-btn)))
+        (memo-treemacs-bookmark-path . ,path)
+	(memo-treemacs-note-id . ,(memo-note-id memo-treemacs-local-note))
+	(memo-treemacs-buffer-name . ,(buffer-name (current-buffer)))
+        (handler . memo-treemacs--bookmark-handler)))))
+
+(defun memo-treemacs--bookmark-handler (record)
+  "Open Memo Treemacs into a bookmark RECORD."
+  (let* ((path (bookmark-prop-get record 'memo-treemacs-bookmark-path))
+	(note-id (bookmark-prop-get record 'memo-treemacs-note-id))
+	(note-query (list (concat "filter:id:" note-id)))
+	(note (memo-api--get-note note-query))
+	(buffer-name (bookmark-prop-get record 'memo-treemacs-buffer-name)))
+    (unless path
+      ;; Don't rely on treemacs-pulse-on-failure to display the error, since the
+      ;; error must be handled in bookmark.el.
+      (user-error "Treemacs--bookmark-handler invoked for a non-Treemacs bookmark"))
+    (if (equal buffer-name memo-treemacs-file-buffer-name)
+	(memo-treemacs-note-render note memo-treemacs-virtual-head-expand-depth path)
+      (memo-treemacs-file-render note 1 path))
+    (switch-to-buffer buffer-name)))
 
 ;;;----------------------------------
 ;;;  treemacs node render function
@@ -206,12 +242,13 @@ Otherwise returns value itself."
 
 (treemacs-define-variadic-entry-node-type memo-treemacs-virt-node
   :key  memo-treemacs-root-node-key
-  :children `(,memo-local-note)
+  :children `(,memo-treemacs-local-note)
   :child-type 'memo-treemacs-virt-head-node)
 
 
-(defun memo-treemacs-note-render (note expand-depth
-                                 &optional right-click-actions)
+(defun memo-treemacs-note-render (note-object expand-depth
+                                 &optional path)
+  "Render treemacs buffer for file with NOTE-OBJECT EXPAND-DEPTH and PATH."
   (let ((buffer (get-buffer-create memo-treemacs-note-buffer-name)))
     (with-current-buffer buffer
       (treemacs-initialize memo-treemacs-virt-node
@@ -220,16 +257,16 @@ Otherwise returns value itself."
                   (memo-treemacs--set-mode-line-format buffer "memo-virt-note")
                   (setq-local face-remapping-alist '((button . default)))
                   (setq-local treemacs-default-visit-action 'treemacs-RET-action)
-                  (setq-local memo-treemacs--right-click-actions right-click-actions)
                   (setq-local window-size-fixed nil)
-		  (setq-local memo-local-note note)
+		  (setq-local memo-treemacs-local-note note-object)
                   (setq-local treemacs--width-is-locked nil)
                   (setq-local treemacs-space-between-root-nodes nil)
                   (when treemacs-text-scale
                     (text-scale-increase treemacs-text-scale))
                   (memo-treemacs-generic-mode t)))
-      (current-buffer))))
-
+      (setq-local bookmark-make-record-function 'memo-treemacs--make-bookmark-record)
+      (if path (treemacs-goto-extension-node path))
+      buffer)))
 
 
 ;;;----------------------------------
@@ -283,30 +320,31 @@ Otherwise returns value itself."
 
 (treemacs-define-variadic-entry-node-type memo-treemacs-file-node
   :key  memo-treemacs-root-node-key
-  :children `(,(memo-api--get-file-by-filid memo-local-file-id))
+  :children `(,(memo-api--get-file-by-filid (memo-note-fileid memo-treemacs-local-note)))
   :child-type 'memo-treemacs-read-file-node)
 
 
-(defun memo-treemacs-file-render (fileid expand-depth
-                                 &optional right-click-actions)
-  "Render treemacs buffer for file with FILEID EXPAND-DEPTH."
+(defun memo-treemacs-file-render (note-object expand-depth
+                                 &optional path)
+  "Render treemacs buffer for file with NOTE-OBJECT EXPAND-DEPTH and PATH."
   (let ((buffer (get-buffer-create memo-treemacs-file-buffer-name)))
     (with-current-buffer buffer
       (treemacs-initialize memo-treemacs-file-node
         :with-expand-depth (or expand-depth 0)
         :and-do (progn
-                  (memo-treemacs--set-mode-line-format buffer fileid)
+                  (memo-treemacs--set-mode-line-format buffer (memo-note-fileid note-object))
                   (setq-local face-remapping-alist '((button . default)))
                   (setq-local treemacs-default-visit-action 'treemacs-RET-action)
-                  (setq-local memo-treemacs--right-click-actions right-click-actions)
                   (setq-local window-size-fixed nil)
                   (setq-local treemacs--width-is-locked nil)
                   (setq-local treemacs-space-between-root-nodes nil)
-		  (setq-local memo-local-file-id fileid)
+		  (setq-local memo-treemacs-local-note note-object)
                   (when treemacs-text-scale
                     (text-scale-increase treemacs-text-scale))
                   (memo-treemacs-generic-mode t)))
-      (current-buffer))))
+      (setq-local bookmark-make-record-function 'memo-treemacs--make-bookmark-record)
+      (if path (treemacs-goto-extension-node path))
+      buffer)))
 
 
 ;;;----------------------------------
@@ -366,7 +404,6 @@ of a side window.
 Argument NOTE-OBJECT is the memo note object."
   (let* ((headid (memo-note-id note-object))
 	 (file-note-object (memo-api--get-first-file-head headid))
-         (fileid (memo-note-fileid file-note-object))
 	 (window-sides-slots '(2 nil nil nil))
          (treemacs-file-buffer  (get-buffer-create memo-treemacs-file-buffer-name))
          (treemacs-note-buffer  (get-buffer-create memo-treemacs-note-buffer-name)))
@@ -375,7 +412,7 @@ Argument NOTE-OBJECT is the memo note object."
     (display-buffer treemacs-note-buffer
 		    `(display-buffer-in-side-window . (,@memo-treemacs-note-position-params)))
     (memo-treemacs-note-render file-note-object memo-treemacs-virtual-head-expand-depth)
-    (memo-treemacs-file-render fileid 1)
+    (memo-treemacs-file-render file-note-object 1)
     (memo-treemacs-file-buffer-goto-node file-note-object)
     (memo-treemacs-note-buffer-goto-node note-object))
   (memo-buffer-open-note note-object))
