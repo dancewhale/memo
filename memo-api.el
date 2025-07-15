@@ -65,7 +65,8 @@ catch error to  memo-api-return-err, value to memo-api-return-value"
   (setq memo-api-return-value (memo-alist-get result "Data"))
   (setq memo-api-return-err (memo-alist-get result "Err"))
   (unless (eq memo-api-return-err 'null)
-    (user-error (memo-alist-get memo-api-return-err "s")))
+    (user-error (or (memo-alist-get memo-api-return-err "s")
+		    (memo-alist-get memo-api-return-err "Message"))))
   memo-api-return-value)
 
 ;; Setting note object.

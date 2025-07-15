@@ -2,13 +2,14 @@ package query
 
 import (
 	"context"
-	"github.com/samber/lo"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"memo/pkg/db"
 	"memo/pkg/logger"
 	"memo/pkg/storage"
 	"memo/pkg/storage/dal"
+
+	"github.com/samber/lo"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func NewCardDB() (*CardDB, error) {
@@ -198,6 +199,24 @@ func (c *CardDB) ancestorFilter(op string, ancestorID []string) *CardDB {
 		c.headDO = c.headDO.Where(dal.Headline.ID.NotIn(idList...))
 	} else {
 		c.headDO = c.headDO.Where(dal.Headline.ID.In(idList...))
+	}
+	return c
+}
+
+// noteIDFilter: 支持filter:id:xxx-xxx-xxx的过滤逻辑
+func (c *CardDB) noteIDFilter(op string, noteID []string) *CardDB {
+	if len(noteID) == 1 && noteID[0] == "NULL" {
+		if op == "-" {
+			c.headDO = c.headDO.Where(dal.Headline.ID.IsNotNull())
+		} else {
+			c.headDO = c.headDO.Where(dal.Headline.ID.IsNull())
+		}
+		return c
+	}
+	if op == "-" {
+		c.headDO = c.headDO.Where(dal.Headline.ID.NotIn(noteID...))
+	} else {
+		c.headDO = c.headDO.Where(dal.Headline.ID.In(noteID...))
 	}
 	return c
 }

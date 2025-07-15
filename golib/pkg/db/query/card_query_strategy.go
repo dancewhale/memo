@@ -140,6 +140,18 @@ func (s *OrderStrategy) Apply(db *CardDB) *CardDB {
 	}
 }
 
+// NoteIDFilterStrategy 卡片ID过滤策略
+// op: '+' means include ids (In), '-' means exclude ids (Not In)
+type NoteIDFilterStrategy struct {
+	NoteID   []string
+	Operater string // "+", "-"
+}
+
+// Apply 实现QueryStrategy接口
+func (s *NoteIDFilterStrategy) Apply(db *CardDB) *CardDB {
+	return db.noteIDFilter(s.Operater, s.NoteID)
+}
+
 // QueryBuilder 查询构建器
 type QueryBuilder struct {
 	strategies []QueryStrategy
@@ -251,6 +263,15 @@ func (b *QueryBuilder) WithOrder(orderBy string, order string) *QueryBuilder {
 	b.strategies = append(b.strategies, &OrderStrategy{
 		OrderBy: orderBy,
 		Order:   order,
+	})
+	return b
+}
+
+// WithNoteIDFilter 添加卡片ID过滤策略
+func (b *QueryBuilder) WithNoteIDFilter(operater string, noteID []string) *QueryBuilder {
+	b.strategies = append(b.strategies, &NoteIDFilterStrategy{
+		NoteID:   noteID,
+		Operater: operater,
 	})
 	return b
 }

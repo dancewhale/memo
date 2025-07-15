@@ -59,6 +59,7 @@ const (
 	StateFilter      = "state"
 	TagFilter        = "tag"
 	PropertyFilter   = "property"
+	NoteIDFilter     = "id" // 新增NoteIDFilter
 )
 
 // 查询语法单元
@@ -266,6 +267,9 @@ func (p *QueryParser) BuildQuery() (*QueryBuilder, error) {
 
 			case AncestorIDFilter:
 				queryBuilder = queryBuilder.WithAncestorFilter(unit.Operater, unit.Values)
+
+			case NoteIDFilter: // 新增NoteIDFilter
+				queryBuilder = queryBuilder.WithNoteIDFilter(unit.Operater, unit.Values)
 			}
 		}
 	}
@@ -306,6 +310,7 @@ func isValidFilterField(field string) bool {
 		StateFilter:      true,
 		TagFilter:        true,
 		PropertyFilter:   true,
+		NoteIDFilter:     true, // 新增NoteIDFilter
 	}
 
 	_, valid := validFields[field]
@@ -329,7 +334,11 @@ func validateFilterValue(field string, values []string) error {
 		if err != nil {
 			return &QuerySyntaxError{Message: fmt.Sprintf("limitfilter限制值必须是整数: %s", values[0])}
 		}
-
+	case NoteIDFilter:
+		// NoteID简单校验，不能为空
+		if len(values) == 0 || (len(values) == 1 && values[0] == "") {
+			return &QuerySyntaxError{Message: "NoteID不能为空"}
+		}
 	}
 
 	return nil
