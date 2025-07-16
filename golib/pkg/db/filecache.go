@@ -84,22 +84,22 @@ type HeadlineCacheMap struct {
 	mutex  sync.RWMutex
 }
 
-func (h *HeadlineCacheMap) Put(file string, headline *HeadlineStats) {
+func (h *HeadlineCacheMap) Put(headid string, headline *HeadlineStats) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
-	h.caches[file] = headline
+	h.caches[headid] = headline
 }
 
-func (h *HeadlineCacheMap) Get(file string) *HeadlineStats {
+func (h *HeadlineCacheMap) Get(headid string) *HeadlineStats {
 	h.mutex.RLock()
 	defer h.mutex.RUnlock()
-	return h.caches[file]
+	return h.caches[headid]
 }
 
 // 全局缓存管理器实例
 var cacheManager *FileHeadlineCacheManager
 var cacheManagerOnce sync.Once
-var headCacheMap *HeadlineCacheMap // 全局缓存映射，用于快速查找headline到fileid的映射
+var headCacheMap *HeadlineCacheMap // 全局headline缓存映射，用于快速查找headline 以及对应headline 的fileid.
 
 // GetCacheManager 获取全局缓存管理器实例
 func GetCacheManager() *FileHeadlineCacheManager {

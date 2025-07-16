@@ -165,7 +165,7 @@ func (api *CardApi) FindNote(q []string) db.Result {
 	if len(notes) == 0 {
 		return db.Result{Data: nil, Err: nil}
 	}
-	note, err := api.getHeadlineWithFsrsByID(notes[0].ID)
+	note, err := api.getHeadlineWithFsrsByID(notes[0].ID, notes[0].FileID)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
@@ -326,7 +326,7 @@ func (api *CardApi) GetNextReviewCard() db.Result {
 		return db.Result{Data: nil, Err: errors.New("no next review card found")}
 	}
 
-	headineWithFsrs, err := api.getHeadlineWithFsrsByID(headID)
+	headineWithFsrs, err := api.getHeadlineWithFsrsByID(headID, nil)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
@@ -344,7 +344,7 @@ func (api *CardApi) GetPreviousReviewCard() db.Result {
 		return db.Result{Data: nil, Err: errors.New("no previous review card found")}
 	}
 
-	headineWithFsrs, err := api.getHeadlineWithFsrsByID(headID)
+	headineWithFsrs, err := api.getHeadlineWithFsrsByID(headID, nil)
 	if err != nil {
 		return db.Result{Data: nil, Err: err}
 	}
@@ -353,8 +353,11 @@ func (api *CardApi) GetPreviousReviewCard() db.Result {
 }
 
 // Helper function to get HeadlineWithFsrs by ID using the cache
-func (api *CardApi) getHeadlineWithFsrsByID(headID string) (*db.HeadlineWithFsrs, error) {
+func (api *CardApi) getHeadlineWithFsrsByID(headID string, fileid *string) (*db.HeadlineWithFsrs, error) {
 	cacheManager := db.GetCacheManager()
+	if fileid != nil {
+		cacheManager.GetFileCacheFromCache(*fileid)
+	}
 	head := cacheManager.GetHeadFromCache(headID)
 
 	// 3. Get HeadlineStats from HeadMap
