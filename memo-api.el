@@ -379,6 +379,11 @@ Returns the ID of the created virt head."
     (memo-make-note-from-return (memo--parse-result result))))
 
 ;; get read new card api
+(defun memo-api--set-current-new-card (headid)
+  "Set current new card in queue to HEADID."
+  (let ((result (memo-bridge-call-sync "SetCurrentNewCard" headid fileid)))
+    (memo-make-note-from-return (memo--parse-result result))))
+
 (defun memo-api--get-next-new-card ()
   "Get next new note."
   (let ((result (memo-bridge-call-sync "GetNextNewCard")))

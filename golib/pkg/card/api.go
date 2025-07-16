@@ -37,8 +37,9 @@ func (api *CardApi) RegistryEpcMethod(service *epc.ServerService) *epc.ServerSer
 	service.RegisterMethod(epc.MakeMethod("GetHeadChildrenVirtCard", api.GetHeadChildrenVirtCard, "string", "Get head virt children note"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadContentByID", api.GetHeadContentByID, "string", "Get headline by id"))
 	service.RegisterMethod(epc.MakeMethod("GetHeadFilePath", api.GetHeadFilePath, "string", "Get headline file path"))
-	service.RegisterMethod(epc.MakeMethod("GetNextReviewCard", api.GetNextReviewCard, "", "Get next reviewed card info"))             // Added
-	service.RegisterMethod(epc.MakeMethod("GetPreviousReviewCard", api.GetPreviousReviewCard, "", "Get previous reviewed card info")) // Added
+	service.RegisterMethod(epc.MakeMethod("GetNextReviewCard", api.GetNextReviewCard, "", "Get next reviewed card info"))                    // Added
+	service.RegisterMethod(epc.MakeMethod("GetPreviousReviewCard", api.GetPreviousReviewCard, "", "Get previous reviewed card info"))        // Added
+	service.RegisterMethod(epc.MakeMethod("SetCurrentNewCard", api.SetCurrentNewCard, "", "Set current new card in queue and return note.")) // Added
 	service.RegisterMethod(epc.MakeMethod("GetNextNewCard", api.GetNextNewCard, "string", "Get headlines in reading order for a file"))
 	service.RegisterMethod(epc.MakeMethod("GetPreviousNewCard", api.GetPreviousNewCard, "string", "Get headlines in reading order for a file"))
 	service.RegisterMethod(epc.MakeMethod("GetNextFileNewCard", api.GetNextFileNewCard, "string", "Get headlines in reading order for a file"))
@@ -244,6 +245,21 @@ func (api *CardApi) GetPreviousFileNewCard() db.Result {
 	head := cacheManager.GetHeadFromCache(headID)
 	if head == nil {
 		return db.Result{Data: nil, Err: logger.Errorf("Failed to get head %s in cache.", headID)}
+	}
+
+	return db.Result{Data: head.Info, Err: nil}
+}
+
+func (api *CardApi) SetCurrentNewCard(headid, fileid string) db.Result {
+	queue := db.GetReadingQueue()
+	err := queue.SetCurrentCard(fileid, headid)
+	if err != nil {
+		return db.Result{Data: nil, Err: err}
+	}
+	cacheManager := db.GetCacheManager()
+	head := cacheManager.GetHeadFromCache(headid)
+	if head == nil {
+		return db.Result{Data: nil, Err: logger.Errorf("Failed to get head %s in cache.", headid)}
 	}
 
 	return db.Result{Data: head.Info, Err: nil}

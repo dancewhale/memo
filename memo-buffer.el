@@ -266,7 +266,8 @@ This function hide posframe and clear temp-content when user switch window."
 ;;;------------------------------------------------------------------
 ;;; virt note operator function.
 ;;;------------------------------------------------------------------
-
+;; only support read note activities save and handler.
+;; TODO: support review note activities save and handler.
 (defun memo-buffer--make-bookmark-record ()
   "Make a bookmark record for the current Buffer.
 
@@ -286,6 +287,7 @@ This function is installed as the `bookmark-make-record-function'."
     (unless note-id
       (user-error "Memo-buffer--bookmark-handler invoked failed for note-id missing"))
     (memo-buffer-open-note note)
+    (memo-api--set-current-new-card note-id (memo-note-fileid note))
     (switch-to-buffer buffer-name)))
 
 

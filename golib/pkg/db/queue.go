@@ -467,11 +467,9 @@ func (rq *ReadingQueue) SetCurrentCard(fileID string, headID string) error {
 	rq.mutex.Lock()
 	defer rq.mutex.Unlock()
 
-	foundFile := false
 	for i, fcl := range rq.FileLists {
 		if fcl.FileID == fileID {
 			rq.CurrentFileIndex = i
-			foundFile = true
 			// 确保文件列表是最新的
 			updatedFCL, err := rq.ensureFileCardListValid(i)
 			if err != nil {
@@ -488,9 +486,6 @@ func (rq *ReadingQueue) SetCurrentCard(fileID string, headID string) error {
 		}
 	}
 
-	if !foundFile {
-		return logger.Errorf("FileID %s not found in the reading queue", fileID)
-	}
 	return nil
 }
 
