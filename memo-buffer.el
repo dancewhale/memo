@@ -266,6 +266,29 @@ This function hide posframe and clear temp-content when user switch window."
 ;;;------------------------------------------------------------------
 ;;; virt note operator function.
 ;;;------------------------------------------------------------------
+
+(defun memo-buffer--make-bookmark-record ()
+  "Make a bookmark record for the current Buffer.
+
+This function is installed as the `bookmark-make-record-function'."
+  (let* ((note memo-buffer--local-note))
+    `((defaults . ,(memo-note-title note))
+      (memo-buffer-note-id . ,(memo-note-id note))
+      (memo-buffer-buffer-name . ,memo--review-buffer-name)
+      (handler . memo-buffer--bookmark-handler))))
+
+(defun memo-buffer--bookmark-handler (record)
+  "Open Memo Buffer into a bookmark RECORD."
+  (let* ((note-id (bookmark-prop-get record 'memo-buffer-note-id))
+	 (note-query (list (concat "filter:id:" note-id)))
+	 (note (memo-api--get-note note-query))
+	 (buffer-name (bookmark-prop-get record 'memo-buffer-buffer-name)))
+    (unless note-id
+      (user-error "Memo-buffer--bookmark-handler invoked failed for note-id missing"))
+    (memo-buffer-open-note note)
+    (switch-to-buffer buffer-name)))
+
+
 (defun memo-buffer-open-note (note)
   "Open NOTE in view buffer."
   (if (not (memo-note-id note))
@@ -281,7 +304,8 @@ This function hide posframe and clear temp-content when user switch window."
       (setq-local header-line-format (memo-note-title note))
       (memo-buffer-set-local-header-line-face)
       (goto-char (point-min))
-      (setq memo-buffer--local-note note)
+      (setq-local memo-buffer--local-note note)
+      (setq-local bookmark-make-record-function 'memo-buffer--make-bookmark-record)
       (olivetti-mode)
       (memo-annotation-mode)
       (memo-buffer--create-float-overlay note)
